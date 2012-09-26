@@ -27,7 +27,7 @@ config_get_type (void)
 
         if (type) return type;
         static const GTypeInfo info = {
-                sizeof (CconfigClass),
+                sizeof (ConfigClass),
                 NULL, // base class initializer
                 NULL, // base class finalizer
                 (GClassInitFunc)config_class_init,

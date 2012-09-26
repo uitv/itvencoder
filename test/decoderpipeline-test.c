@@ -9,6 +9,6 @@ main()
         DecoderPipeline *decoderpipeline;
 
         g_type_init();
-        decoderpipeline = g_object_new(TYPE_DECODER_PIPELINE, NULL);
+        decoderpipeline = g_object_new(TYPE_DECODER_PIPELINE, 0, NULL);
         return 0;
 }

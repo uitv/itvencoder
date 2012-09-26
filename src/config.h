@@ -8,16 +8,20 @@
 #define __CONFIG_H__
 
 #include <glib-object.h>
+#include "jansson.h"
 
 typedef struct _Config      Config;
 typedef struct _ConfigClass ConfigClass;
 
 struct _Config {
-    GObject parent;
+        GObject         parent;
+
+        json_t          *itvencoder_config;
+        GArray          *channel_config_array; // array of json_t * type
 };
 
 struct _ConfigClass {
-    GObjectClass parent;
+        GObjectClass parent;
 };
 
 #define TYPE_CONFIG           (config_get_type())
