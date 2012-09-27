@@ -23,6 +23,8 @@ struct _Config {
 
 struct _ConfigClass {
         GObjectClass parent;
+
+        gint (*config_reload_config_file_func)(Config *config);
 };
 
 #define TYPE_CONFIG           (config_get_type())
@@ -34,5 +36,6 @@ struct _ConfigClass {
 #define config_new(...)       (g_object_new(TYPE_CONFIG, ## __VA_ARGS__, NULL))
 
 GType config_get_type (void);
+gint config_reload_config_file(Config *config);
 
 #endif /* __CONFIG_H__ */

@@ -4,6 +4,7 @@ CFLAGS += -I../third/jansson-2.4/src
 CFLAGS += -std=c99 -g
 LDFLAGS += $(shell pkg-config --libs gstreamer-0.10)
 LDFLAGS += -lgstapp-0.10
+STATIC_JANSSON = ../third/jansson-2.4/src/.libs/libjansson.a
 
 all: itvencoder decoderpipeline config
 
@@ -14,7 +15,7 @@ decoderpipeline:
 	gcc $(CFLAGS) $(LDFLAGS) decoderpipeline-test.c ../src/decoderpipeline.c -o decoderpipeline
 
 config: config-test.c ../src/config.c ../src/config.h
-	gcc $(CFLAGS) $(LDFLAGS) config-test.c ../src/config.c -o config
+	gcc $(CFLAGS) $(LDFLAGS) config-test.c ../src/config.c $(STATIC_JANSSON) -o config
 
 clean:
 	rm itvencoder decoderpipeline config

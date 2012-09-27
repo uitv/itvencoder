@@ -17,6 +17,7 @@ static void config_init(Config *config);
 static GObject *config_constructor(GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static gint config_reload_config_file_func(Config *config);
 
 static void
 config_class_init(ConfigClass *configclass)
@@ -27,6 +28,8 @@ config_class_init(ConfigClass *configclass)
         g_object_class->constructor = config_constructor;
         g_object_class->set_property = config_set_property;
         g_object_class->get_property = config_get_property;
+
+        configclass->config_reload_config_file_func = config_reload_config_file_func;
 
         config_param = g_param_spec_string("config_file_path",
                                            "configf",
@@ -39,6 +42,8 @@ config_class_init(ConfigClass *configclass)
 static void
 config_init(Config *config)
 {
+        config->config_file_path = NULL;
+        config->itvencoder_config = NULL;
 }
 
 static GObject *
@@ -82,6 +87,21 @@ config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspe
         }
 }
 
+static gint
+config_reload_config_file_func(Config *config)
+{
+        json_error_t error;
+
+        json_decref(config->itvencoder_config);
+        config->itvencoder_config = json_load_file(config->config_file_path, 0, &error);
+        if(!config->itvencoder_config) {
+                g_print("%d: %s\n", error.line, error.text);
+                return -1;
+        }
+
+        return 0;
+}
+
 GType
 config_get_type (void)
 {
@@ -105,3 +125,8 @@ config_get_type (void)
         return type;
 }
 
+gint
+config_reload_config_file(Config *config)
+{
+        return CONFIG_GET_CLASS(config)->config_reload_config_file_func(config);
+}
