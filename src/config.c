@@ -18,6 +18,7 @@ static GObject *config_constructor(GType type, guint n_construct_properties, GOb
 static void config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gint config_reload_config_file_func(Config *config);
+static gint config_save_config_file_func(Config *config);
 
 static void
 config_class_init(ConfigClass *configclass)
@@ -30,6 +31,7 @@ config_class_init(ConfigClass *configclass)
         g_object_class->get_property = config_get_property;
 
         configclass->config_reload_config_file_func = config_reload_config_file_func;
+        configclass->config_save_config_file_func = config_save_config_file_func;
 
         config_param = g_param_spec_string("config_file_path",
                                            "configf",
@@ -102,6 +104,12 @@ config_reload_config_file_func(Config *config)
         return 0;
 }
 
+static gint
+config_save_config_file_func(Config *config)
+{
+        json_dump_file(config->itvencoder_config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
+}
+
 GType
 config_get_type (void)
 {
@@ -129,4 +137,10 @@ gint
 config_reload_config_file(Config *config)
 {
         return CONFIG_GET_CLASS(config)->config_reload_config_file_func(config);
+}
+
+gint
+config_save_config_file(Config *config)
+{
+        return CONFIG_GET_CLASS(config)->config_save_config_file_func(config);
 }
