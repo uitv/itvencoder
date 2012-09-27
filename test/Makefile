@@ -13,7 +13,7 @@ itvencoder:
 decoderpipeline:
 	gcc $(CFLAGS) $(LDFLAGS) decoderpipeline-test.c ../src/decoderpipeline.c -o decoderpipeline
 
-config:
+config: config-test.c ../src/config.c ../src/config.h
 	gcc $(CFLAGS) $(LDFLAGS) config-test.c ../src/config.c -o config
 
 clean:

@@ -16,6 +16,7 @@ typedef struct _ConfigClass ConfigClass;
 struct _Config {
         GObject         parent;
 
+        gchar           *config_file_path;
         json_t          *itvencoder_config;
         GArray          *channel_config_array; // array of json_t * type
 };
