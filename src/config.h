@@ -18,13 +18,14 @@ struct _Config {
 
         gchar           *config_file_path;
         json_t          *itvencoder_config;
+        gboolean        config_dirty; // config have been modified?
         GArray          *channel_config_array; // array of json_t * type
 };
 
 struct _ConfigClass {
         GObjectClass parent;
 
-        gint (*config_reload_config_file_func)(Config *config);
+        gint (*config_load_config_file_func)(Config *config);
         gint (*config_save_config_file_func)(Config *config);
 };
 
@@ -37,7 +38,7 @@ struct _ConfigClass {
 #define config_new(...)       (g_object_new(TYPE_CONFIG, ## __VA_ARGS__, NULL))
 
 GType config_get_type (void);
-gint config_reload_config_file(Config *config);
+gint config_load_config_file(Config *config);
 gint config_save_config_file(Config *config);
 
 #endif /* __CONFIG_H__ */

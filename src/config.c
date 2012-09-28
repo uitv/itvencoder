@@ -17,7 +17,7 @@ static void config_init(Config *config);
 static GObject *config_constructor(GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static gint config_reload_config_file_func(Config *config);
+static gint config_load_config_file_func(Config *config);
 static gint config_save_config_file_func(Config *config);
 
 static void
@@ -30,7 +30,7 @@ config_class_init(ConfigClass *configclass)
         g_object_class->set_property = config_set_property;
         g_object_class->get_property = config_get_property;
 
-        configclass->config_reload_config_file_func = config_reload_config_file_func;
+        configclass->config_load_config_file_func = config_load_config_file_func;
         configclass->config_save_config_file_func = config_save_config_file_func;
 
         config_param = g_param_spec_string("config_file_path",
@@ -90,7 +90,7 @@ config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspe
 }
 
 static gint
-config_reload_config_file_func(Config *config)
+config_load_config_file_func(Config *config)
 {
         json_error_t error;
 
@@ -134,9 +134,12 @@ config_get_type (void)
 }
 
 gint
-config_reload_config_file(Config *config)
+config_load_config_file(Config *config)
 {
-        return CONFIG_GET_CLASS(config)->config_reload_config_file_func(config);
+        if (CONFIG_GET_CLASS(config)->config_load_config_file_func(config) == -1) {
+                g_printf ("load config file error\n");
+                return -1;
+        }
 }
 
 gint
