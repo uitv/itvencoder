@@ -7,7 +7,6 @@
 #ifndef __DECODER_PIPELINE_H__
 #define __DECODER_PIPELINE_H__
 
-#include <glib-object.h>
 #include <gst/gst.h>
 
 typedef struct _DecoderPipeline      DecoderPipeline;

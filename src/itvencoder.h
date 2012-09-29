@@ -6,7 +6,7 @@
 #ifndef __ITVENCODER_H__
 #define __ITVENCODER_H__
 
-#include <glib-object.h>
+#include <gst/gst.h>
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
@@ -36,6 +36,6 @@ struct _ITVEncoderClass {
 #define itvencoder_new(...)       (g_object_new(TYPE_ITVENCODER, ## __VA_ARGS__, NULL))
 
 GType itvencoder_get_type (void);
-GTimeVal itvencoder_get_start_time(ITVEncoder *itvencoder);
+GTimeVal itvencoder_get_start_time (ITVEncoder *itvencoder);
 
 #endif /* __ITVENCODER_H__ */
