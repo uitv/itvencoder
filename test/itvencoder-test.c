@@ -1,15 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <glib.h>
+#include <gst/gst.h>
 #include "itvencoder.h"
 
+GST_DEBUG_CATEGORY(ITVENCODER);
+#define GST_CAT_DEFAULT ITVENCODER
+
 int
-main()
+main(int argc, char *argv[])
 {
         ITVEncoder *itvencoder;
 
-        g_type_init();
+        gst_init(&argc, &argv);
+        GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+
         itvencoder = g_object_new(TYPE_ITVENCODER, 0, NULL);
-        printf("%lld\n", itvencoder_get_start_time(itvencoder));
+        GST_DEBUG("%lld\n", itvencoder_get_start_time(itvencoder));
+        GST_LOG("%lld\n", itvencoder_get_start_time(itvencoder));
         return 0;
 }

@@ -4,24 +4,27 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
-#include <glib-object.h>
+#include <gst/gst.h>
 #include "config.h"
+
+GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
+#define GST_CAT_DEFAULT ITVENCODER
 
 enum {
         CONFIG_PROP_0,
         CONFIG_PROP_CONFIG_FILE_PATH,
 };
 
-static void config_class_init(ConfigClass *configclass);
-static void config_init(Config *config);
-static GObject *config_constructor(GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
-static void config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
-static void config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static gint config_load_config_file_func(Config *config);
-static gint config_save_config_file_func(Config *config);
+static void config_class_init (ConfigClass *configclass);
+static void config_init (Config *config);
+static GObject *config_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
+static void config_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
+static void config_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static gint config_load_config_file_func (Config *config);
+static gint config_save_config_file_func (Config *config);
 
 static void
-config_class_init(ConfigClass *configclass)
+config_class_init (ConfigClass *configclass)
 {
         GObjectClass *g_object_class = G_OBJECT_CLASS(configclass);
         GParamSpec *config_param;
@@ -33,23 +36,23 @@ config_class_init(ConfigClass *configclass)
         configclass->config_load_config_file_func = config_load_config_file_func;
         configclass->config_save_config_file_func = config_save_config_file_func;
 
-        config_param = g_param_spec_string("config_file_path",
-                                           "configf",
-                                           "config file path",
-                                           "itvencoder.conf",
-                                           G_PARAM_WRITABLE | G_PARAM_READABLE);
-        g_object_class_install_property(g_object_class, CONFIG_PROP_CONFIG_FILE_PATH, config_param);
+        config_param = g_param_spec_string ("config_file_path",
+                                            "configf",
+                                            "config file path",
+                                            "itvencoder.conf",
+                                            G_PARAM_WRITABLE | G_PARAM_READABLE);
+        g_object_class_install_property (g_object_class, CONFIG_PROP_CONFIG_FILE_PATH, config_param);
 }
 
 static void
-config_init(Config *config)
+config_init (Config *config)
 {
         config->config_file_path = NULL;
         config->itvencoder_config = NULL;
 }
 
 static GObject *
-config_constructor(GType type, guint n_construct_properties, GObjectConstructParam *construct_properties)
+config_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties)
 {
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
@@ -60,7 +63,7 @@ config_constructor(GType type, guint n_construct_properties, GObjectConstructPar
 }
 
 static void
-config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
+config_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CONFIG(obj));
 
@@ -75,7 +78,7 @@ config_set_property(GObject *obj, guint prop_id, const GValue *value, GParamSpec
 }
 
 static void
-config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
+config_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
 {
         Config *config = CONFIG(obj);
 
@@ -90,14 +93,14 @@ config_get_property(GObject *obj, guint prop_id, GValue *value, GParamSpec *pspe
 }
 
 static gint
-config_load_config_file_func(Config *config)
+config_load_config_file_func (Config *config)
 {
         json_error_t error;
 
         json_decref(config->itvencoder_config);
         config->itvencoder_config = json_load_file(config->config_file_path, 0, &error);
         if(!config->itvencoder_config) {
-                g_print("%d: %s\n", error.line, error.text);
+                GST_ERROR("%d: %s\n", error.line, error.text);
                 return -1;
         }
 
@@ -105,7 +108,7 @@ config_load_config_file_func(Config *config)
 }
 
 static gint
-config_save_config_file_func(Config *config)
+config_save_config_file_func (Config *config)
 {
         json_dump_file(config->itvencoder_config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
 }
@@ -128,22 +131,22 @@ config_get_type (void)
                 (GInstanceInitFunc)config_init,
                 NULL
         };
-        type = g_type_register_static(G_TYPE_OBJECT, "Config", &info, 0);
+        type = g_type_register_static (G_TYPE_OBJECT, "Config", &info, 0);
 
         return type;
 }
 
 gint
-config_load_config_file(Config *config)
+config_load_config_file (Config *config)
 {
         if (CONFIG_GET_CLASS(config)->config_load_config_file_func(config) == -1) {
-                g_printf ("load config file error\n");
+                GST_ERROR ("load config file error\n");
                 return -1;
         }
 }
 
 gint
-config_save_config_file(Config *config)
+config_save_config_file (Config *config)
 {
-        return CONFIG_GET_CLASS(config)->config_save_config_file_func(config);
+        return CONFIG_GET_CLASS (config)->config_save_config_file_func (config);
 }
