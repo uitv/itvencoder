@@ -30,7 +30,13 @@ main(int argc, char *argv[])
                 GST_DEBUG ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
 
-        GST_DEBUG (">>>>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
+        for (guint i=0; i<itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                GST_DEBUG (">>>find channel, name is %s", channel->name);
+                GST_DEBUG (">>>decoderpipeline template - %s", json_string_value (json_object_get(channel->config, "name")));
+        }
+
+        GST_DEBUG (">>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         channel = g_object_new (TYPE_CHANNEL, "name", "cctv-99", "config", channel_config->config, NULL);
         g_object_get (channel, "name", &name, NULL);
         GST_DEBUG ("channel name is %s", name);
