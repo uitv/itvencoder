@@ -11,6 +11,9 @@ main(int argc, char *argv[])
 {
         ITVEncoder *itvencoder;
         ChannelConfig *channel_config;
+        Channel *channel;
+        gchar *name;
+        json_t *config;
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -26,6 +29,13 @@ main(int argc, char *argv[])
                 GST_DEBUG ("config file %d - %s", i, channel_config->config_path);
                 GST_DEBUG ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
+
+        GST_DEBUG (">>>>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
+        channel = g_object_new (TYPE_CHANNEL, "name", "cctv-99", "config", channel_config->config, NULL);
+        g_object_get (channel, "name", &name, NULL);
+        GST_DEBUG ("channel name is %s", name);
+        g_object_get (channel, "config", &config, NULL);
+        GST_DEBUG ("channel name - %s", json_string_value (json_object_get(config, "name")));
 
         return 0;
 }

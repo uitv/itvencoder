@@ -9,6 +9,7 @@
 #include <gst/gst.h>
 
 #include "config.h"
+#include "channel.h"
 #include "decoderpipeline.h"
 
 typedef struct _ITVEncoder      ITVEncoder;
@@ -28,6 +29,7 @@ struct _ITVEncoder {
         Config          *config;
         guint           total_channel_number;
         guint           working_channel_number; 
+        GArray          *channel_array;
 };
 
 struct _ITVEncoderClass {
