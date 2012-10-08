@@ -50,7 +50,7 @@ static void
 config_init (Config *config)
 {
         config->config_file_path = NULL;
-        config->itvencoder_config = NULL;
+        config->config = NULL;
         config->channel_config_array = NULL;
 }
 
@@ -103,9 +103,9 @@ config_load_config_file_func (Config *config)
         glob_t channel_config_paths;
         ChannelConfig *channel_config;
 
-        json_decref(config->itvencoder_config);
-        config->itvencoder_config = json_load_file(config->config_file_path, 0, &error);
-        if(!config->itvencoder_config) {
+        json_decref(config->config);
+        config->config = json_load_file(config->config_file_path, 0, &error);
+        if(!config->config) {
                 GST_ERROR("%d: %s\n", error.line, error.text);
                 return -1;
         }
@@ -116,7 +116,7 @@ config_load_config_file_func (Config *config)
         }
 
         config->channel_config_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
-        channel_configs_pattern = (gchar *)json_string_value(json_object_get(config->itvencoder_config, "channel_configs"));
+        channel_configs_pattern = (gchar *)json_string_value(json_object_get(config->config, "channel_configs"));
         if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
                 GST_ERROR ("Open channel config files failure.");
                 return -2;
@@ -140,7 +140,7 @@ config_load_config_file_func (Config *config)
 static gint
 config_save_config_file_func (Config *config)
 {
-        json_dump_file(config->itvencoder_config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
+        json_dump_file(config->config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
 }
 
 GType

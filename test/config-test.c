@@ -45,7 +45,7 @@ main(int argc, char *argv[])
         gst_debug_remove_log_function(gst_debug_log_default);
         gst_debug_add_log_function (printf_extension_log_func, NULL);
         config_load_config_file(config);
-        channel = json_object_get(config->itvencoder_config, "channel_configs"); 
+        channel = json_object_get(config->config, "channel_configs"); 
         GST_LOG("channel config files: %s\n", json_string_value(channel));
         config_save_config_file(config);
 

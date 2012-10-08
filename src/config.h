@@ -17,14 +17,15 @@ typedef struct _ConfigClass     ConfigClass;
 struct _ChannelConfig {
         gchar          *config_path;
         json_t         *config;
+        gboolean       dirty;
 };
 
 struct _Config {
         GObject         parent;
 
         gchar           *config_file_path;
-        json_t          *itvencoder_config;
-        gboolean        config_dirty; // config have been modified?
+        json_t          *config;
+        gboolean        dirty; // config have been modified?
         GArray          *channel_config_array; // array of json_t * type
 };
 
