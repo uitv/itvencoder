@@ -23,6 +23,8 @@ itvencoder_init (ITVEncoder *itvencoder)
 {
         GST_LOG ("itvencoder_init");
         g_get_current_time (&itvencoder->start_time);
+        itvencoder->config = g_object_new(TYPE_CONFIG, "config_file_path", "itvencoder.conf", NULL);
+        config_load_config_file(itvencoder->config);
 }
 
 GType

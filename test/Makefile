@@ -8,8 +8,8 @@ STATIC_JANSSON = ../third/jansson-2.4/src/.libs/libjansson.a
 
 all: itvencoder decoderpipeline config
 
-itvencoder: itvencoder-test.c ../src/itvencoder.c
-	gcc $(CFLAGS) $(LDFLAGS) itvencoder-test.c ../src/itvencoder.c -o itvencoder
+itvencoder: itvencoder-test.c ../src/itvencoder.c ../src/itvencoder.h ../src/config.h ../src/config.c ../src/decoderpipeline.h ../src/decoderpipeline.c
+	gcc $(CFLAGS) $(LDFLAGS) itvencoder-test.c ../src/config.c ../src/decoderpipeline.c ../src/itvencoder.c $(STATIC_JANSSON) -o itvencoder
 
 decoderpipeline: decoderpipeline-test.c ../src/decoderpipeline.c
 	gcc $(CFLAGS) $(LDFLAGS) decoderpipeline-test.c ../src/decoderpipeline.c -o decoderpipeline
