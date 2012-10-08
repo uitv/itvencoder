@@ -29,6 +29,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         itvencoder->config = g_object_new(TYPE_CONFIG, "config_file_path", "itvencoder.conf", NULL);
         config_load_config_file(itvencoder->config);
 
+        // initialize channel_array
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
