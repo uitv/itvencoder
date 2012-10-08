@@ -13,15 +13,15 @@ typedef struct _DecoderPipeline      DecoderPipeline;
 typedef struct _DecoderPipelineClass DecoderPipelineClass;
 
 struct _DecoderPipeline {
-        GObject parent;
+        GObject         parent;
 
-        GstElement   *pipeline;
-        gchar        *uri;
-        guint        program_number;
+        GstElement      *pipeline;
+        gchar           *uri;
+        guint           program_number;
 };
 
 struct _DecoderPipelineClass {
-        GObjectClass parent;
+        GObjectClass    parent;
 };
 
 #define TYPE_DECODER_PIPELINE           (decoder_pipeline_get_type())
