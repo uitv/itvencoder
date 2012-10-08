@@ -5,6 +5,8 @@
  */
 
 #include <gst/gst.h>
+#include <glob.h>
+
 #include "config.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -49,6 +51,7 @@ config_init (Config *config)
 {
         config->config_file_path = NULL;
         config->itvencoder_config = NULL;
+        config->channel_config_array = NULL;
 }
 
 static GObject *
@@ -96,6 +99,9 @@ static gint
 config_load_config_file_func (Config *config)
 {
         json_error_t error;
+        gchar *channel_configs_pattern;
+        glob_t channel_config_paths;
+        ChannelConfig *channel_config;
 
         json_decref(config->itvencoder_config);
         config->itvencoder_config = json_load_file(config->config_file_path, 0, &error);
@@ -103,6 +109,30 @@ config_load_config_file_func (Config *config)
                 GST_ERROR("%d: %s\n", error.line, error.text);
                 return -1;
         }
+
+        if (config->channel_config_array != NULL) {
+                g_array_free (config->channel_config_array, FALSE);
+                config->channel_config_array = NULL;
+        }
+
+        config->channel_config_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
+        channel_configs_pattern = (gchar *)json_string_value(json_object_get(config->itvencoder_config, "channel_configs"));
+        if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
+                GST_ERROR ("Open channel config files failure.");
+                return -2;
+        }
+        for (guint i=0; i<channel_config_paths.gl_pathc; i++) {
+                GST_DEBUG ("Find channel config file: %s.", channel_config_paths.gl_pathv[i]);
+                channel_config = (ChannelConfig *)g_malloc (sizeof(ChannelConfig));
+                channel_config->config_path = g_strdup (channel_config_paths.gl_pathv[i]);
+                channel_config->config = json_load_file(channel_config->config_path, 0, &error);
+                if (!channel_config->config) { //TODO: error check, free allocated.
+                        GST_ERROR ("%d: %s\n", error.line, error.text);
+                        return -1;
+                }
+                g_array_append_val (config->channel_config_array, channel_config);
+        }
+        globfree (&channel_config_paths);
 
         return 0;
 }
@@ -143,6 +173,8 @@ config_load_config_file (Config *config)
                 GST_ERROR ("load config file error\n");
                 return -1;
         }
+
+        return 0;
 }
 
 gint

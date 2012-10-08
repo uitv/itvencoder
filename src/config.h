@@ -10,8 +10,14 @@
 #include <gst/gst.h>
 #include "jansson.h"
 
-typedef struct _Config      Config;
-typedef struct _ConfigClass ConfigClass;
+typedef struct _ChannelConfig   ChannelConfig;
+typedef struct _Config          Config;
+typedef struct _ConfigClass     ConfigClass;
+
+struct _ChannelConfig {
+        gchar          *config_path;
+        json_t         *config;
+};
 
 struct _Config {
         GObject         parent;

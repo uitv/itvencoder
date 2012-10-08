@@ -10,6 +10,7 @@ int
 main(int argc, char *argv[])
 {
         ITVEncoder *itvencoder;
+        ChannelConfig *channel_config;
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -20,5 +21,11 @@ main(int argc, char *argv[])
         GST_INFO ("%d", json_integer_value(json_object_get(itvencoder->config->itvencoder_config, "listening_ports")));
         GST_INFO ("%s", json_string_value(json_object_get(itvencoder->config->itvencoder_config, "channel_configs")));
         GST_INFO ("%s", json_string_value(json_object_get(itvencoder->config->itvencoder_config, "log_directory")));
+        for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
+                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
+                GST_DEBUG ("config file %d - %s", i, channel_config->config_path);
+                GST_DEBUG ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
+        }
+
         return 0;
 }
