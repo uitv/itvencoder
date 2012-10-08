@@ -22,6 +22,7 @@ static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
         GST_LOG ("itvencoder_init");
+
         g_get_current_time (&itvencoder->start_time);
         itvencoder->config = g_object_new(TYPE_CONFIG, "config_file_path", "itvencoder.conf", NULL);
         config_load_config_file(itvencoder->config);
@@ -31,6 +32,8 @@ GType
 itvencoder_get_type (void)
 {
         static GType type = 0;
+
+        GST_LOG ("itvencoder get type");
 
         if (type) return type;
         static const GTypeInfo info = {
@@ -53,8 +56,9 @@ itvencoder_get_type (void)
 GTimeVal
 itvencoder_get_start_time (ITVEncoder *itvencoder)
 {
-        GTimeVal invalid_time = {0,0};
+        GST_LOG ("itvencoder get start time");
 
+        GTimeVal invalid_time = {0,0};
         g_return_val_if_fail (IS_ITVENCODER (itvencoder), invalid_time);
 
         return itvencoder->start_time;

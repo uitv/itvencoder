@@ -20,13 +20,15 @@ decoder_pipeline_class_init (DecoderPipelineClass *decoderpipelineclass)
 static void
 decoder_pipeline_init (DecoderPipeline *decoderpipeline)
 {
-        GST_LOG ("decoder_pipeline_init");
+        GST_LOG ("decoder pipeline init");
 }
 
 GType
 decoder_pipeline_get_type (void)
 {
         static GType type = 0;
+
+        GST_LOG ("decoder pipeline get type");
 
         if (type) return type;
         static const GTypeInfo info = {

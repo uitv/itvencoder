@@ -30,6 +30,8 @@ config_class_init (ConfigClass *configclass)
         GObjectClass *g_object_class = G_OBJECT_CLASS(configclass);
         GParamSpec *config_param;
 
+        GST_LOG ("config class init");
+
         g_object_class->constructor = config_constructor;
         g_object_class->set_property = config_set_property;
         g_object_class->get_property = config_get_property;
@@ -48,6 +50,8 @@ config_class_init (ConfigClass *configclass)
 static void
 config_init (Config *config)
 {
+        GST_LOG ("config init");
+
         config->config_file_path = NULL;
         config->config = NULL;
         config->channel_config_array = NULL;
@@ -59,6 +63,8 @@ config_constructor (GType type, guint n_construct_properties, GObjectConstructPa
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
+        GST_LOG ("cofnig constructor");
+
         obj = parent_class->constructor(type, n_construct_properties, construct_properties);
 
         return obj;
@@ -68,6 +74,8 @@ static void
 config_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CONFIG(obj));
+
+        GST_LOG ("config set property");
 
         switch(prop_id) {
         case CONFIG_PROP_CONFIG_FILE_PATH:
@@ -83,6 +91,8 @@ static void
 config_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
 {
         Config *config = CONFIG(obj);
+
+        GST_LOG ("config get property");
 
         switch(prop_id) {
         case CONFIG_PROP_CONFIG_FILE_PATH:
@@ -101,6 +111,8 @@ config_load_config_file_func (Config *config)
         gchar *channel_configs_pattern;
         glob_t channel_config_paths;
         ChannelConfig *channel_config;
+
+        GST_LOG ("config load config file func");
 
         json_decref(config->config);
         config->config = json_load_file(config->config_file_path, 0, &error);
@@ -139,6 +151,8 @@ config_load_config_file_func (Config *config)
 static gint
 config_save_config_file_func (Config *config)
 {
+        GST_LOG ("config save cofnig file func");
+
         json_dump_file(config->config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
 }
 
@@ -146,6 +160,8 @@ GType
 config_get_type (void)
 {
         static GType type = 0;
+
+        GST_LOG ("cofnig get type");
 
         if (type) return type;
         static const GTypeInfo info = {
@@ -168,6 +184,8 @@ config_get_type (void)
 gint
 config_load_config_file (Config *config)
 {
+        GST_LOG ("config load config file");
+
         if (CONFIG_GET_CLASS(config)->config_load_config_file_func(config) == -1) {
                 GST_ERROR ("load config file error\n");
                 return -1;
@@ -179,5 +197,7 @@ config_load_config_file (Config *config)
 gint
 config_save_config_file (Config *config)
 {
+        GST_LOG ("config save config file");
+
         return CONFIG_GET_CLASS (config)->config_save_config_file_func (config);
 }

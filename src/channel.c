@@ -27,6 +27,8 @@ channel_class_init (ChannelClass *channelclass)
         GObjectClass *g_object_class = G_OBJECT_CLASS(channelclass);
         GParamSpec *config_param;
 
+        GST_LOG ("channel class init.");
+
         g_object_class->constructor = channel_constructor;
         g_object_class->set_property = channel_set_property;
         g_object_class->get_property = channel_get_property;
@@ -48,7 +50,7 @@ channel_class_init (ChannelClass *channelclass)
 static void
 channel_init (Channel *channel)
 {
-        GST_LOG ("channel_init");
+        GST_LOG ("channel object init");
 }
 
 static GObject *
@@ -56,6 +58,8 @@ channel_constructor (GType type, guint n_construct_properties, GObjectConstructP
 {
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+
+        GST_LOG ("channel constructor");
 
         obj = parent_class->constructor(type, n_construct_properties, construct_properties);
 
@@ -66,6 +70,8 @@ static void
 channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CHANNEL(obj));
+
+        GST_LOG ("channel set property");
 
         switch(prop_id) {
         case CHANNEL_PROP_NAME:
@@ -85,6 +91,8 @@ channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
 {
         Channel *channel = CHANNEL(obj);
 
+        GST_LOG ("channel get property");
+
         switch(prop_id) {
         case CHANNEL_PROP_NAME:
                 g_value_set_string (value, channel->name);
@@ -102,6 +110,8 @@ GType
 channel_get_type (void)
 {
         static GType type = 0;
+
+        GST_LOG ("channel get type");
 
         if (type) return type;
         static const GTypeInfo info = {
