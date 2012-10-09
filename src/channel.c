@@ -120,11 +120,13 @@ channel_parse_config_func (Channel *channel)
         GRegex *regex;
         gchar *template;
         GMatchInfo *match_info;
+        json_t *decoder_pipeline;
 
         GST_LOG ("channel parse config func");
 
+        decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
+
         /* parse decoder pipeline format */
-        json_t *decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
         if (!json_is_object (decoder_pipeline)) {
                 GST_ERROR ("parse channel config file error: %s", channel->name);
                 return -1;
@@ -147,8 +149,17 @@ channel_parse_config_func (Channel *channel)
         }
         g_regex_match (regex, template, 0, &match_info);
         while (g_match_info_matches (match_info)) {
-                gchar *word = g_match_info_fetch_named (match_info, "para");
-                g_array_append_val (channel->decoder_pipeline->parameter_array, word);
+                gchar *key = g_match_info_fetch_named (match_info, "para");
+                json_t *value = json_object_get(decoder_pipeline, key);
+                if (json_is_string (value)) {
+                        gchar *v = (gchar *)json_string_value (value);
+                        g_array_append_val (channel->decoder_pipeline->parameter_array, v);
+                } else if (json_is_integer (value)) {
+                        gchar *v = g_strdup_printf ("%i", json_integer_value (value));
+                        g_array_append_val (channel->decoder_pipeline->parameter_array, v);
+                } else {
+                        GST_ERROR ("unsupoorted type of channel configuration");
+                }
                 g_match_info_next (match_info, NULL);
         }
         g_match_info_free (match_info);
