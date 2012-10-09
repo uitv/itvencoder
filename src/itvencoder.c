@@ -26,7 +26,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         g_get_current_time (&itvencoder->start_time);
 
         // load config
-        itvencoder->config = g_object_new(TYPE_CONFIG, "config_file_path", "itvencoder.conf", NULL);
+        itvencoder->config = config_new ("config_file_path", "itvencoder.conf", NULL);
         config_load_config_file(itvencoder->config);
 
         // initialize channels
@@ -34,7 +34,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 ChannelConfig *channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 gchar *channel_name = (gchar *)json_string_value (json_object_get(channel_config->config, "name"));
-                Channel *channel = g_object_new (TYPE_CHANNEL, "name", channel_name, "config", channel_config->config, NULL);
+                Channel *channel = channel_new ("name", channel_name, "config", channel_config->config, NULL);
                 channel_parse_config (channel);
                 GST_DEBUG ("parse channel %s, name is %s", channel_config->config_path, channel_name);
                 g_array_append_val (itvencoder->channel_array, channel);
