@@ -58,6 +58,7 @@ channel_init (Channel *channel)
         GST_LOG ("channel object init");
 
         channel->decoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
+        channel->decoder_pipeline->parameter_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
 static GObject *
@@ -116,22 +117,42 @@ channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
 static gint
 channel_parse_config_func (Channel *channel)
 {
+        GRegex *regex;
+        gchar *template;
+        GMatchInfo *match_info;
+
         GST_LOG ("channel parse config func");
 
+        /* parse decoder pipeline format */
         json_t *decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
         if (!json_is_object (decoder_pipeline)) {
                 GST_ERROR ("parse channel config file error: %s", channel->name);
                 return -1;
         }
-        gchar *template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
 
-        GRegex *regex = g_regex_new("<%[^<%]*%>", G_REGEX_OPTIMIZE, 0, NULL);
+        regex = g_regex_new("<%[^<%]*%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
-                GST_WARNING ("bad regular expression\n");
+                GST_ERROR ("bad regular expression");
                 return 1;
         }
-
         channel->decoder_pipeline->format = g_regex_replace (regex, template, -1, 0, "%s", 0, NULL);
+        g_regex_unref (regex);
+
+        /* parse decoder pipeline parameters */
+        regex = g_regex_new("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
+        if (regex == NULL) {
+                GST_ERROR ("bad regular expression");
+                return 1;
+        }
+        g_regex_match (regex, template, 0, &match_info);
+        while (g_match_info_matches (match_info)) {
+                gchar *word = g_match_info_fetch_named (match_info, "para");
+                g_array_append_val (channel->decoder_pipeline->parameter_array, word);
+                g_match_info_next (match_info, NULL);
+        }
+        g_match_info_free (match_info);
+        g_regex_unref (regex);
 
         return 0;
 }
