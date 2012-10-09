@@ -123,14 +123,15 @@ channel_parse_config_func (Channel *channel)
 
         GST_LOG ("channel parse config func");
 
+        /* parse decoder pipeline format */
         decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
-
-        /* parse decoder pipeline format  TODO: json regex memory release!? */
         if (!json_is_object (decoder_pipeline)) {
                 GST_ERROR ("parse channel config file error: %s", channel->name);
                 return -1;
         }
-        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template")); // TODO: release?
+        json_t *j = json_object_get(decoder_pipeline, "decoder-pipeline-template");
+        template = g_strdup((gchar *)json_string_value (j));
+        json_decref (j);
 
         regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
@@ -146,18 +147,24 @@ channel_parse_config_func (Channel *channel)
                 json_t *value = json_object_get(decoder_pipeline, key);
                 if (json_is_string (value)) {
                         gchar *v = (gchar *)json_string_value (value);
-                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL); // TODO: release?
+                        gchar *t = template;
+                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        g_free (t);
                 } else if (json_is_integer (value)) {
                         gchar *v = g_strdup_printf ("%i", json_integer_value (value));
-                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL); // TODO: release?
+                        gchar *t = template;
+                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        g_free (t);
                 } else {
                         GST_ERROR ("unsupoorted type of channel configuration");
                 }
+                json_decref (value);
                 g_regex_unref (regex);
                 g_match_info_next (match_info, NULL);
         }
         channel->decoder_pipeline->pipeline_string = template;
         g_match_info_free (match_info);
+        json_decref (decoder_pipeline);
 
         return 0;
 }
