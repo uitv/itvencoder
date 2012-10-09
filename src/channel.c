@@ -58,7 +58,6 @@ channel_init (Channel *channel)
         GST_LOG ("channel object init");
 
         channel->decoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
-        channel->decoder_pipeline->parameter_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
 static GObject *
@@ -133,37 +132,32 @@ channel_parse_config_func (Channel *channel)
         }
         template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
 
-        regex = g_regex_new("<%[^<%]*%>", G_REGEX_OPTIMIZE, 0, NULL);
-        if (regex == NULL) {
-                GST_ERROR ("bad regular expression");
-                return 1;
-        }
-        channel->decoder_pipeline->format = g_regex_replace (regex, template, -1, 0, "%s", 0, NULL);
-        g_regex_unref (regex);
-
-        /* parse decoder pipeline parameters */
-        regex = g_regex_new("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
+        regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
                 GST_ERROR ("bad regular expression");
                 return 1;
         }
         g_regex_match (regex, template, 0, &match_info);
+        g_regex_unref (regex);
         while (g_match_info_matches (match_info)) {
                 gchar *key = g_match_info_fetch_named (match_info, "para");
+                gchar *regex_str = g_strdup_printf ("<%c%s%c>", '%', key, '%');
+                regex = g_regex_new (regex_str, G_REGEX_OPTIMIZE, 0, NULL);
                 json_t *value = json_object_get(decoder_pipeline, key);
                 if (json_is_string (value)) {
                         gchar *v = (gchar *)json_string_value (value);
-                        g_array_append_val (channel->decoder_pipeline->parameter_array, v);
+                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL);
                 } else if (json_is_integer (value)) {
                         gchar *v = g_strdup_printf ("%i", json_integer_value (value));
-                        g_array_append_val (channel->decoder_pipeline->parameter_array, v);
+                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL);
                 } else {
                         GST_ERROR ("unsupoorted type of channel configuration");
                 }
+                g_regex_unref (regex);
                 g_match_info_next (match_info, NULL);
         }
+        channel->decoder_pipeline->pipeline_string = template;
         g_match_info_free (match_info);
-        g_regex_unref (regex);
 
         return 0;
 }

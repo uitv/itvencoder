@@ -15,8 +15,6 @@ typedef struct _Channel           Channel;
 typedef struct _ChannelClass      ChannelClass;
 
 struct _DecoderPipeline {
-        gchar           *format; // sprintf fmt
-        GArray          *parameter_array; // just value of string type
         gchar           *pipeline_string;
 };
 
