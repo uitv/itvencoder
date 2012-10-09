@@ -56,6 +56,8 @@ static void
 channel_init (Channel *channel)
 {
         GST_LOG ("channel object init");
+
+        channel->decoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
 }
 
 static GObject *
@@ -121,13 +123,15 @@ channel_parse_config_func (Channel *channel)
                 GST_ERROR ("parse channel config file error: %s", channel->name);
                 return -1;
         }
+        gchar *template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+
         GRegex *regex = g_regex_new("<%[^<%]*%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
                 GST_WARNING ("bad regular expression\n");
                 return 1;
         }
-        gchar *template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
-        channel->decoder_pipeline_fmt = g_regex_replace (regex, template, -1, 0, "%s", 0, NULL);
+
+        channel->decoder_pipeline->format = g_regex_replace (regex, template, -1, 0, "%s", 0, NULL);
 
         return 0;
 }

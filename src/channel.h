@@ -9,18 +9,22 @@
 #include <gst/gst.h>
 
 #include "jansson.h"
-#include "decoderpipeline.h"
 
-typedef struct _Channel      Channel;
-typedef struct _ChannelClass ChannelClass;
+typedef struct _DecoderPipeline   DecoderPipeline;
+typedef struct _Channel           Channel;
+typedef struct _ChannelClass      ChannelClass;
+
+struct _DecoderPipeline {
+        gchar           *format; // sprintf fmt
+        GArray          *parameter_array;
+};
 
 struct _Channel {
         GObject         parent;
 
         gchar           *name; // same as the name in channel config file
         json_t          *config;
-        gchar           *decoder_pipeline_fmt; // sprintf fmt
-        DecoderPipeline decoder_pipeline; 
+        DecoderPipeline *decoder_pipeline; 
 };
 
 struct _ChannelClass {

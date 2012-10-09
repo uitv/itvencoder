@@ -10,7 +10,6 @@
 
 #include "config.h"
 #include "channel.h"
-#include "decoderpipeline.h"
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
