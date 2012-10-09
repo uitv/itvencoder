@@ -125,12 +125,12 @@ channel_parse_config_func (Channel *channel)
 
         decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
 
-        /* parse decoder pipeline format */
+        /* parse decoder pipeline format  TODO: json regex memory release!? */
         if (!json_is_object (decoder_pipeline)) {
                 GST_ERROR ("parse channel config file error: %s", channel->name);
                 return -1;
         }
-        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template")); // TODO: release?
 
         regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
@@ -146,10 +146,10 @@ channel_parse_config_func (Channel *channel)
                 json_t *value = json_object_get(decoder_pipeline, key);
                 if (json_is_string (value)) {
                         gchar *v = (gchar *)json_string_value (value);
-                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL);
+                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL); // TODO: release?
                 } else if (json_is_integer (value)) {
                         gchar *v = g_strdup_printf ("%i", json_integer_value (value));
-                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL);
+                        template = g_regex_replace (regex, template, -1, 0, v, 0, NULL); // TODO: release?
                 } else {
                         GST_ERROR ("unsupoorted type of channel configuration");
                 }
