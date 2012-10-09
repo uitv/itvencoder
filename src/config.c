@@ -54,7 +54,7 @@ config_init (Config *config)
 
         config->config_file_path = NULL;
         config->config = NULL;
-        config->channel_config_array = NULL;
+        config->channel_config_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
 static GObject *
@@ -121,12 +121,6 @@ config_load_config_file_func (Config *config)
                 return -1;
         }
 
-        if (config->channel_config_array != NULL) {
-                g_array_free (config->channel_config_array, FALSE);
-                config->channel_config_array = NULL;
-        }
-
-        config->channel_config_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         channel_configs_pattern = (gchar *)json_string_value(json_object_get(config->config, "channel_configs"));
         if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
                 GST_ERROR ("Open channel config files failure.");
