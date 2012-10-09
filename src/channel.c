@@ -4,6 +4,8 @@
  */
 
 #include <gst/gst.h>
+
+#include "jansson.h"
 #include "channel.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -20,6 +22,7 @@ static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static gint channel_parse_config_func (Channel *channel);
 
 static void
 channel_class_init (ChannelClass *channelclass)
@@ -32,6 +35,8 @@ channel_class_init (ChannelClass *channelclass)
         g_object_class->constructor = channel_constructor;
         g_object_class->set_property = channel_set_property;
         g_object_class->get_property = channel_get_property;
+
+        channelclass->channel_parse_config_func = channel_parse_config_func;
 
         config_param = g_param_spec_string ("name",
                                             "name",
@@ -106,6 +111,27 @@ channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
         }
 }
 
+static gint
+channel_parse_config_func (Channel *channel)
+{
+        GST_LOG ("channel parse config func");
+
+        json_t *decoder_pipeline = json_object_get (channel->config, "decoder-pipeline");
+        if (!json_is_object (decoder_pipeline)) {
+                GST_ERROR ("parse channel config file error: %s", channel->name);
+                return -1;
+        }
+        GRegex *regex = g_regex_new("<%[^<%]*%>", G_REGEX_OPTIMIZE, 0, NULL);
+        if (regex == NULL) {
+                GST_WARNING ("bad regular expression\n");
+                return 1;
+        }
+        gchar *template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+        channel->decoder_pipeline_fmt = g_regex_replace (regex, template, -1, 0, "%s", 0, NULL);
+
+        return 0;
+}
+
 GType
 channel_get_type (void)
 {
@@ -131,3 +157,15 @@ channel_get_type (void)
         return type;
 }
 
+gint
+channel_parse_config (Channel *channel)
+{
+        GST_LOG ("channel parse config");
+
+        if (CHANNEL_GET_CLASS(channel)->channel_parse_config_func(channel) != 0) {
+                GST_ERROR ("channel parse config error\n");
+                return -1;
+        }
+
+        return 0;
+}

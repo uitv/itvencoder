@@ -19,11 +19,14 @@ struct _Channel {
 
         gchar           *name; // same as the name in channel config file
         json_t          *config;
-        DecoderPipeline decoderpipeline; 
+        gchar           *decoder_pipeline_fmt; // sprintf fmt
+        DecoderPipeline decoder_pipeline; 
 };
 
 struct _ChannelClass {
         GObjectClass parent;
+
+        gint (*channel_parse_config_func)(Channel *channel);
 };
 
 #define TYPE_CHANNEL           (channel_get_type())
@@ -35,5 +38,6 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
+gint channel_parse_config (Channel *channel);
 
 #endif /* __CHANNEL_H__ */

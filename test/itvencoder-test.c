@@ -32,7 +32,7 @@ main(int argc, char *argv[])
 
         for (guint i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_DEBUG (">>>find channel, name is %s", channel->name);
+                GST_DEBUG (">>>find channel, name is %s, decoder pipeline: %s", channel->name, channel->decoder_pipeline_fmt);
                 GST_DEBUG (">>>decoderpipeline template - %s", json_string_value (json_object_get(channel->config, "name")));
         }
 
