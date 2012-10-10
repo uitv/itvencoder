@@ -34,7 +34,6 @@ struct _ConfigClass {
 
         gint (*config_load_config_file_func)(Config *config);
         gint (*config_save_config_file_func)(Config *config);
-        gchar* (*config_get_decoder_pipeline_string_func) (Config *config, gchar *name);
 };
 
 #define TYPE_CONFIG           (config_get_type())
@@ -48,6 +47,6 @@ struct _ConfigClass {
 GType config_get_type (void);
 gint config_load_config_file (Config *config);
 gint config_save_config_file (Config *config);
-gchar* config_get_decoder_pipeline_string (Config *config, gchar *name);
+gchar* config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline);
 
 #endif /* __CONFIG_H__ */
