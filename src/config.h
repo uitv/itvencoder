@@ -15,6 +15,7 @@ typedef struct _ConfigClass     ConfigClass;
 
 struct _ChannelConfig {
         gchar           *config_path;
+        gchar           *name;
         json_t          *config;
         gboolean        dirty;
 };
@@ -33,6 +34,7 @@ struct _ConfigClass {
 
         gint (*config_load_config_file_func)(Config *config);
         gint (*config_save_config_file_func)(Config *config);
+        gchar* (*config_get_decoder_pipeline_string_func) (Config *config, gchar *name);
 };
 
 #define TYPE_CONFIG           (config_get_type())
@@ -46,5 +48,6 @@ struct _ConfigClass {
 GType config_get_type (void);
 gint config_load_config_file (Config *config);
 gint config_save_config_file (Config *config);
+gchar* config_get_decoder_pipeline_string (Config *config, gchar *name);
 
 #endif /* __CONFIG_H__ */

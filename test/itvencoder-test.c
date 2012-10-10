@@ -27,6 +27,7 @@ main(int argc, char *argv[])
         for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 GST_DEBUG ("config file %d - %s", i, channel_config->config_path);
+                GST_INFO ("channel name - %s", channel_config->name);
                 GST_DEBUG ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
 
@@ -36,7 +37,7 @@ main(int argc, char *argv[])
         }
 
         GST_DEBUG (">>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
-        channel = g_object_new (TYPE_CHANNEL, "name", "cctv-99", "config", channel_config->config, NULL);
+        channel = channel_new (TYPE_CHANNEL, "name", "cctv-99", NULL);
         g_object_get (channel, "name", &name, NULL);
         GST_DEBUG ("channel name is %s", name);
         g_object_get (channel, "config", &config, NULL);

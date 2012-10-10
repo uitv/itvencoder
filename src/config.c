@@ -23,6 +23,7 @@ static void config_set_property (GObject *obj, guint prop_id, const GValue *valu
 static void config_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gint config_load_config_file_func (Config *config);
 static gint config_save_config_file_func (Config *config);
+static gchar* config_get_decoder_pipeline_string_func (Config *config, gchar *name);
 
 static void
 config_class_init (ConfigClass *configclass)
@@ -38,6 +39,7 @@ config_class_init (ConfigClass *configclass)
 
         configclass->config_load_config_file_func = config_load_config_file_func;
         configclass->config_save_config_file_func = config_save_config_file_func;
+        configclass->config_get_decoder_pipeline_string_func = config_get_decoder_pipeline_string_func;
 
         config_param = g_param_spec_string ("config_file_path",
                                             "configf",
@@ -114,7 +116,7 @@ config_load_config_file_func (Config *config)
 
         GST_LOG ("config load config file func");
 
-        json_decref(config->config);
+        json_decref(config->config); //TODO: should check
         config->config = json_load_file(config->config_file_path, 0, &error);
         if(!config->config) {
                 GST_ERROR("%d: %s\n", error.line, error.text);
@@ -124,15 +126,21 @@ config_load_config_file_func (Config *config)
         channel_configs_pattern = (gchar *)json_string_value(json_object_get(config->config, "channel_configs"));
         if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
                 GST_ERROR ("Open channel config files failure.");
+                g_free (channel_configs_pattern);
                 return -2;
         }
-        for (guint i=0; i<channel_config_paths.gl_pathc; i++) {
+        for (guint i=0; i<channel_config_paths.gl_pathc; i++) { // TODO: name unique identifier check.
                 GST_DEBUG ("Find channel config file: %s.", channel_config_paths.gl_pathv[i]);
                 channel_config = (ChannelConfig *)g_malloc (sizeof(ChannelConfig));
                 channel_config->config_path = g_strdup (channel_config_paths.gl_pathv[i]);
                 channel_config->config = json_load_file(channel_config->config_path, 0, &error);
                 if (!channel_config->config) { //TODO: error check, free allocated.
                         GST_ERROR ("%d: %s\n", error.line, error.text);
+                        return -1;
+                }
+                channel_config->name = (gchar *)json_string_value(json_object_get (channel_config->config, "name"));
+                if (!channel_config->name) {
+                        GST_ERROR ("channel name error");
                         return -1;
                 }
                 g_array_append_val (config->channel_config_array, channel_config);
@@ -148,6 +156,65 @@ config_save_config_file_func (Config *config)
         GST_LOG ("config save cofnig file func");
 
         json_dump_file(config->config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
+}
+
+static gchar*
+config_get_decoder_pipeline_string_func (Config *config, gchar *name)
+{
+        ChannelConfig *channel_config;
+        json_t *decoder_pipeline;
+        gchar *template;
+        GRegex *regex;
+        GMatchInfo *match_info;
+
+        GST_LOG ("config get decoder pipeline string func");
+
+        for (guint i=0; i<config->channel_config_array->len; i++) {
+                channel_config = g_array_index (config->channel_config_array, gpointer, i);
+                if (g_strcmp0 (channel_config->name, name) == 0) {
+                        break;
+                }
+        }
+
+        decoder_pipeline = json_object_get (channel_config->config, "decoder-pipeline");
+        if (!json_is_object (decoder_pipeline)) {
+                GST_ERROR ("parse channel config file error: %s", channel_config->name);
+                return NULL;
+        }
+        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+
+        regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
+        if (regex == NULL) {
+                GST_ERROR ("bad regular expression");
+                return NULL;
+        }
+        g_regex_match (regex, template, 0, &match_info);
+        g_regex_unref (regex);
+
+        while (g_match_info_matches (match_info)) {
+                gchar *key = g_match_info_fetch_named (match_info, "para");
+                gchar *regex_str = g_strdup_printf ("<%c%s%c>", '%', key, '%');
+                regex = g_regex_new (regex_str, G_REGEX_OPTIMIZE, 0, NULL);
+                json_t *value = json_object_get(decoder_pipeline, key);
+                if (json_is_string (value)) {
+                        gchar *v = (gchar *)json_string_value (value);
+                        gchar *t = template;
+                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        g_free (t);
+                } else if (json_is_integer (value)) {
+                        gchar *v = g_strdup_printf ("%i", json_integer_value (value));
+                        gchar *t = template;
+                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        g_free (t);
+                } else {
+                        GST_ERROR ("unsupoorted type of channel configuration");
+                }
+                g_regex_unref (regex);
+                g_match_info_next (match_info, NULL);
+        }
+        g_match_info_free (match_info);
+
+        return template;
 }
 
 GType
@@ -194,4 +261,12 @@ config_save_config_file (Config *config)
         GST_LOG ("config save config file");
 
         return CONFIG_GET_CLASS (config)->config_save_config_file_func (config);
+}
+
+gchar*
+config_get_decoder_pipeline_string (Config *config, gchar *name)
+{
+        GST_LOG ("config get decoder pipeline string");
+
+        return CONFIG_GET_CLASS (config)->config_get_decoder_pipeline_string_func (config, name); 
 }
