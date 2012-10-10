@@ -35,6 +35,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                 ChannelConfig *channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 Channel *channel = channel_new ("name", channel_config->name, NULL);
                 channel->decoder_pipeline->pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
+                channel->encoder_pipeline->pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
                 GST_DEBUG ("parse channel %s, name is %s", channel_config->config_path, channel_config->name);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
