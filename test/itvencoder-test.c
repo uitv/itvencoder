@@ -37,7 +37,7 @@ main(int argc, char *argv[])
         }
 
         GST_DEBUG (">>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
-        channel = channel_new (TYPE_CHANNEL, "name", "cctv-99", NULL);
+        channel = channel_new ("name", "cctv-99", NULL);
         g_object_get (channel, "name", &name, NULL);
         GST_DEBUG ("channel name is %s", name);
         g_object_get (channel, "config", &config, NULL);
