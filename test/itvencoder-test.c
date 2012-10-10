@@ -33,7 +33,8 @@ main(int argc, char *argv[])
         for (guint i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 GST_INFO (">>>>>>>>> channel decoder pipeline string is \n%s", channel->decoder_pipeline->pipeline_string);
-                GST_INFO (">>>>>>>>> channel encoder pipeline string is \n%s", channel->encoder_pipeline->pipeline_string);
+                EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, 0);
+                GST_INFO (">>>>>>>>> channel encoder pipeline string is \n%s", encoder_pipeline->pipeline_string); 
         }
 
         GST_DEBUG (">>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));

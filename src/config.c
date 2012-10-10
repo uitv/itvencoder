@@ -358,7 +358,7 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
                         template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
                         g_free (t);
                 } else {
-                        GST_ERROR ("unsupoorted type of channel configuration");
+                        GST_ERROR ("unsupported type of channel configuration - %s", key);
                 }
                 g_regex_unref (regex);
                 g_match_info_next (match_info, NULL);

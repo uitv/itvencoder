@@ -28,7 +28,7 @@ struct _Channel {
 
         gchar           *name; // same as the name in channel config file
         DecoderPipeline *decoder_pipeline; 
-        EncoderPipeline *encoder_pipeline; 
+        GArray          *encoder_pipeline_array; 
 };
 
 struct _ChannelClass {
@@ -44,5 +44,6 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
+guint channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string);
 
 #endif /* __CHANNEL_H__ */

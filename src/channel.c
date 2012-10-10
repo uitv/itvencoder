@@ -48,7 +48,7 @@ channel_init (Channel *channel)
         GST_LOG ("channel object init");
 
         channel->decoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
-        channel->encoder_pipeline = g_slice_alloc (sizeof (EncoderPipeline)); //TODO free!
+        channel->encoder_pipeline_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
 static GObject *
@@ -123,3 +123,15 @@ channel_get_type (void)
         return type;
 }
 
+guint
+channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
+{
+        GST_LOG ("channel add encoder pipeline");
+        EncoderPipeline *encoder_pipeline;
+
+        encoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
+        encoder_pipeline->pipeline_string = pipeline_string;
+        g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
+
+        return 0;
+}
