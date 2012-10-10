@@ -181,7 +181,7 @@ config_get_decoder_pipeline_string_func (Config *config, gchar *name)
                 GST_ERROR ("parse channel config file error: %s", channel_config->name);
                 return NULL;
         }
-        template = (gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template"));
+        template = g_strdup((gchar *)json_string_value (json_object_get(decoder_pipeline, "decoder-pipeline-template")));
 
         regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
@@ -196,6 +196,12 @@ config_get_decoder_pipeline_string_func (Config *config, gchar *name)
                 gchar *regex_str = g_strdup_printf ("<%c%s%c>", '%', key, '%');
                 regex = g_regex_new (regex_str, G_REGEX_OPTIMIZE, 0, NULL);
                 json_t *value = json_object_get(decoder_pipeline, key);
+                if (json_is_null (value)) {
+                        GST_ERROR ("parse channel config error");
+                        g_regex_unref (regex);
+                        g_match_info_free (match_info);
+                        return NULL;
+                }
                 if (json_is_string (value)) {
                         gchar *v = (gchar *)json_string_value (value);
                         gchar *t = template;
@@ -270,3 +276,4 @@ config_get_decoder_pipeline_string (Config *config, gchar *name)
 
         return CONFIG_GET_CLASS (config)->config_get_decoder_pipeline_string_func (config, name); 
 }
+

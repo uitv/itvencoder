@@ -48,6 +48,7 @@ channel_init (Channel *channel)
         GST_LOG ("channel object init");
 
         channel->decoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
+        channel->encoder_pipeline = g_slice_alloc (sizeof (EncoderPipeline)); //TODO free!
 }
 
 static GObject *

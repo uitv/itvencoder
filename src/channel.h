@@ -11,10 +11,15 @@
 #include "jansson.h"
 
 typedef struct _DecoderPipeline   DecoderPipeline;
+typedef struct _EncoderPipeline   EncoderPipeline;
 typedef struct _Channel           Channel;
 typedef struct _ChannelClass      ChannelClass;
 
 struct _DecoderPipeline {
+        gchar           *pipeline_string;
+};
+
+struct _EncoderPipeline {
         gchar           *pipeline_string;
 };
 
@@ -23,6 +28,7 @@ struct _Channel {
 
         gchar           *name; // same as the name in channel config file
         DecoderPipeline *decoder_pipeline; 
+        EncoderPipeline *encoder_pipeline; 
 };
 
 struct _ChannelClass {

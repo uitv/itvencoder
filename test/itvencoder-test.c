@@ -13,7 +13,6 @@ main(int argc, char *argv[])
         ChannelConfig *channel_config;
         Channel *channel;
         gchar *name;
-        json_t *config;
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -33,15 +32,14 @@ main(int argc, char *argv[])
 
         for (guint i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO (">>>>>>>>> channel pipeline string is %s", channel->decoder_pipeline->pipeline_string);
+                GST_INFO (">>>>>>>>> channel decoder pipeline string is \n%s", channel->decoder_pipeline->pipeline_string);
+                GST_INFO (">>>>>>>>> channel encoder pipeline string is \n%s", channel->encoder_pipeline->pipeline_string);
         }
 
         GST_DEBUG (">>>name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         channel = channel_new ("name", "cctv-99", NULL);
         g_object_get (channel, "name", &name, NULL);
         GST_DEBUG ("channel name is %s", name);
-        g_object_get (channel, "config", &config, NULL);
-        GST_DEBUG ("channel name - %s", json_string_value (json_object_get(config, "name")));
 
         return 0;
 }
