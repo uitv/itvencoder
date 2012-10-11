@@ -124,10 +124,21 @@ channel_get_type (void)
 }
 
 guint
+channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
+{
+        GST_LOG ("channel set decoder pipeline");
+
+        channel->decoder_pipeline->pipeline_string = pipeline_string;
+
+        return 0;
+}
+
+guint
 channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
-        GST_LOG ("channel add encoder pipeline");
         EncoderPipeline *encoder_pipeline;
+
+        GST_LOG ("channel add encoder pipeline");
 
         encoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
         encoder_pipeline->pipeline_string = pipeline_string;

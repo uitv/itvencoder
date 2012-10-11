@@ -17,10 +17,14 @@ typedef struct _ChannelClass      ChannelClass;
 
 struct _DecoderPipeline {
         gchar           *pipeline_string;
+        GstElement      *pipeline;
+        GstClockTime    last_heartbeat;
 };
 
 struct _EncoderPipeline {
         gchar           *pipeline_string;
+        GstElement      *pipeline;
+        GstClockTime    last_heartbeat;
 };
 
 struct _Channel {
@@ -44,6 +48,7 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
+guint channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string);
 
 #endif /* __CHANNEL_H__ */

@@ -43,7 +43,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                         GST_ERROR ("no decoder pipeline error");
                         exit (-1); //TODO : exit or return?
                 }
-                channel->decoder_pipeline->pipeline_string = pipeline_string;
+                channel_set_decoder_pipeline (channel, pipeline_string);
                 for (;;) {
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
                         if (pipeline_string == NULL) {
