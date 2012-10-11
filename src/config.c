@@ -266,12 +266,12 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
 
         GST_LOG ("config get decoder pipeline string");
 
-        selected_pipeline_key = config_get_selected_pipeline_key (channel_config, pipeline);
         j = json_object_get (channel_config->config, pipeline);
         if (j == NULL) {
-                GST_ERROR ("parse channel config file error: %s", channel_config->name);
+                GST_INFO ("No %s in %s", pipeline, channel_config->config_path);
                 return NULL;
         }
+        selected_pipeline_key = config_get_selected_pipeline_key (channel_config, pipeline);
         /* Got the selected pipeline, e.g mpeg2-mp3 */
         selected_pipeline = json_object_get (j, selected_pipeline_key);
         if (selected_pipeline == NULL) {

@@ -21,6 +21,10 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
 static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
+        ChannelConfig *channel_config;
+        Channel *channel;
+        gchar *pipeline_string;
+
         GST_LOG ("itvencoder_init");
 
         g_get_current_time (&itvencoder->start_time);
@@ -32,11 +36,49 @@ itvencoder_init (ITVEncoder *itvencoder)
         // initialize channels
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
-                ChannelConfig *channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                Channel *channel = channel_new ("name", channel_config->name, NULL);
-                channel->decoder_pipeline->pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
-                channel_add_encoder_pipeline (channel, config_get_pipeline_string (channel_config, "encoder-pipeline-1"));
-                GST_DEBUG ("parse channel %s, name is %s", channel_config->config_path, channel_config->name);
+                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
+                channel = channel_new ("name", channel_config->name, NULL);
+                pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
+                if (pipeline_string == NULL) {
+                        GST_ERROR ("no decoder pipeline error");
+                        exit (-1); //TODO : exit or return?
+                }
+                channel->decoder_pipeline->pipeline_string = pipeline_string;
+                for (;;) {
+                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
+                        if (pipeline_string == NULL) {
+                                GST_ERROR ("One encoder pipeline is must");
+                                exit (-1); //TODO : exit or return?
+                        }
+                        channel_add_encoder_pipeline (channel, pipeline_string);
+
+                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-2");
+                        if (pipeline_string == NULL) {
+                                GST_INFO ("One encoder pipelines found.");
+                                break; //TODO : exit or return?
+                        }
+                        channel_add_encoder_pipeline (channel, pipeline_string);
+
+                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-3");
+                        if (pipeline_string == NULL) {
+                                GST_INFO ("Two encoder pipelines found.");
+                                break; //TODO : exit or return?
+                        }
+                        channel_add_encoder_pipeline (channel, pipeline_string);
+
+                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-4");
+                        if (pipeline_string == NULL) {
+                                GST_INFO ("Three encoder pipelines found.");
+                                break; //TODO : exit or return?
+                        }
+                        channel_add_encoder_pipeline (channel, pipeline_string);
+                        GST_INFO ("Four encoder pipelines found.");
+                        break;
+                }
+                GST_INFO ("parse channel %s, name is %s, encoder channel number %d.",
+                           channel_config->config_path,
+                           channel_config->name,
+                           channel->encoder_pipeline_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
 }
