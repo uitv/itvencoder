@@ -260,7 +260,7 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
 {
         json_t *j, *selected_pipeline;
         gchar *selected_pipeline_key;
-        gchar *template;
+        gchar *t1, *t2;
         GRegex *regex;
         GMatchInfo *match_info;
 
@@ -283,13 +283,14 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
                 GST_ERROR ("parse selected pipeline template error: %s", channel_config->name);
                 return NULL;
         }
-        template = g_strdup ((gchar *)json_string_value (j));
+        t1 = (gchar *)json_string_value (j);
+        t2 = g_strdup (t1);
         regex = g_regex_new ("<%(?<para>[^<%]*)%>", G_REGEX_OPTIMIZE, 0, NULL);
         if (regex == NULL) {
                 GST_ERROR ("bad regular expression");
                 return NULL;
         }
-        g_regex_match (regex, template, 0, &match_info);
+        g_regex_match (regex, t1, 0, &match_info);
         g_regex_unref (regex);
 
         while (g_match_info_matches (match_info)) {
@@ -301,21 +302,24 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
                         GST_ERROR ("parse channel config error : %s?", key);
                         g_regex_unref (regex);
                         g_match_info_free (match_info);
+                        g_free (key);
+                        g_free (selected_pipeline_key);
                         return NULL;
                 }
                 if (json_is_string (value)) {
                         gchar *v = (gchar *)json_string_value (value);
-                        gchar *t = template;
-                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        gchar *t = t2;
+                        t2 = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
                         g_free (t);
                 } else if (json_is_integer (value)) {
                         gchar *v = g_strdup_printf ("%i", json_integer_value (value));
-                        gchar *t = template;
-                        template = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
+                        gchar *t = t2;
+                        t2 = g_regex_replace (regex, t, -1, 0, v, 0, NULL);
                         g_free (t);
                 } else {
                         GST_ERROR ("unsupported type of channel configuration - %s", key);
                 }
+                g_free (key);
                 g_regex_unref (regex);
                 g_match_info_next (match_info, NULL);
         }
@@ -323,6 +327,6 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
         g_match_info_free (match_info);
         g_free (selected_pipeline_key);
 
-        return template;
+        return t2;
 }
 
