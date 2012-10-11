@@ -126,7 +126,16 @@ channel_get_type (void)
 guint
 channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
+        GError *e = NULL;
+
         GST_LOG ("channel set decoder pipeline");
+
+        channel->decoder_pipeline->pipeline = gst_parse_launch (pipeline_string, &e);
+        if (e != NULL) {
+                GST_ERROR ("Error parsing pipeline %s: %s", pipeline_string, e->message);
+                g_error_free (e);
+                return -1;
+        }
 
         channel->decoder_pipeline->pipeline_string = pipeline_string;
 
@@ -136,12 +145,22 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 guint
 channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
+        GstElement *p;
+        GError *e = NULL;
         EncoderPipeline *encoder_pipeline;
 
         GST_LOG ("channel add encoder pipeline");
 
+        p = gst_parse_launch (pipeline_string, &e);
+        if (e != NULL) {
+                GST_ERROR ("Error parsing pipeline %s: %s", pipeline_string, e->message);
+                g_error_free (e);
+                return -1;
+        }
+
         encoder_pipeline = g_slice_alloc (sizeof (DecoderPipeline)); //TODO free!
         encoder_pipeline->pipeline_string = pipeline_string;
+        encoder_pipeline->pipeline = p;
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;

@@ -43,35 +43,51 @@ itvencoder_init (ITVEncoder *itvencoder)
                         GST_ERROR ("no decoder pipeline error");
                         exit (-1); //TODO : exit or return?
                 }
-                channel_set_decoder_pipeline (channel, pipeline_string);
+                if (channel_set_decoder_pipeline (channel, pipeline_string) != 0) {
+                        GST_ERROR ("Set decoder pipeline error.");
+                        exit (-1);
+                }
                 for (;;) {
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
                         if (pipeline_string == NULL) {
                                 GST_ERROR ("One encoder pipeline is must");
                                 exit (-1); //TODO : exit or return?
                         }
-                        channel_add_encoder_pipeline (channel, pipeline_string);
+                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                                GST_ERROR ("Add encoder pipeline 1 error");
+                                exit (-1);
+                        }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-2");
                         if (pipeline_string == NULL) {
                                 GST_INFO ("One encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        channel_add_encoder_pipeline (channel, pipeline_string);
+                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                                GST_ERROR ("Add encoder pipeline 2 error");
+                                exit (-1);
+                        }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-3");
                         if (pipeline_string == NULL) {
                                 GST_INFO ("Two encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        channel_add_encoder_pipeline (channel, pipeline_string);
+                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                                GST_ERROR ("Add encoder pipeline 3 error");
+                                exit (-1);
+                        }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-4");
                         if (pipeline_string == NULL) {
                                 GST_INFO ("Three encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        channel_add_encoder_pipeline (channel, pipeline_string);
+                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                                GST_ERROR ("Add encoder pipeline 4 error");
+                                exit (-1);
+                        }
+
                         GST_INFO ("Four encoder pipelines found.");
                         break;
                 }
