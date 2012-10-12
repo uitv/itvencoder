@@ -19,6 +19,8 @@ struct _DecoderPipeline {
         gchar           *pipeline_string;
         GstElement      *pipeline;
         GstClockTime    last_heartbeat;
+        GstElement      *videosink;
+        GstElement      *audiosink;
 };
 
 struct _EncoderPipeline {

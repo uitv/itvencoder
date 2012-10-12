@@ -127,17 +127,31 @@ guint
 channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
         GError *e = NULL;
+        GstElement *p;
 
         GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
 
-        channel->decoder_pipeline->pipeline = gst_parse_launch (pipeline_string, &e);
+        p = gst_parse_launch (pipeline_string, &e);
         if (e != NULL) {
                 GST_ERROR ("Error parsing pipeline %s: %s", pipeline_string, e->message);
                 g_error_free (e);
                 return -1;
         }
 
+        channel->decoder_pipeline->pipeline = p;
         channel->decoder_pipeline->pipeline_string = pipeline_string;
+
+        channel->decoder_pipeline->videosink = gst_bin_get_by_name (GST_BIN (p), "videosink");
+        if (channel->decoder_pipeline->videosink == NULL) {
+                GST_ERROR ("Get video sink error");
+                return -1;
+        }
+
+        channel->decoder_pipeline->audiosink = gst_bin_get_by_name (GST_BIN (p), "audiosink");
+        if (channel->decoder_pipeline->audiosink == NULL) {
+                GST_ERROR ("Get audio sink error");
+                return -1;
+        }
 
         return 0;
 }
@@ -163,6 +177,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("g_malloc memeory error.");
                 return -1;
         }
+
         encoder_pipeline->pipeline_string = pipeline_string;
         encoder_pipeline->encodersink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (encoder_pipeline->encodersink == NULL) {
@@ -172,14 +187,14 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         }
 
         encoder_pipeline->videosrc = gst_bin_get_by_name (GST_BIN (p), "videosrc");
-        if (encoder_pipeline->encodersink == NULL) {
+        if (encoder_pipeline->videosrc == NULL) {
                 GST_ERROR ("Get video src error");
                 g_free (encoder_pipeline);
                 return -1;
         }
 
         encoder_pipeline->audiosrc = gst_bin_get_by_name (GST_BIN (p), "audiosrc");
-        if (encoder_pipeline->encodersink == NULL) {
+        if (encoder_pipeline->audiosrc == NULL) {
                 GST_ERROR ("Get audio src error");
                 g_free (encoder_pipeline);
                 return -1;
