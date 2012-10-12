@@ -9,6 +9,8 @@ GST_DEBUG_CATEGORY(ITVENCODER);
 int
 main(int argc, char *argv[])
 {
+        guint major, minor, micro, nano;
+        const gchar *nano_str;
         ITVEncoder *itvencoder;
         ChannelConfig *channel_config;
         Channel *channel;
@@ -18,8 +20,16 @@ main(int argc, char *argv[])
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
-        loop = g_main_loop_new (NULL, FALSE);
+        gst_version (&major, &minor, &micro, &nano);
+        if (nano == 1)
+                nano_str = "(git)";
+        else if (nano == 2)
+                nano_str = "(Prerelease)";
+        else
+                nano_str = "";
+        GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
+        loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
         GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
         GST_INFO ("listening ports : %d", json_integer_value(json_object_get(itvencoder->config->config, "listening_ports")));
