@@ -25,9 +25,6 @@ struct _EncoderPipeline {
         gchar           *pipeline_string;
         GstElement      *pipeline;
         GstClockTime    last_heartbeat;
-        GstElement      *videosrc;
-        GstElement      *audiosrc;
-        GstElement      *encodersink;
 };
 
 struct _Channel {
@@ -54,5 +51,6 @@ GType channel_get_type (void);
 guint channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string);
 gint channel_set_decoder_pipeline_state (Channel *channel, GstState state);
+gint channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state);
 
 #endif /* __CHANNEL_H__ */
