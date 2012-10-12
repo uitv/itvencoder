@@ -4,6 +4,7 @@
  */
 
 #include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 
 #include "jansson.h"
 #include "channel.h"
@@ -21,6 +22,7 @@ static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static GstFlowReturn appsink_callback_func (GstAppSink * elt, gpointer user_data);
 
 static void
 channel_class_init (ChannelClass *channelclass)
@@ -123,11 +125,18 @@ channel_get_type (void)
         return type;
 }
 
+static GstFlowReturn appsink_callback_func (GstAppSink * elt, gpointer user_data)
+{
+        GST_LOG ("appsink callback func");
+}
+
 guint
 channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
         GError *e = NULL;
-        GstElement *p;
+        GstElement *appsink, *p;
+        GstAppSinkCallbacks videosink_callbacks = {NULL, NULL, appsink_callback_func, NULL};
+        GstAppSinkCallbacks audiosink_callbacks = {NULL, NULL, appsink_callback_func, NULL};
 
         GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
 
@@ -141,17 +150,21 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
         channel->decoder_pipeline->pipeline = p;
         channel->decoder_pipeline->pipeline_string = pipeline_string;
 
-        channel->decoder_pipeline->videosink = gst_bin_get_by_name (GST_BIN (p), "videosink");
-        if (channel->decoder_pipeline->videosink == NULL) {
+        appsink = gst_bin_get_by_name (GST_BIN (p), "videosink");
+        if (appsink == NULL) {
                 GST_ERROR ("Get video sink error");
                 return -1;
         }
+        gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &videosink_callbacks, NULL, NULL);
+        gst_object_unref (appsink);
 
-        channel->decoder_pipeline->audiosink = gst_bin_get_by_name (GST_BIN (p), "audiosink");
-        if (channel->decoder_pipeline->audiosink == NULL) {
+        appsink = gst_bin_get_by_name (GST_BIN (p), "audiosink");
+        if (appsink == NULL) {
                 GST_ERROR ("Get audio sink error");
                 return -1;
         }
+        gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &audiosink_callbacks, NULL, NULL);
+        gst_object_unref (appsink);
 
         return 0;
 }
@@ -202,6 +215,15 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
 
         encoder_pipeline->pipeline = p;
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
+
+        return 0;
+}
+
+gint channel_set_decoder_pipeline_state (Channel *channel, GstState state)
+{
+        GST_LOG ("set decoder pipeline state");
+
+        gst_element_set_state (channel->decoder_pipeline->pipeline, state);
 
         return 0;
 }

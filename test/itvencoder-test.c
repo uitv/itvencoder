@@ -13,9 +13,12 @@ main(int argc, char *argv[])
         ChannelConfig *channel_config;
         Channel *channel;
         gchar *name;
+        GMainLoop *loop;
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+
+        loop = g_main_loop_new (NULL, FALSE);
 
         itvencoder = itvencoder_new (0, NULL);
         GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
@@ -41,6 +44,10 @@ main(int argc, char *argv[])
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string); 
                 }
         }
+        
+        channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
 
+        GST_INFO ("\nChannel %s Running................................................", channel->name);
+        g_main_loop_run (loop);
         return 0;
 }
