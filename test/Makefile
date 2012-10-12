@@ -6,7 +6,7 @@ LDFLAGS += $(shell pkg-config --libs gstreamer-0.10)
 LDFLAGS += -lgstapp-0.10
 STATIC_JANSSON = ../third/jansson-2.4/src/.libs/libjansson.a
 
-itvencoder_deppend = itvencoder-test.c \
+itvencoder_deppend = itvencoder.c \
                      ../src/itvencoder.c \
 		     ../src/itvencoder.h \
 		     ../src/config.h \
@@ -14,7 +14,7 @@ itvencoder_deppend = itvencoder-test.c \
 		     ../src/channel.c \
 		     ../src/channel.h
 
-itvencoder_src = itvencoder-test.c \
+itvencoder_src = itvencoder.c \
                  ../src/config.c \
 		 ../src/itvencoder.c \
 		 ../src/channel.c
