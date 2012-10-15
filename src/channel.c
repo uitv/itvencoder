@@ -150,7 +150,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         Channel *channel = ((UserData *)user_data)->channel;
         guint i;
 
-        GST_LOG ("appsink callback func %c", type);
+        GST_LOG ("decoder appsink callback func %c", type);
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         switch (type) {
@@ -159,8 +159,8 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("\naudio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_audio_position = i;
-                if (channel->decoder_pipeline->audio_ring[i] != NULL)
-                        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
+                //if (channel->decoder_pipeline->audio_ring[i] != NULL)
+                //        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
                 channel->decoder_pipeline->audio_ring[i] = buffer;
                 break;
         case 'v':
@@ -168,8 +168,8 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("\nvideo current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_video_position = i;
-                if (channel->decoder_pipeline->video_ring[i] != NULL)
-                        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
+                //if (channel->decoder_pipeline->video_ring[i] != NULL)
+                //        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
                 channel->decoder_pipeline->video_ring[i] = buffer;
                 break;
         default:
@@ -234,23 +234,118 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
 {
         GstBuffer *buffer;
 
-        GST_LOG ("appsink callback func");
+        GST_LOG ("\nencoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         GST_LOG ("\nbuffer duration: %d", GST_BUFFER_DURATION(buffer));
         gst_buffer_unref (buffer);
 }
 
+typedef struct _EncoderAppsrcUserData {
+        gint index;
+        gchar type;
+        Channel *channel;
+} EncoderAppsrcUserData;
+
 static void
 encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer user_data)
 {
-        GST_LOG ("encoder appsrc need data callback func");
+        gint index = ((EncoderAppsrcUserData *)user_data)->index;
+        gchar type = ((EncoderAppsrcUserData *)user_data)->type;
+        Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
+        EncoderPipeline *encoder_pipeline;
+        gint i;
+
+        GST_LOG ("\nencoder appsrc need data callback func type %c; length %d", type, length);
+
+        encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
+        switch (type) {
+        case 'a':
+                encoder_pipeline->audio_enough = FALSE;
+                /* next buffer */
+                i = encoder_pipeline->current_audio_position + 1;
+                i = i % AUDIO_RING_SIZE;
+                for (;;) {
+                        /* insure next buffer isn't current decoder buffer */
+                        if (i == channel->decoder_pipeline->current_audio_position ||
+                                channel->decoder_pipeline->current_audio_position == -1) {
+                                GST_LOG ("\nwaiting audio decoder ready");
+                                g_usleep (50000); /* wiating 50ms */
+                                continue;
+                        }
+                        if (encoder_pipeline->audio_enough) {
+                                GST_LOG ("\naudio enough.");
+                                break;
+                        }
+                        GST_LOG (
+                                "\naudio encoder position %d; decoder position %d",
+                                i,
+                                channel->decoder_pipeline->current_audio_position
+                        );
+                        if (gst_app_src_push_buffer (src, channel->decoder_pipeline->audio_ring[i]) != GST_FLOW_OK) {
+                                GST_ERROR ("\ngst_app_src_push_buffer audio failure.");
+                                break;
+                        }
+                        encoder_pipeline->current_audio_position = i;
+                        i = (i + 1) % AUDIO_RING_SIZE;
+                }
+                break;
+        case 'v':
+                encoder_pipeline->video_enough = FALSE;
+                /* next buffer */
+                i = encoder_pipeline->current_video_position + 1;
+                i = i % VIDEO_RING_SIZE;
+                for (;;) {
+                        /* insure next buffer isn't current decoder buffer */
+                        if (i == channel->decoder_pipeline->current_video_position ||
+                                channel->decoder_pipeline->current_video_position == -1) {
+                                GST_LOG ("\nwaiting video decoder ready");
+                                g_usleep (50000); /* waiting 50ms */
+                                continue;
+                        }
+                        if (encoder_pipeline->video_enough) {
+                                GST_LOG ("\nvideo enough.");
+                                break;
+                        }
+                        GST_LOG (
+                                "\nvideo encoder position %d; decoder position %d",
+                                i,
+                                channel->decoder_pipeline->current_video_position
+                        );
+                        if (gst_app_src_push_buffer (src, channel->decoder_pipeline->video_ring[i]) != GST_FLOW_OK) {
+                                GST_ERROR ("\ngst_app_src_push_buffer video failure.");
+                                break;
+                        }
+                        encoder_pipeline->current_video_position = i;
+                        i = (i + 1) % VIDEO_RING_SIZE;
+                }
+                break;
+        default:
+                GST_ERROR ("\nerror");
+        }
 }
 
 static void
 encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
 {
-        GST_LOG ("encoder appsrc enough data callback func");
+        gint index = ((EncoderAppsrcUserData *)user_data)->index;
+        gchar type = ((EncoderAppsrcUserData *)user_data)->type;
+        Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
+        EncoderPipeline *encoder_pipeline;
+
+        GST_LOG ("\nencoder appsrc enough data callback func type %c", type);
+
+        encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
+        switch (type) {
+        case 'a':
+                encoder_pipeline->audio_enough = TRUE;
+                break;
+        case 'v':
+                encoder_pipeline->video_enough = TRUE;
+                break;
+        default:
+                GST_ERROR ("\nerror");
+        }
 }
 
 guint
@@ -270,6 +365,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 encoder_appsink_callback_func,
                 NULL
         };
+        EncoderAppsrcUserData *user_data;
 
         GST_LOG ("channel add encoder pipeline : %s", pipeline_string);
 
@@ -295,7 +391,11 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, NULL, NULL);
+        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
+        user_data->index = 0;
+        user_data->type = 'v';
+        user_data->channel = channel;
+        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
         gst_object_unref (appsrc);
 
         appsrc = gst_bin_get_by_name (GST_BIN (p), "audiosrc");
@@ -304,7 +404,11 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, NULL, NULL);
+        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
+        user_data->index = 0;
+        user_data->type = 'a';
+        user_data->channel = channel;
+        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
         gst_object_unref (appsrc);
 
         encoder_pipeline = g_malloc (sizeof (EncoderPipeline)); //TODO free!
@@ -312,8 +416,13 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("g_malloc memeory error.");
                 return -1;
         }
+
         encoder_pipeline->pipeline_string = pipeline_string;
         encoder_pipeline->pipeline = p;
+        encoder_pipeline->current_video_position = -1;
+        encoder_pipeline->current_audio_position = -1;
+        encoder_pipeline->audio_enough = FALSE;
+        encoder_pipeline->video_enough = FALSE;
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;
