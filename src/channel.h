@@ -7,8 +7,10 @@
 #define __CHANNEL_H__
 
 #include <gst/gst.h>
-
 #include "jansson.h"
+
+#define AUDIO_RING_SIZE 32 //TODO: configuration or computer from codec type.
+#define VIDEO_RING_SIZE 32
 
 typedef struct _DecoderPipeline   DecoderPipeline;
 typedef struct _EncoderPipeline   EncoderPipeline;
@@ -19,12 +21,22 @@ struct _DecoderPipeline {
         gchar *pipeline_string;
         GstElement *pipeline;
         GstClockTime last_heartbeat;
+
+        /* decoder produce, encoder consume */
+        GstBuffer       *audio_ring[AUDIO_RING_SIZE];
+        gint            current_audio_position; // decoder write position
+
+        GstBuffer       *video_ring[VIDEO_RING_SIZE];
+        gint            current_video_position; // decoder write position
 };
 
 struct _EncoderPipeline {
         gchar           *pipeline_string;
         GstElement      *pipeline;
         GstClockTime    last_heartbeat;
+        
+        gint current_video_position; // encoder read position
+        gint current_audio_position; // encoder read position
 };
 
 struct _Channel {
