@@ -202,7 +202,8 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
         channel->decoder_pipeline->pipeline = p;
         channel->decoder_pipeline->pipeline_string = pipeline_string;
 
-        appsink = gst_bin_get_by_name (GST_BIN (p), "videosink");
+        /* set video sink callback */
+        appsink = gst_bin_get_by_name (GST_BIN (p), "videosink"); //TODO release
         if (appsink == NULL) {
                 GST_ERROR ("Get video sink error");
                 return -1;
@@ -213,6 +214,7 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
         gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, user_data, NULL);
         gst_object_unref (appsink);
 
+        /* set audio sink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "audiosink");
         if (appsink == NULL) {
                 GST_ERROR ("Get audio sink error");

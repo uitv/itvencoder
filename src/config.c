@@ -40,11 +40,13 @@ config_class_init (ConfigClass *configclass)
         configclass->config_load_config_file_func = config_load_config_file_func;
         configclass->config_save_config_file_func = config_save_config_file_func;
 
-        config_param = g_param_spec_string ("config_file_path",
-                                            "configf",
-                                            "config file path",
-                                            "itvencoder.conf",
-                                            G_PARAM_WRITABLE | G_PARAM_READABLE);
+        config_param = g_param_spec_string (
+                "config_file_path",
+                "configf",
+                "config file path",
+                "itvencoder.conf",
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
         g_object_class_install_property (g_object_class, CONFIG_PROP_CONFIG_FILE_PATH, config_param);
 }
 
