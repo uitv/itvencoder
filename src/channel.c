@@ -138,6 +138,30 @@ channel_get_type (void)
         return type;
 }
 
+static gboolean
+bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
+{
+        gchar *debug;
+        GError *error;
+
+        switch (GST_MESSAGE_TYPE (msg)) {
+        case GST_MESSAGE_EOS:
+                GST_INFO ("\nEnd of stream\n");
+                break;
+        case GST_MESSAGE_ERROR: 
+                gst_message_parse_error (msg, &error, &debug);
+                g_free (debug);
+                GST_ERROR ("\n%s error: %s", (gchar *)data, error->message);
+                g_error_free (error);
+                break;
+        default:
+                GST_DEBUG ("\n%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
+                break;
+        }
+
+        return TRUE;
+}
+
 typedef struct _UserData {
         gchar type;
         Channel *channel;
@@ -182,6 +206,7 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
         GError *e = NULL;
         GstElement *appsink, *p;
+        GstBus *bus;
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
@@ -198,6 +223,9 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_error_free (e);
                 return -1;
         }
+
+        bus = gst_pipeline_get_bus (GST_PIPELINE (p));
+        gst_bus_add_watch (bus, bus_callback, "decoderpipeline");
 
         channel->decoder_pipeline->pipeline = p;
         channel->decoder_pipeline->pipeline_string = pipeline_string;
@@ -353,6 +381,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
 {
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
+        GstBus *bus;
         EncoderPipeline *encoder_pipeline;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback_func,
@@ -375,6 +404,9 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_error_free (e);
                 return -1;
         }
+
+        bus = gst_pipeline_get_bus (GST_PIPELINE (p));
+        gst_bus_add_watch (bus, bus_callback, "encoderpipeline");
 
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {
