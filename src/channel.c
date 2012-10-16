@@ -143,6 +143,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
 {
         gchar *debug;
         GError *error;
+        GstState old, new, pending;
 
         switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS:
@@ -153,6 +154,10 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                 g_free (debug);
                 GST_ERROR ("%s error: %s", (gchar *)data, error->message);
                 g_error_free (error);
+                break;
+        case GST_MESSAGE_STATE_CHANGED:
+                gst_message_parse_state_changed (msg, &old, &new, &pending);
+                GST_DEBUG ("%s state from %d to %d", (gchar *)data, old, new);
                 break;
         default:
                 GST_DEBUG ("%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
