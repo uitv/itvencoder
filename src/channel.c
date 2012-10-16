@@ -146,16 +146,16 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
 
         switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS:
-                GST_INFO ("\nEnd of stream\n");
+                GST_LOG ("End of stream\n");
                 break;
         case GST_MESSAGE_ERROR: 
                 gst_message_parse_error (msg, &error, &debug);
                 g_free (debug);
-                GST_ERROR ("\n%s error: %s", (gchar *)data, error->message);
+                GST_ERROR ("%s error: %s", (gchar *)data, error->message);
                 g_error_free (error);
                 break;
         default:
-                GST_DEBUG ("\n%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
+                GST_DEBUG ("%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
                 break;
         }
 
@@ -181,7 +181,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         case 'a':
                 i = channel->decoder_pipeline->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
-                GST_LOG ("\naudio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
+                GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_audio_position = i;
                 //if (channel->decoder_pipeline->audio_ring[i] != NULL)
                 //        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
@@ -190,14 +190,14 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         case 'v':
                 i = channel->decoder_pipeline->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
-                GST_LOG ("\nvideo current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
+                GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_video_position = i;
                 //if (channel->decoder_pipeline->video_ring[i] != NULL)
                 //        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
                 channel->decoder_pipeline->video_ring[i] = buffer;
                 break;
         default:
-                GST_ERROR ("\nerror");
+                GST_ERROR ("error");
         }
 }
 
@@ -262,10 +262,10 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
 {
         GstBuffer *buffer;
 
-        GST_LOG ("\nencoder appsink callback func");
+        GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_LOG ("\nbuffer duration: %d", GST_BUFFER_DURATION(buffer));
+        GST_LOG ("buffer size: %d", GST_BUFFER_SIZE(buffer));
         gst_buffer_unref (buffer);
 }
 
@@ -284,7 +284,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         EncoderPipeline *encoder_pipeline;
         gint i;
 
-        GST_LOG ("\nencoder appsrc need data callback func type %c; length %d", type, length);
+        GST_LOG ("encoder appsrc need data callback func type %c; length %d", type, length);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -297,21 +297,21 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_audio_position ||
                                 channel->decoder_pipeline->current_audio_position == -1) {
-                                GST_LOG ("\nwaiting audio decoder ready");
+                                GST_LOG ("waiting audio decoder ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
                         }
                         if (encoder_pipeline->audio_enough) {
-                                GST_LOG ("\naudio enough.");
+                                GST_LOG ("audio enough.");
                                 break;
                         }
                         GST_LOG (
-                                "\naudio encoder position %d; decoder position %d",
+                                "audio encoder position %d; decoder position %d",
                                 i,
                                 channel->decoder_pipeline->current_audio_position
                         );
                         if (gst_app_src_push_buffer (src, channel->decoder_pipeline->audio_ring[i]) != GST_FLOW_OK) {
-                                GST_ERROR ("\ngst_app_src_push_buffer audio failure.");
+                                GST_ERROR ("gst_app_src_push_buffer audio failure.");
                                 break;
                         }
                         encoder_pipeline->current_audio_position = i;
@@ -327,21 +327,21 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_video_position ||
                                 channel->decoder_pipeline->current_video_position == -1) {
-                                GST_LOG ("\nwaiting video decoder ready");
+                                GST_LOG ("waiting video decoder ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
                         }
                         if (encoder_pipeline->video_enough) {
-                                GST_LOG ("\nvideo enough.");
+                                GST_LOG ("video enough, break for need data signal.");
                                 break;
                         }
                         GST_LOG (
-                                "\nvideo encoder position %d; decoder position %d",
+                                "video encoder position %d; decoder position %d",
                                 i,
                                 channel->decoder_pipeline->current_video_position
                         );
                         if (gst_app_src_push_buffer (src, channel->decoder_pipeline->video_ring[i]) != GST_FLOW_OK) {
-                                GST_ERROR ("\ngst_app_src_push_buffer video failure.");
+                                GST_ERROR ("gst_app_src_push_buffer video failure.");
                                 break;
                         }
                         encoder_pipeline->current_video_position = i;
@@ -349,7 +349,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                 }
                 break;
         default:
-                GST_ERROR ("\nerror");
+                GST_ERROR ("error");
         }
 }
 
@@ -361,7 +361,7 @@ encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
         EncoderPipeline *encoder_pipeline;
 
-        GST_LOG ("\nencoder appsrc enough data callback func type %c", type);
+        GST_LOG ("encoder appsrc enough data callback func type %c", type);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -372,7 +372,7 @@ encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
                 encoder_pipeline->video_enough = TRUE;
                 break;
         default:
-                GST_ERROR ("\nerror");
+                GST_ERROR ("error");
         }
 }
 
