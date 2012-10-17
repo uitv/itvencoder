@@ -270,7 +270,7 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
         GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_LOG ("buffer size: %d", GST_BUFFER_SIZE(buffer));
+        GST_DEBUG ("buffer size: %d", GST_BUFFER_SIZE(buffer));
         gst_buffer_unref (buffer);
 }
 
@@ -289,7 +289,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         EncoderPipeline *encoder_pipeline;
         gint i;
 
-        GST_LOG ("encoder appsrc need data callback func type %c; length %d", type, length);
+        GST_DEBUG ("encoder appsrc need data callback func type %c; length %d", type, length);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -332,15 +332,15 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_video_position ||
                                 channel->decoder_pipeline->current_video_position == -1) {
-                                GST_LOG ("waiting video decoder ready");
+                                GST_DEBUG ("waiting video decoder ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
                         }
                         if (encoder_pipeline->video_enough) {
-                                GST_LOG ("video enough, break for need data signal.");
+                                GST_DEBUG ("video enough, break for need data signal.");
                                 break;
                         }
-                        GST_LOG (
+                        GST_DEBUG (
                                 "video encoder position %d; decoder position %d",
                                 i,
                                 channel->decoder_pipeline->current_video_position
@@ -366,7 +366,7 @@ encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
         EncoderPipeline *encoder_pipeline;
 
-        GST_LOG ("encoder appsrc enough data callback func type %c", type);
+        GST_DEBUG ("encoder appsrc enough data callback func type %c", type);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
