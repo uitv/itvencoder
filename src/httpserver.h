@@ -8,17 +8,20 @@
 
 #include <gst/gst.h>
 #include "mongoose.h"
+#include "itvencoder.h"
 
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
 
 struct _HTTPServer {
-    GObject parent;
-    struct mg_context *ctx;
+        GObject parent;
+
+        ITVEncoder *itvencoder;
+        struct mg_context *ctx;
 };
 
 struct _HTTPServerClass {
-    GObjectClass parent;
+        GObjectClass parent;
 };
 
 #define TYPE_HTTPSERVER           (httpserver_get_type())
@@ -30,5 +33,6 @@ struct _HTTPServerClass {
 #define httpserver_new(...)       (g_object_new(TYPE_HTTPSERVER, ## __VA_ARGS__, NULL))
 
 GType httpserver_get_type (void);
+gint httpserver_start (HTTPServer *httpserver);
 
 #endif /* __HTTPSERVER_H__ */

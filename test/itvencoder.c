@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gst/gst.h>
+#include "httpserver.h"
 #include "itvencoder.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
@@ -15,6 +16,7 @@ main(int argc, char *argv[])
         ChannelConfig *channel_config;
         Channel *channel;
         gchar *name;
+        HTTPServer *httpserver;
         GMainLoop *loop;
 
         gst_init(&argc, &argv);
@@ -55,6 +57,9 @@ main(int argc, char *argv[])
                 }
         }
         
+        // start httpserver
+        httpserver = httpserver_new ("itvencoder", itvencoder, NULL);
+        httpserver_start (httpserver);
         channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
         channel_set_encoder_pipeline_state (channel, 0, GST_STATE_PLAYING);
 

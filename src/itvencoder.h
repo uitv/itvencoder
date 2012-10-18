@@ -10,7 +10,6 @@
 
 #include "config.h"
 #include "channel.h"
-#include "httpserver.h"
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
@@ -30,8 +29,6 @@ struct _ITVEncoder {
         guint           total_channel_number;
         guint           working_channel_number; 
         GArray          *channel_array;
-
-        HTTPServer *httpserver;
 };
 
 struct _ITVEncoderClass {

@@ -31,7 +31,7 @@ static void
 channel_class_init (ChannelClass *channelclass)
 {
         GObjectClass *g_object_class = G_OBJECT_CLASS(channelclass);
-        GParamSpec *config_param;
+        GParamSpec *param;
 
         GST_LOG ("channel class init.");
 
@@ -39,14 +39,14 @@ channel_class_init (ChannelClass *channelclass)
         g_object_class->set_property = channel_set_property;
         g_object_class->get_property = channel_get_property;
 
-        config_param = g_param_spec_string (
+        param = g_param_spec_string (
                 "name",
                 "name",
                 "name of channel",
-                "",
+                NULL,
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
-        g_object_class_install_property (g_object_class, CHANNEL_PROP_NAME, config_param);
+        g_object_class_install_property (g_object_class, CHANNEL_PROP_NAME, param);
 }
 
 static void

@@ -97,9 +97,6 @@ itvencoder_init (ITVEncoder *itvencoder)
                            channel->encoder_pipeline_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
-
-        // start httpserver
-        itvencoder->httpserver = httpserver_new (NULL);
 }
 
 GType
