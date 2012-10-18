@@ -35,9 +35,10 @@ struct _EncoderPipeline {
         GstClockTime    last_heartbeat;
         
         gint current_video_position; // encoder read position
-        gboolean video_enough;
+        gboolean video_enough; /* appsrc enaugh_data signal */
         gint current_audio_position; // encoder read position
         gboolean audio_enough;
+        GSList *httprequest_socket_list;
 };
 
 struct _Channel {

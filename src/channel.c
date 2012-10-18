@@ -459,6 +459,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         encoder_pipeline->current_audio_position = -1;
         encoder_pipeline->audio_enough = FALSE;
         encoder_pipeline->video_enough = FALSE;
+        encoder_pipeline->httprequest_socket_list = NULL;
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;

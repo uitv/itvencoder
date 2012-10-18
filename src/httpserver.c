@@ -21,16 +21,64 @@ static GObject *httpserver_constructor (GType type, guint n_construct_properties
 static void httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
+static gint extract_channel_index (gchar *uri);
+static gint extract_encoder_index (gchar *uri);
+
+static
+gint extract_channel_index (gchar *uri)
+{
+        GRegex *regex;
+        GMatchInfo *match_info;
+        gchar *channel;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                channel = g_match_info_fetch_named (match_info, "channel");
+                GST_DEBUG ("channel is %s", channel);
+                return atoi (channel);
+        }
+        return -1;
+}
+
+static
+gint extract_encoder_index (gchar *uri)
+{
+        GRegex *regex;
+        GMatchInfo *match_info;
+        gchar *encoder;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                encoder = g_match_info_fetch_named (match_info, "encoder");
+                GST_DEBUG ("encoder is %s", encoder);
+                return atoi (encoder);
+        }
+        return -1;
+}
 
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn)
 {
         const struct mg_request_info *request_info = mg_get_request_info(conn);
         ITVEncoder *itvencoder = (ITVEncoder *)mg_get_user_data (conn);
         Channel *channel;
+        gint c, e;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, 1);
         gchar *s = channel->decoder_pipeline->pipeline_string;
         if (event == MG_NEW_REQUEST) {
+                switch (request_info->uri[1]) {
+                case 'c':
+                        e = extract_encoder_index (request_info->uri),
+                        c = extract_channel_index (request_info->uri);
+                        if (c == -1 || e == -1) {
+                                GST_WARNING ("bad channel encoder path");
+                        } else {
+                                GST_DEBUG ("channel: %d; encoder: %d", c, e);
+                        }
+                        break;
+                }
                 mg_printf(conn,
                           "HTTP/1.1 200 OK\r\n"
                           "Content-Type: text/plain\r\n"
