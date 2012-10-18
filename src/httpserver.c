@@ -11,9 +11,9 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 static void httpserver_class_init (HTTPServerClass *httpserverclass);
 static void httpserver_init (HTTPServer *httpserver);
-static void *callback(enum mg_event event, struct mg_connection *conn);
+static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
 
-static void *callback(enum mg_event event, struct mg_connection *conn)
+static void *request_dispatcher (enum mg_event event, struct mg_connection *conn)
 {
         const struct mg_request_info *request_info = mg_get_request_info(conn);
 
@@ -42,7 +42,7 @@ httpserver_init (HTTPServer *httpserver)
 {
         const char *options[] = {"listening_ports", "8000", "enable_keep_alive", "yes", NULL};
 
-        httpserver->ctx = mg_start(&callback, NULL, options);
+        httpserver->ctx = mg_start(&request_dispatcher, NULL, options);
 }
 
 GType
