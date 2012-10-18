@@ -7,7 +7,6 @@
 #define __CHANNEL_H__
 
 #include <gst/gst.h>
-#include "jansson.h"
 
 #define AUDIO_RING_SIZE 32 //TODO: configuration or computer from codec type.
 #define VIDEO_RING_SIZE 32

@@ -7,7 +7,6 @@
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 
-#include "jansson.h"
 #include "channel.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
