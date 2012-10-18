@@ -1,6 +1,7 @@
 CFLAGS += $(shell pkg-config --cflags gstreamer-0.10)
 CFLAGS += -I../src
 CFLAGS += -I../third/jansson-2.4/src
+CFLAGS += -I../third/valenok-mongoose-0804ce7
 CFLAGS += -std=c99 -g
 LDFLAGS += $(shell pkg-config --libs gstreamer-0.10)
 LDFLAGS += -lgstapp-0.10
@@ -12,12 +13,18 @@ itvencoder_deppend = itvencoder.c \
 		     ../src/config.h \
 		     ../src/config.c \
 		     ../src/channel.c \
-		     ../src/channel.h
+		     ../src/channel.h \
+		     ../src/httpserver.c \
+		     ../src/httpserver.h \
+		     ../third/valenok-mongoose-0804ce7/mongoose.c \
+		     ../third/valenok-mongoose-0804ce7/mongoose.h
 
 itvencoder_src = itvencoder.c \
                  ../src/config.c \
 		 ../src/itvencoder.c \
-		 ../src/channel.c
+		 ../src/channel.c \
+		 ../src/httpserver.c \
+		 ../third/valenok-mongoose-0804ce7/mongoose.c
 
 all: itvencoder config
 
