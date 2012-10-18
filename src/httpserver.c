@@ -4,6 +4,7 @@
  */
 
 #include <gst/gst.h>
+#include <string.h>
 #include "httpserver.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -25,7 +26,7 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                           "Content-Length: %d\r\n"
                           "\r\n"
                           "%s",
-                          17, "Hello, ITVEncoder");
+                          strlen (request_info->uri), request_info->uri);
                 return "";
         } else {
                 return NULL;
