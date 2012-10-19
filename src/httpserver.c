@@ -74,7 +74,7 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
         if (event == MG_NEW_REQUEST) {
                 switch (request_info->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        if (http_get_encoder (conn, itvencoder) == -1) {
+                        if (http_get_encoder (conn, itvencoder) != 0) {
                                 mg_printf (conn,
                                         "HTTP/1.1 404 Not Found\r\n"
                                         "Server: ITVEncoder\r\n"
@@ -85,9 +85,15 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                                         strlen (message_404),
                                         message_404
                                 );
-                                return "";
                         }
-                        break;
+                        mg_printf(conn,
+                                "HTTP/1.1 200 OK\r\n"
+                                "Content-Type: video/mpeg\r\n"
+                                "Server: ITVEncoder\r\n"
+                                "Transfer-Encoding: chunked\r\n"
+                                "\r\n"
+                        );
+                        return "";
                 }
                 mg_printf(conn,
                           "HTTP/1.1 200 OK\r\n"

@@ -3,6 +3,7 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <unistd.h>
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
@@ -265,11 +266,21 @@ static
 GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
+        EncoderPipeline *encoder_pipeline = (EncoderPipeline *)user_data;
+        GSList *socket_list;
+        gint socket;
 
         GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_DEBUG ("buffer size: %d", GST_BUFFER_SIZE(buffer));
+        socket_list = encoder_pipeline->httprequest_socket_list;
+        while (socket_list != NULL) {
+                socket = GPOINTER_TO_INT(socket_list->data);
+                write (socket, "bc\r\n", 4);
+                write (socket, GST_BUFFER_DATA(buffer), 188);
+                write (socket, "\r\n", 2);
+                socket_list = g_slist_next (socket_list);
+        } 
         gst_buffer_unref (buffer);
 }
 
@@ -288,7 +299,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         EncoderPipeline *encoder_pipeline;
         gint i;
 
-        GST_DEBUG ("encoder appsrc need data callback func type %c; length %d", type, length);
+        GST_LOG ("encoder appsrc need data callback func type %c; length %d", type, length);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -365,7 +376,7 @@ encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
         EncoderPipeline *encoder_pipeline;
 
-        GST_DEBUG ("encoder appsrc enough data callback func type %c", type);
+        GST_LOG ("encoder appsrc enough data callback func type %c", type);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -418,7 +429,12 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &encoder_appsink_callbacks, NULL, NULL);
+        encoder_pipeline = g_malloc (sizeof (EncoderPipeline)); //TODO free!
+        if (encoder_pipeline == NULL) {
+                GST_ERROR ("g_malloc memeory error.");
+                return -1;
+        }
+        gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &encoder_appsink_callbacks, encoder_pipeline, NULL);
         gst_object_unref (appsink);
 
         appsrc = gst_bin_get_by_name (GST_BIN (p), "videosrc");
@@ -446,12 +462,6 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         user_data->channel = channel;
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
         gst_object_unref (appsrc);
-
-        encoder_pipeline = g_malloc (sizeof (EncoderPipeline)); //TODO free!
-        if (encoder_pipeline == NULL) {
-                GST_ERROR ("g_malloc memeory error.");
-                return -1;
-        }
 
         encoder_pipeline->pipeline_string = pipeline_string;
         encoder_pipeline->pipeline = p;
