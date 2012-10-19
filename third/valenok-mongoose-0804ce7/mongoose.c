@@ -632,6 +632,11 @@ mg_get_request_info(const struct mg_connection *conn) {
   return &conn->request_info;
 }
 
+const int
+mg_get_socket (const struct mg_connection *conn) {
+  return conn->client.sock;
+}
+
 static void mg_strlcpy(register char *dst, register const char *src, size_t n) {
   for (; *src != '\0' && n > 1; n--) {
     *dst++ = *src++;
@@ -876,7 +881,7 @@ static int should_keep_alive(const struct mg_connection *conn) {
   if (conn->must_close ||
       conn->status_code == 401 ||
       mg_strcasecmp(conn->ctx->config[ENABLE_KEEP_ALIVE], "yes") != 0 ||
-      (header != NULL && mg_strcasecmp(header, "keep-alive") != 0) ||
+      //(header != NULL && mg_strcasecmp(header, "keep-alive") != 0) ||
       (header == NULL && http_version && strcmp(http_version, "1.1"))) {
     return 0;
   }

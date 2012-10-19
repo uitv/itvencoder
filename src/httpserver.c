@@ -21,41 +21,45 @@ static GObject *httpserver_constructor (GType type, guint n_construct_properties
 static void httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
-static gint extract_channel_index (gchar *uri);
-static gint extract_encoder_index (gchar *uri);
+static gint http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder);
 
-static
-gint extract_channel_index (gchar *uri)
+static gint
+http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
 {
-        GRegex *regex;
-        GMatchInfo *match_info;
-        gchar *channel;
+        gchar *uri;
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c, *e;
+        Channel *channel;
+        EncoderPipeline *encoder;
+        gint ret=-1, socket;
 
+
+        uri = mg_get_request_info (conn)->uri;
         regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
         if (g_match_info_matches (match_info)) {
-                channel = g_match_info_fetch_named (match_info, "channel");
-                GST_DEBUG ("channel is %s", channel);
-                return atoi (channel);
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < itvencoder->channel_array->len) {
+                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
+                        e = g_match_info_fetch_named (match_info, "encoder");
+                        if (atoi (e) < channel->encoder_pipeline_array->len) {
+                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
+                                encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
+                                socket = mg_get_socket (conn);
+                                encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
+                                ret = 0;
+                        } 
+                        g_free (e);
+                } 
+                g_free (c);
         }
-        return -1;
-}
 
-static
-gint extract_encoder_index (gchar *uri)
-{
-        GRegex *regex;
-        GMatchInfo *match_info;
-        gchar *encoder;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                encoder = g_match_info_fetch_named (match_info, "encoder");
-                GST_DEBUG ("encoder is %s", encoder);
-                return atoi (encoder);
-        }
-        return -1;
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+        return ret;
 }
 
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn)
@@ -63,19 +67,25 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
         const struct mg_request_info *request_info = mg_get_request_info(conn);
         ITVEncoder *itvencoder = (ITVEncoder *)mg_get_user_data (conn);
         Channel *channel;
-        gint c, e;
+        gchar *message_404 = "No such encoder channel.";
 
         channel = g_array_index (itvencoder->channel_array, gpointer, 1);
         gchar *s = channel->decoder_pipeline->pipeline_string;
         if (event == MG_NEW_REQUEST) {
                 switch (request_info->uri[1]) {
-                case 'c':
-                        e = extract_encoder_index (request_info->uri),
-                        c = extract_channel_index (request_info->uri);
-                        if (c == -1 || e == -1) {
-                                GST_WARNING ("bad channel encoder path");
-                        } else {
-                                GST_DEBUG ("channel: %d; encoder: %d", c, e);
+                case 'c': /* uri is /channel..., maybe request for encoder streaming */
+                        if (http_get_encoder (conn, itvencoder) == -1) {
+                                mg_printf (conn,
+                                        "HTTP/1.1 404 Not Found\r\n"
+                                        "Server: ITVEncoder\r\n"
+                                        "Content-Type: text/html\r\n"
+                                        "Connection: close\r\n"
+                                        "Content-Length: %d\r\n\r\n"
+                                        "%s",
+                                        strlen (message_404),
+                                        message_404
+                                );
+                                return "";
                         }
                         break;
                 }
