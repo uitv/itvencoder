@@ -8,8 +8,8 @@
 
 #include <gst/gst.h>
 
-#define AUDIO_RING_SIZE 32 //TODO: configuration or computer from codec type.
-#define VIDEO_RING_SIZE 32
+#define AUDIO_RING_SIZE 256 //TODO: configuration or computer from codec type.
+#define VIDEO_RING_SIZE 128
 
 typedef struct _DecoderPipeline   DecoderPipeline;
 typedef struct _EncoderPipeline   EncoderPipeline;
