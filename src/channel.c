@@ -188,8 +188,8 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_audio_position = i;
-                //if (channel->decoder_pipeline->audio_ring[i] != NULL)
-                //        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
+                if (channel->decoder_pipeline->audio_ring[i] != NULL)
+                        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
                 channel->decoder_pipeline->audio_ring[i] = buffer;
                 break;
         case 'v':
@@ -197,8 +197,8 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->decoder_pipeline->current_video_position = i;
-                //if (channel->decoder_pipeline->video_ring[i] != NULL)
-                //        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
+                if (channel->decoder_pipeline->video_ring[i] != NULL)
+                        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
                 channel->decoder_pipeline->video_ring[i] = buffer;
                 break;
         default:
@@ -299,7 +299,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         EncoderPipeline *encoder_pipeline;
         gint i;
 
-        GST_LOG ("encoder appsrc need data callback func type %c; length %d", type, length);
+        GST_LOG ("encoder %d appsrc need data callback func type %c; length %d", index, type, length);
 
         encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
@@ -325,7 +325,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                                 i,
                                 channel->decoder_pipeline->current_audio_position
                         );
-                        if (gst_app_src_push_buffer (src, channel->decoder_pipeline->audio_ring[i]) != GST_FLOW_OK) {
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->decoder_pipeline->audio_ring[i])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer audio failure.");
                                 break;
                         }
@@ -355,7 +355,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                                 i,
                                 channel->decoder_pipeline->current_video_position
                         );
-                        if (gst_app_src_push_buffer (src, channel->decoder_pipeline->video_ring[i]) != GST_FLOW_OK) {
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->decoder_pipeline->video_ring[i])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer video failure.");
                                 break;
                         }
@@ -444,7 +444,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 return -1;
         }
         user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
-        user_data->index = 0;
+        user_data->index = channel->encoder_pipeline_array->len;
         user_data->type = 'v';
         user_data->channel = channel;
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
@@ -457,7 +457,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 return -1;
         }
         user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
-        user_data->index = 0;
+        user_data->index = channel->encoder_pipeline_array->len;
         user_data->type = 'a';
         user_data->channel = channel;
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);

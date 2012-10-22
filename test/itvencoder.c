@@ -62,6 +62,7 @@ main(int argc, char *argv[])
         httpserver_start (httpserver);
         channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
         channel_set_encoder_pipeline_state (channel, 0, GST_STATE_PLAYING);
+        channel_set_encoder_pipeline_state (channel, 1, GST_STATE_PLAYING);
 
         GST_INFO ("\nChannel %s Running................................................", channel->name);
         g_main_loop_run (loop);
