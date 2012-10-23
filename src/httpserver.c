@@ -33,7 +33,6 @@ http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
         Channel *channel;
         EncoderPipeline *encoder;
         gint ret=-1, socket;
-	GSList *l;
 
         uri = mg_get_request_info (conn)->uri;
         regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
@@ -47,12 +46,7 @@ http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
                                 GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
                                 encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
                                 socket = mg_get_socket (conn);
-				for (l = encoder->httprequest_socket_list; l != NULL; l = g_slist_next(l)){
-                			if (socket == GPOINTER_TO_INT(l->data)) // exist TODO: socket manage
-						break;
-				}
-				if (l == NULL) // not founc, new socket
-                                	encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
+                                encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
                                 ret = 0;
                         } 
                         g_free (e);

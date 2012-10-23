@@ -276,7 +276,10 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
         socket_list = encoder_pipeline->httprequest_socket_list;
         while (socket_list != NULL) {
                 socket = GPOINTER_TO_INT(socket_list->data);
-                write (socket, "bc\r\n", 4);
+                if (write (socket, "bc\r\n", 4) == -1) {
+			GST_INFO ("write http socket error, maybe have been closed, remove it");
+			encoder_pipeline->httprequest_socket_list = g_slist_remove (encoder_pipeline->httprequest_socket_list, GINT_TO_POINTER (socket));
+		}
                 write (socket, GST_BUFFER_DATA(buffer), 188);
                 write (socket, "\r\n", 2);
                 socket_list = g_slist_next (socket_list);
