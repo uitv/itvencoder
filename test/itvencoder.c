@@ -30,6 +30,7 @@ main(int argc, char *argv[])
                 nano_str = "(Prerelease)";
         else
                 nano_str = "";
+        GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
         loop = g_main_loop_new (NULL, FALSE);
