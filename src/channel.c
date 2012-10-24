@@ -493,9 +493,9 @@ channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state
 {
         EncoderPipeline *e;
 
-        GST_LOG ("channel set encoder pipeline state");
+        GST_LOG ("channel set encoder pipeline state index %d", index);
 
-        if (0 > index || index > channel->encoder_pipeline_array->len ) {
+        if (0 > index || index >= channel->encoder_pipeline_array->len ) {
                 GST_ERROR ("index exceed the count of encoder number. %d", index);
                 return -1;
         }
