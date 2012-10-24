@@ -77,11 +77,13 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                         if (http_get_encoder (conn, itvencoder) != 0) {
                                 mg_printf (conn,
                                         "HTTP/1.1 404 Not Found\r\n"
-                                        "Server: ITVEncoder\r\n"
+                                        "Server: %s-%s\r\n"
                                         "Content-Type: text/html\r\n"
                                         "Connection: close\r\n"
                                         "Content-Length: %d\r\n\r\n"
                                         "%s",
+                                        ENCODER_NAME,
+                                        ENCODER_VERSION,
                                         strlen (message_404),
                                         message_404
                                 );
@@ -89,19 +91,23 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                         mg_printf(conn,
                                 "HTTP/1.1 200 OK\r\n"
                                 "Content-Type: video/mpeg\r\n"
-                                "Server: ITVEncoder\r\n"
+                                "Server: %s-%s\r\n"
                                 "Transfer-Encoding: chunked\r\n"
-                                "\r\n"
+                                "\r\n",
+                                ENCODER_NAME,
+                                ENCODER_VERSION
                         );
                         return "";
                 }
                 mg_printf(conn,
                           "HTTP/1.1 200 OK\r\n"
                           "Content-Type: text/plain\r\n"
-                          "Server: iencoder/0.0.1\r\n"
+                          "Server: %s-%s\r\n"
                           "Content-Length: %d\r\n"
                           "\r\n"
                           "%s\n%s",
+                          ENCODER_NAME,
+                          ENCODER_VERSION,
                           strlen (request_info->uri) + strlen (s) + 1,
                           request_info->uri,
                           s);
