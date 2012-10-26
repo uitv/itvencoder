@@ -55,6 +55,7 @@ channel_init (Channel *channel)
 {
         GST_LOG ("channel object init");
 
+        channel->system_clock = gst_system_clock_obtain ();
         channel->decoder_pipeline = g_malloc (sizeof (DecoderPipeline)); //TODO free!
         channel->decoder_pipeline->current_audio_position = -1;
         for (gint i=0; i<AUDIO_RING_SIZE; i++)
@@ -204,6 +205,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         default:
                 GST_ERROR ("error");
         }
+        channel->decoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
 }
 
 guint
@@ -369,6 +371,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         default:
                 GST_ERROR ("error");
         }
+        encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
 }
 
 static void

@@ -31,6 +31,7 @@ struct _ITVEncoder {
         guint           memory_total;
 
         GTimeVal        start_time;
+        GstClock *system_clock;
 
         Config          *config;
         guint           total_channel_number;

@@ -12,6 +12,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
+static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -24,10 +25,21 @@ itvencoder_init (ITVEncoder *itvencoder)
         ChannelConfig *channel_config;
         Channel *channel;
         gchar *pipeline_string;
+        GstClockID id;
+        GstClockTime t;
+        GstClockReturn ret;
 
         GST_LOG ("itvencoder_init");
 
         g_get_current_time (&itvencoder->start_time);
+        itvencoder->system_clock = gst_system_clock_obtain ();
+        t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
+        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
+        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
+        if (ret != GST_CLOCK_OK) {
+                GST_WARNING ("Register itvencoder monitor failure");
+                exit (-1);
+        }
 
         // load config
         itvencoder->config = config_new ("config_file_path", "itvencoder.conf", NULL);
@@ -122,6 +134,38 @@ itvencoder_get_type (void)
         type = g_type_register_static (G_TYPE_OBJECT, "ITVEncoder", &info, 0);
 
         return type;
+}
+
+static gboolean
+itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
+{
+        GstClockID nextid;
+        GstClockTime t;
+        GstClockReturn ret;
+        ITVEncoder *itvencoder = (ITVEncoder *)user_data;
+        Channel *channel;
+        gint i, j;
+
+        GST_INFO ("itvencoder channel monitor");
+
+        for (i=0; i<itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                GST_INFO ("%s decoder pipeline last heart beat %llu", channel->name, channel->decoder_pipeline->last_heartbeat);
+                for (j=0; j<channel->encoder_pipeline_array->len; j++) {
+                        EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                        GST_INFO ("%s encoder pipeline last heart beat %llu", channel->name, encoder_pipeline->last_heartbeat);
+                }
+        }
+
+        t = gst_clock_get_time (itvencoder->system_clock)  + 2000 * GST_MSECOND;
+        nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
+        ret = gst_clock_id_wait_async (nextid, itvencoder_channel_monitor, itvencoder);
+        if (ret != GST_CLOCK_OK) {
+                GST_WARNING ("Register itvencoder monitor failure");
+                return FALSE;
+        }
+
+        return TRUE;
 }
 
 GTimeVal
