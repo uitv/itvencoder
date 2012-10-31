@@ -28,6 +28,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         GstClockID id;
         GstClockTime t;
         GstClockReturn ret;
+        guint i;
 
         GST_LOG ("itvencoder_init");
 
@@ -47,7 +48,7 @@ itvencoder_init (ITVEncoder *itvencoder)
 
         // initialize channels
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
-        for (guint i=0; i<itvencoder->config->channel_config_array->len; i++) {
+        for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 channel = channel_new ("name", channel_config->name, NULL);
                 pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");

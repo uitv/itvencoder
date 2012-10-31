@@ -115,6 +115,7 @@ config_load_config_file_func (Config *config)
         gchar *channel_configs_pattern;
         glob_t channel_config_paths;
         ChannelConfig *channel_config;
+        guint i;
 
         GST_LOG ("config load config file func");
 
@@ -136,7 +137,7 @@ config_load_config_file_func (Config *config)
                 g_free (channel_configs_pattern);
                 return -2;
         }
-        for (guint i=0; i<channel_config_paths.gl_pathc; i++) { // TODO: name unique identifier check.
+        for (i=0; i<channel_config_paths.gl_pathc; i++) { // TODO: name unique identifier check.
                 GST_DEBUG ("Find channel config file: %s.", channel_config_paths.gl_pathv[i]);
                 channel_config = (ChannelConfig *)g_malloc (sizeof(ChannelConfig));
                 channel_config->config_path = g_strdup (channel_config_paths.gl_pathv[i]);
@@ -221,6 +222,7 @@ config_get_selected_pipeline_key (ChannelConfig *channel_config, gchar *pipeline
 {
         json_t *j1, *j2, *j3;
         gchar *key, *selected_pipeline_key;
+        guint i;
 
         GST_LOG ("config get selected pipeline");
 
@@ -241,7 +243,7 @@ config_get_selected_pipeline_key (ChannelConfig *channel_config, gchar *pipeline
                 return NULL;
         }
         key = g_strdup ((gchar *)json_string_value (j3));
-        for (guint i = 1; i < json_array_size (j2); i++) {
+        for (i = 1; i < json_array_size (j2); i++) {
                 selected_pipeline_key = (gchar *)json_string_value (json_array_get (j2, i));
                 j3 = json_object_get (j1, selected_pipeline_key);
                 if (j3 == NULL) {

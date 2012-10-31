@@ -53,15 +53,17 @@ channel_class_init (ChannelClass *channelclass)
 static void
 channel_init (Channel *channel)
 {
+        guint i;
+
         GST_LOG ("channel object init");
 
         channel->system_clock = gst_system_clock_obtain ();
         channel->decoder_pipeline = g_malloc (sizeof (DecoderPipeline)); //TODO free!
         channel->decoder_pipeline->current_audio_position = -1;
-        for (gint i=0; i<AUDIO_RING_SIZE; i++)
+        for (i=0; i<AUDIO_RING_SIZE; i++)
                 channel->decoder_pipeline->audio_ring[i] = NULL;
         channel->decoder_pipeline->current_video_position = -1;
-        for (gint i=0; i<VIDEO_RING_SIZE; i++)
+        for (i=0; i<VIDEO_RING_SIZE; i++)
                 channel->decoder_pipeline->video_ring[i] = NULL;
 
         channel->encoder_pipeline_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!

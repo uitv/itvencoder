@@ -18,6 +18,7 @@ struct _HTTPServer {
 
         ITVEncoder *itvencoder;
         struct mg_context *ctx;
+        GThread *server_thread;
 };
 
 struct _HTTPServerClass {

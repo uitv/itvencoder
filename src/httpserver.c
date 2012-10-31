@@ -3,10 +3,15 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <errno.h>
 #include "httpserver.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -17,6 +22,8 @@ enum {
         HTTPSERVER_PROP_ITVENCODER,
 };
 
+#define MAXEVENTS 512
+
 static void httpserver_class_init (HTTPServerClass *httpserverclass);
 static void httpserver_init (HTTPServer *httpserver);
 static GObject *httpserver_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
@@ -24,6 +31,7 @@ static void httpserver_set_property (GObject *obj, guint prop_id, const GValue *
 static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
 static gint http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder);
+static gpointer httpserver_listen_thread (gpointer data);
 
 static gint
 http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
@@ -218,12 +226,110 @@ httpserver_get_type (void)
         return type;
 }
 
+typedef struct _HTTPServerListenThreadData {
+        gint port; 
+        gint efd;
+        struct epoll_event event;
+} HTTPServerListenThreadData;
+
+static gpointer
+httpserver_listen_thread (gpointer data)
+{
+        HTTPServerListenThreadData *thread_data = (HTTPServerListenThreadData *)data;
+        struct addrinfo hints;
+        struct addrinfo *result, *rp;
+        gint ret, listen_sock;
+        gchar *port = g_strdup_printf ("%d", thread_data->port);
+        struct epoll_event events[MAXEVENTS];
+
+        memset (&hints, 0, sizeof (struct addrinfo));
+        hints.ai_family = AF_UNSPEC; /* Return IPv4 and IPv6 choices */
+        hints.ai_socktype = SOCK_STREAM; /* We want a TCP socket */
+        hints.ai_flags = AI_PASSIVE; /* All interfaces */
+        ret = getaddrinfo (NULL, port, &hints, &result);
+        if (ret != 0) {
+                GST_ERROR ("getaddrinfo: %s\n", gai_strerror(ret));
+                return NULL; // FIXME
+        }
+
+        GST_ERROR ("port is %s", port);
+        for (rp = result; rp != NULL; rp = rp->ai_next) {
+                listen_sock = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+                int opt = 1;
+                setsockopt (listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+                if (listen_sock == -1)
+                        continue;
+                ret = bind (listen_sock, rp->ai_addr, rp->ai_addrlen);
+                if (ret == 0) {
+                        /* We managed to bind successfully! */
+                        GST_ERROR ("listen socket %d", listen_sock);
+                        break;
+                }
+                close(listen_sock);
+        }
+
+        if (rp == NULL) {
+                GST_ERROR ("Could not bind %s\n", port);
+                return NULL;
+        }
+
+        freeaddrinfo (result);
+        g_free (port);
+
+        ret = listen (listen_sock, SOMAXCONN);
+        if (ret == -1) {
+                GST_ERROR ("listen error");
+                return NULL;
+        }
+
+        thread_data->efd = epoll_create1(0);
+        if (thread_data->efd == -1) {
+                GST_ERROR ("epoll_create error %d", errno);
+                return NULL;
+        }
+
+        thread_data->event.data.fd = listen_sock;
+        thread_data->event.events = EPOLLIN | EPOLLET;
+        ret = epoll_ctl (thread_data->efd, EPOLL_CTL_ADD, listen_sock, &(thread_data->event));
+        if (ret == -1) {
+                GST_ERROR ("epoll_ctl %d", errno);
+                return NULL;
+        }
+
+        while (1) {
+                int n, i;
+
+                n = epoll_wait (thread_data->efd, events, MAXEVENTS, -1);
+                if (n == -1) {
+                        GST_ERROR ("epoll_wait %d", errno);
+                }
+                for (i = 0; i < n; i++) {
+                        //if ((events[i].events & EPOLLERR) ||
+                        if ((events[i].events & EPOLLHUP)) {
+                                /* An error has occured on this fd, or the socket is not
+                                ready for reading(why were we notified then?) */
+                                GST_ERROR ("epoll error %d, fd %d", errno, events[i].data.fd);
+                                close (events[i].data.fd);
+                                continue;
+                        }
+                        GST_ERROR ("helloe, heree");
+                        //handle_request(events[i].data.fd);
+                }
+        }
+}
+
 gint
 httpserver_start (HTTPServer *httpserver)
 {
         const char *options[] = {"listening_ports", "8000", "enable_keep_alive", "yes", NULL};
+        HTTPServerListenThreadData *data;
+        GError *error = NULL;
 
         httpserver->ctx = mg_start (&request_dispatcher, httpserver->itvencoder, options);
+        data = g_malloc (sizeof (HTTPServerListenThreadData));
+
+        data->port=9999;
+        httpserver->server_thread = g_thread_create (httpserver_listen_thread, data, TRUE, &error);
 
         return 0;
 }
