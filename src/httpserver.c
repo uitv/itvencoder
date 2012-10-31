@@ -48,7 +48,6 @@ http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
                                 GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
                                 encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
                                 socket = mg_get_socket (conn);
-                                //fcntl (socket, F_SETFL, O_NONBLOCK);
                                 encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
                                 ret = 0;
                         } 
