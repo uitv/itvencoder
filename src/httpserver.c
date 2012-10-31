@@ -90,16 +90,17 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                                         strlen (message_404),
                                         message_404
                                 );
+                        } else {
+                                mg_printf(conn,
+                                        "HTTP/1.1 200 OK\r\n"
+                                        "Content-Type: video/mpeg\r\n"
+                                        "Server: %s-%s\r\n"
+                                        "Transfer-Encoding: chunked\r\n"
+                                        "\r\n",
+                                        ENCODER_NAME,
+                                        ENCODER_VERSION
+                                );
                         }
-                        mg_printf(conn,
-                                "HTTP/1.1 200 OK\r\n"
-                                "Content-Type: video/mpeg\r\n"
-                                "Server: %s-%s\r\n"
-                                "Transfer-Encoding: chunked\r\n"
-                                "\r\n",
-                                ENCODER_NAME,
-                                ENCODER_VERSION
-                        );
                         return "";
                 }
                 mg_printf(conn,
