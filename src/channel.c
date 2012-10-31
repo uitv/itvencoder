@@ -278,7 +278,7 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
         socket_list = encoder_pipeline->httprequest_socket_list;
         while (socket_list != NULL) {
                 socket = GPOINTER_TO_INT(socket_list->data);
-                if (write (socket, "bc\r\n", 4) <= 0) {
+                if (write (socket, "bc\r\n", 4) < 0) {
 			GST_INFO ("write http socket error, maybe have been closed, remove it");
 			encoder_pipeline->httprequest_socket_list = g_slist_remove (encoder_pipeline->httprequest_socket_list, GINT_TO_POINTER (socket));
 		}
@@ -314,6 +314,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                 i = encoder_pipeline->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
                 for (;;) {
+        		encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_audio_position ||
                                 channel->decoder_pipeline->current_audio_position == -1) {
@@ -344,6 +345,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                 i = encoder_pipeline->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
                 for (;;) {
+        		encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_video_position ||
                                 channel->decoder_pipeline->current_video_position == -1) {
@@ -371,7 +373,6 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         default:
                 GST_ERROR ("error");
         }
-        encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
 }
 
 static void
