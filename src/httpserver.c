@@ -304,8 +304,7 @@ httpserver_listen_thread (gpointer data)
                         GST_ERROR ("epoll_wait %d", errno);
                 }
                 for (i = 0; i < n; i++) {
-                        //if ((events[i].events & EPOLLERR) ||
-                        if ((events[i].events & EPOLLHUP)) {
+                        if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
                                 /* An error has occured on this fd, or the socket is not
                                 ready for reading(why were we notified then?) */
                                 GST_ERROR ("epoll error %d, fd %d", errno, events[i].data.fd);
