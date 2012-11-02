@@ -187,6 +187,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         switch (type) {
         case 'a':
+                channel->decoder_pipeline->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
                 i = channel->decoder_pipeline->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
@@ -196,6 +197,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 channel->decoder_pipeline->audio_ring[i] = buffer;
                 break;
         case 'v':
+                channel->decoder_pipeline->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
                 i = channel->decoder_pipeline->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
@@ -207,7 +209,6 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
         default:
                 GST_ERROR ("error");
         }
-        channel->decoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
 }
 
 guint
@@ -316,7 +317,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                 i = encoder_pipeline->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
                 for (;;) {
-        		encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
+        		encoder_pipeline->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_audio_position ||
                                 channel->decoder_pipeline->current_audio_position == -1) {
@@ -347,7 +348,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
                 i = encoder_pipeline->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
                 for (;;) {
-        		encoder_pipeline->last_heartbeat = gst_clock_get_time (channel->system_clock);
+        		encoder_pipeline->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_video_position ||
                                 channel->decoder_pipeline->current_video_position == -1) {

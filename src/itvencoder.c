@@ -151,10 +151,12 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO ("%s decoder pipeline last heart beat %llu", channel->name, channel->decoder_pipeline->last_heartbeat);
+                GST_INFO ("%s decoder pipeline video last heart beat %llu", channel->name, channel->decoder_pipeline->last_video_heartbeat);
+                GST_INFO ("%s decoder pipeline audio last heart beat %llu", channel->name, channel->decoder_pipeline->last_audio_heartbeat);
                 for (j=0; j<channel->encoder_pipeline_array->len; j++) {
                         EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
-                        GST_INFO ("%s encoder pipeline last heart beat %llu", channel->name, encoder_pipeline->last_heartbeat);
+                        GST_INFO ("%s encoder pipeline video last heart beat %llu", channel->name, encoder_pipeline->last_video_heartbeat);
+                        GST_INFO ("%s encoder pipeline audio last heart beat %llu", channel->name, encoder_pipeline->last_audio_heartbeat);
                 }
         }
 

@@ -19,7 +19,8 @@ typedef struct _ChannelClass      ChannelClass;
 struct _DecoderPipeline {
         gchar *pipeline_string;
         GstElement *pipeline;
-        GstClockTime last_heartbeat;
+        GstClockTime last_video_heartbeat;
+        GstClockTime last_audio_heartbeat;
 
         /* decoder produce, encoder consume */
         GstBuffer       *audio_ring[AUDIO_RING_SIZE];
@@ -32,7 +33,8 @@ struct _DecoderPipeline {
 struct _EncoderPipeline {
         gchar           *pipeline_string;
         GstElement      *pipeline;
-        GstClockTime    last_heartbeat;
+        GstClockTime    last_video_heartbeat;
+        GstClockTime    last_audio_heartbeat;
         
         gint current_video_position; // encoder read position
         gboolean video_enough; /* appsrc enaugh_data signal */
