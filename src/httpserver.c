@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <netinet/tcp.h>
 #include <gst/gst.h>
 #include <string.h>
 #include <errno.h>
@@ -32,6 +33,8 @@ static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value,
 static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
 static gint http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder);
 static gpointer httpserver_listen_thread (gpointer data);
+static void thread_pool_func (gpointer data, gpointer user_data);
+static gint read_request (EventData *event_data);
 
 static gint
 http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
@@ -152,6 +155,15 @@ httpserver_class_init (HTTPServerClass *httpserverclass)
 static void
 httpserver_init (HTTPServer *httpserver)
 {
+        gint i;
+
+        httpserver->listen_port = 9999;
+        httpserver->server_thread = NULL;
+        httpserver->thread_pool = NULL;
+        httpserver->event_data_queue = g_queue_new ();
+        for (i=0; i<MAXEVENTS; i++) {
+                g_queue_push_head (httpserver->event_data_queue, (EventData *)g_malloc (sizeof (EventData)));
+        }
 }
 
 static GObject *
@@ -226,21 +238,54 @@ httpserver_get_type (void)
         return type;
 }
 
-typedef struct _HTTPServerListenThreadData {
-        gint port; 
-        gint efd;
-        struct epoll_event event;
-} HTTPServerListenThreadData;
+static gint
+read_request (EventData *event_data)
+{
+        gint count, read_pos = 0;
+        gchar *buf = &(event_data->raw_request[0]);
+
+        while (1) {
+                count = read (event_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
+                if (count == -1) {
+                        if (errno != EAGAIN) {
+                                GST_ERROR ("read error number %d", errno);
+                                return -1;
+                        } else { /* errno == EAGAIN means read complete */
+                                GST_INFO ("read complete\n");
+                                break;
+                        }
+                } else if (count == 0) { /* closed by client */
+                        GST_WARNING ("client closed\n");
+                        return -2;
+                } else if (count > 0) {
+                        read_pos += count;
+                        if (read_pos == kRequestBufferSize) {
+                                GST_ERROR ("rquest size too large");
+                                return -3;
+                        }
+                }
+        }
+
+        buf[read_pos] = 0; /* string */
+        return read_pos;
+}
+
+static gint
+parse_request (EventData *event_data)
+{
+}
 
 static gpointer
 httpserver_listen_thread (gpointer data)
 {
-        HTTPServerListenThreadData *thread_data = (HTTPServerListenThreadData *)data;
+        HTTPServer *http_server = (HTTPServer *)data;
         struct addrinfo hints;
         struct addrinfo *result, *rp;
         gint ret, listen_sock;
-        gchar *port = g_strdup_printf ("%d", thread_data->port);
-        struct epoll_event events[MAXEVENTS];
+        gchar *port = g_strdup_printf ("%d", http_server->listen_port);
+        struct epoll_event event, events[MAXEVENTS];
+        GError *e = NULL;
+        EventData event_user_data;
 
         memset (&hints, 0, sizeof (struct addrinfo));
         hints.ai_family = AF_UNSPEC; /* Return IPv4 and IPv6 choices */
@@ -252,7 +297,7 @@ httpserver_listen_thread (gpointer data)
                 return NULL; // FIXME
         }
 
-        GST_ERROR ("port is %s", port);
+        GST_INFO ("start http server on port is %s", port);
         for (rp = result; rp != NULL; rp = rp->ai_next) {
                 listen_sock = socket (rp->ai_family, rp->ai_socktype, rp->ai_protocol);
                 int opt = 1;
@@ -262,10 +307,10 @@ httpserver_listen_thread (gpointer data)
                 ret = bind (listen_sock, rp->ai_addr, rp->ai_addrlen);
                 if (ret == 0) {
                         /* We managed to bind successfully! */
-                        GST_ERROR ("listen socket %d", listen_sock);
+                        GST_INFO ("listen socket %d", listen_sock);
                         break;
                 }
-                close(listen_sock);
+                close (listen_sock);
         }
 
         if (rp == NULL) {
@@ -282,15 +327,18 @@ httpserver_listen_thread (gpointer data)
                 return NULL;
         }
 
-        thread_data->efd = epoll_create1(0);
-        if (thread_data->efd == -1) {
+        http_server->listen_sock = listen_sock;
+        http_server->epollfd = epoll_create1(0);
+        if (http_server->epollfd == -1) {
                 GST_ERROR ("epoll_create error %d", errno);
                 return NULL;
         }
 
-        thread_data->event.data.fd = listen_sock;
-        thread_data->event.events = EPOLLIN | EPOLLET;
-        ret = epoll_ctl (thread_data->efd, EPOLL_CTL_ADD, listen_sock, &(thread_data->event));
+        //event_user_data.sock = listen_sock;
+        //event_user_data.user_data = NULL;
+        event.data.ptr = NULL;
+        event.events = EPOLLIN | EPOLLET;
+        ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, listen_sock, &event);
         if (ret == -1) {
                 GST_ERROR ("epoll_ctl %d", errno);
                 return NULL;
@@ -299,20 +347,89 @@ httpserver_listen_thread (gpointer data)
         while (1) {
                 int n, i;
 
-                n = epoll_wait (thread_data->efd, events, MAXEVENTS, -1);
+                n = epoll_wait (http_server->epollfd, events, MAXEVENTS, -1);
                 if (n == -1) {
                         GST_ERROR ("epoll_wait %d", errno);
                 }
                 for (i = 0; i < n; i++) {
-                        if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP)) {
-                                /* An error has occured on this fd, or the socket is not
-                                ready for reading(why were we notified then?) */
-                                GST_ERROR ("epoll error %d, fd %d", errno, events[i].data.fd);
-                                close (events[i].data.fd);
-                                continue;
+                        g_thread_pool_push (http_server->thread_pool, &events[i], &e);
+                        if (e != NULL) { // FIXME
+                                GST_ERROR ("Thread pool push error %s", e->message);
+                                g_error_free (e);
+                                //return NULL;
                         }
-                        GST_ERROR ("helloe, heree");
-                        //handle_request(events[i].data.fd);
+                }
+        }
+}
+
+static int
+setNonblocking(int fd)
+{
+        int flags;
+        if (-1 ==(flags = fcntl(fd, F_GETFL, 0)))
+                flags = 0;
+        return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+static void
+thread_pool_func (gpointer data, gpointer user_data)
+{
+        struct epoll_event *e = (struct epoll_event *)data;
+        HTTPServer *http_server = (HTTPServer *)user_data;
+        struct sockaddr in_addr;
+        socklen_t in_len;
+        gint accepted_sock;
+        EventData *event_data;
+        gint ret;
+        
+        if ((e->events & EPOLLERR) || (e->events & EPOLLHUP)) { //FIXME
+                /* An error has occured on this fd, or the socket is not ready for reading(why were we notified then?) */
+                GST_ERROR ("epoll error %d" /*fd %d"*/, errno/*, e->data.fd*/);
+                //close (e.data.fd); 
+                return;
+        }
+
+        if (e->data.ptr == NULL) { /* new connection */
+                while (1) { /* repeat accept until -1 returned */
+                        accepted_sock = accept (http_server->listen_sock, &in_addr, &in_len);
+                        if (accepted_sock == -1) {
+                                if (( errno == EAGAIN) || (errno == EWOULDBLOCK)) { /* We have processed all incoming connections. */
+                                        break;
+                                } else {
+                                        GST_ERROR ("accept errorno %d", errno);
+                                        break;
+                                }
+                        }
+                        if (g_queue_get_length (http_server->event_data_queue) == 0) {
+                                GST_WARNING ("event queue empty");
+                                close (accepted_sock);
+                        } else {
+                                GST_INFO ("new request arrived, accepted_sock %d", accepted_sock);
+                                int on = 1;
+                                setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
+                                setNonblocking (accepted_sock);
+                                event_data = g_queue_pop_tail (http_server->event_data_queue);
+                                event_data->client_addr = in_addr;
+                                event_data->sock = accepted_sock;
+                                g_get_current_time (&(event_data->birth_time));
+                                event_data->status = HTTP_CONNECTED;
+                                e->data.ptr = event_data;
+                                e->events = EPOLLIN | EPOLLET;
+                                ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, e);
+                                if (ret == -1) {
+                                        GST_ERROR ("epoll_ctl %d", errno);
+                                        g_queue_push_head (http_server->event_data_queue, e->data.ptr);
+                                        return;
+                                }
+                        }
+                }
+        } else { /* request */
+                event_data = e->data.ptr;
+                ret = read_request (event_data);
+                if (ret > 0) {
+                        GST_INFO ("Request arrived %d : %s", event_data->sock, event_data->raw_request);
+                        write (event_data->sock, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nokokokokok", 75);
+                        close (event_data->sock);
                 }
         }
 }
@@ -321,14 +438,24 @@ gint
 httpserver_start (HTTPServer *httpserver)
 {
         const char *options[] = {"listening_ports", "8000", "enable_keep_alive", "yes", NULL};
-        HTTPServerListenThreadData *data;
-        GError *error = NULL;
+        GError *e = NULL;
+        gint max_threads = 10;
 
         httpserver->ctx = mg_start (&request_dispatcher, httpserver->itvencoder, options);
-        data = g_malloc (sizeof (HTTPServerListenThreadData));
 
-        data->port=9999;
-        httpserver->server_thread = g_thread_create (httpserver_listen_thread, data, TRUE, &error);
+        httpserver->thread_pool = g_thread_pool_new (thread_pool_func, httpserver, max_threads, TRUE, &e);
+        if (e != NULL) {
+                GST_ERROR ("Create thread pool error %s", e->message);
+                g_error_free (e);
+                return -1;
+        }
+
+        httpserver->server_thread = g_thread_create (httpserver_listen_thread, httpserver, TRUE, &e);
+        if (e != NULL) {
+                GST_ERROR ("Create httpserver thread error %s", e->message);
+                g_error_free (e);
+                return -1;
+        }
 
         return 0;
 }

@@ -6,6 +6,7 @@
 #ifndef __HTTPSERVER_H__
 #define __HTTPSERVER_H__
 
+#include <netinet/in.h>
 #include <gst/gst.h>
 #include "mongoose.h"
 #include "itvencoder.h"
@@ -13,12 +14,36 @@
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
 
+enum http_status {
+        HTTP_CONNECTED,
+        HTTP_REQUEST,
+        HTTP_CONTINUE
+};
+
+#define kRequestBufferSize 1024
+
+typedef struct _EventData {
+        gint sock;
+        struct sockaddr client_addr;
+        GTimeVal birth_time;
+        guint64 bytes_send;
+        enum http_status status;
+        gchar raw_request[kRequestBufferSize];
+        gpointer user_data;
+} EventData;
+
 struct _HTTPServer {
         GObject parent;
 
         ITVEncoder *itvencoder;
         struct mg_context *ctx;
+
+        gint listen_port;
+        gint listen_sock;
+        gint epollfd;
         GThread *server_thread;
+        GThreadPool *thread_pool;
+        GQueue *event_data_queue;
 };
 
 struct _HTTPServerClass {
