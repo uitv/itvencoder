@@ -34,7 +34,7 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
 static gint http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder);
 static gpointer httpserver_listen_thread (gpointer data);
 static void thread_pool_func (gpointer data, gpointer user_data);
-static gint read_request (EventData *event_data);
+static gint read_request (RequestData *request_data);
 
 static gint
 http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
@@ -160,9 +160,9 @@ httpserver_init (HTTPServer *httpserver)
         httpserver->listen_port = 9999;
         httpserver->server_thread = NULL;
         httpserver->thread_pool = NULL;
-        httpserver->event_data_queue = g_queue_new ();
+        httpserver->request_data_queue = g_queue_new ();
         for (i=0; i<MAXEVENTS; i++) {
-                g_queue_push_head (httpserver->event_data_queue, (EventData *)g_malloc (sizeof (EventData)));
+                g_queue_push_head (httpserver->request_data_queue, (RequestData *)g_malloc (sizeof (RequestData)));
         }
 }
 
@@ -239,13 +239,13 @@ httpserver_get_type (void)
 }
 
 static gint
-read_request (EventData *event_data)
+read_request (RequestData *request_data)
 {
         gint count, read_pos = 0;
-        gchar *buf = &(event_data->raw_request[0]);
+        gchar *buf = &(request_data->raw_request[0]);
 
         while (1) {
-                count = read (event_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
+                count = read (request_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
                 if (count == -1) {
                         if (errno != EAGAIN) {
                                 GST_ERROR ("read error number %d", errno);
@@ -271,8 +271,51 @@ read_request (EventData *event_data)
 }
 
 static gint
-parse_request (EventData *event_data)
+parse_request (RequestData *request_data)
 {
+        gchar *buf = request_data->raw_request;
+        gchar *uri = &(request_data->uri[0]);
+        gint i;
+
+        if (strncmp (buf, "GET", 3) == 0) {
+                request_data->method = HTTP_GET;
+        } else if (strncmp (buf, "PUT", 3) == 0) {
+                request_data->method = HTTP_PUT;
+        } else {
+                return 1; /* Bad request */
+        }
+
+        buf += 3;
+        while (*buf == ' ') { /* skip space */
+                buf++;
+        }
+
+        i = 0;
+        while (*buf != ' ' && i++ < 255) { /* max length of uri is 255*/
+                *uri = *buf;
+                buf++;
+                uri++;
+        }
+        if (i <= 255) {
+                uri = '\0';
+        } else { /* Bad request, uri too long */
+                return 1;
+        }
+
+        while (*buf == ' ') { /* skip space */
+                buf++;
+        }
+
+        if (strncmp (buf, "HTTP/1.1", 8) == 0) { /* http version must be 1.1 */
+                request_data->version = HTTP_1_1; 
+        } else { /* Bad request, must be http 1.1 */
+                return 1;
+        }
+
+        buf += 8;
+
+        /* TODO : parse headers */
+        return 0;
 }
 
 static gpointer
@@ -285,7 +328,6 @@ httpserver_listen_thread (gpointer data)
         gchar *port = g_strdup_printf ("%d", http_server->listen_port);
         struct epoll_event event, events[MAXEVENTS];
         GError *e = NULL;
-        EventData event_user_data;
 
         memset (&hints, 0, sizeof (struct addrinfo));
         hints.ai_family = AF_UNSPEC; /* Return IPv4 and IPv6 choices */
@@ -334,8 +376,6 @@ httpserver_listen_thread (gpointer data)
                 return NULL;
         }
 
-        //event_user_data.sock = listen_sock;
-        //event_user_data.user_data = NULL;
         event.data.ptr = NULL;
         event.events = EPOLLIN | EPOLLET;
         ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, listen_sock, &event);
@@ -379,7 +419,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         struct sockaddr in_addr;
         socklen_t in_len;
         gint accepted_sock;
-        EventData *event_data;
+        RequestData *request_data;
         gint ret;
         
         if ((e->events & EPOLLERR) || (e->events & EPOLLHUP)) { //FIXME
@@ -400,7 +440,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                         break;
                                 }
                         }
-                        if (g_queue_get_length (http_server->event_data_queue) == 0) {
+                        if (g_queue_get_length (http_server->request_data_queue) == 0) {
                                 GST_WARNING ("event queue empty");
                                 close (accepted_sock);
                         } else {
@@ -408,49 +448,64 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 int on = 1;
                                 setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                                 setNonblocking (accepted_sock);
-                                event_data = g_queue_pop_tail (http_server->event_data_queue);
-                                event_data->client_addr = in_addr;
-                                event_data->sock = accepted_sock;
-                                g_get_current_time (&(event_data->birth_time));
-                                event_data->status = HTTP_CONNECTED;
-                                e->data.ptr = event_data;
+                                request_data = g_queue_pop_tail (http_server->request_data_queue);
+                                request_data->client_addr = in_addr;
+                                request_data->sock = accepted_sock;
+                                g_get_current_time (&(request_data->birth_time));
+                                request_data->status = HTTP_CONNECTED;
+                                e->data.ptr = request_data;
                                 e->events = EPOLLIN | EPOLLET;
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, e);
                                 if (ret == -1) {
                                         GST_ERROR ("epoll_ctl %d", errno);
-                                        g_queue_push_head (http_server->event_data_queue, e->data.ptr);
+                                        g_queue_push_head (http_server->request_data_queue, e->data.ptr);
                                         return;
                                 }
                         }
                 }
         } else { /* request */
-                event_data = e->data.ptr;
-                ret = read_request (event_data);
+                request_data = e->data.ptr;
+                ret = read_request (request_data);
                 if (ret > 0) {
-                        GST_INFO ("Request arrived %d : %s", event_data->sock, event_data->raw_request);
-                        write (event_data->sock, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nokokokokok", 75);
-                        close (event_data->sock);
+                        GST_INFO ("Request arrived %d : %s", request_data->sock, request_data->raw_request);
+                        write (request_data->sock, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nokokokokok", 75);
+                        close (request_data->sock);
+                }
+
+                ret = parse_request (request_data);
+                if (ret == 0) { /* parse complete, call back user function */
+                        GST_INFO ("Request uri %s", request_data->uri);
+                        if (http_server->user_callback != NULL) {
+                                http_server->user_callback (request_data, http_server->user_data);
+                        } else {
+                                GST_ERROR ("Missing user call back");
+                        }
+                } else if (ret == 1) { /* Bad Request */
+                        GST_WARNING ("Bad request");
                 }
         }
 }
 
 gint
-httpserver_start (HTTPServer *httpserver)
+httpserver_start (HTTPServer *http_server, GFunc user_callback, gpointer user_data)
 {
         const char *options[] = {"listening_ports", "8000", "enable_keep_alive", "yes", NULL};
         GError *e = NULL;
-        gint max_threads = 10;
+        RequestData *request_data;
 
-        httpserver->ctx = mg_start (&request_dispatcher, httpserver->itvencoder, options);
+        http_server->ctx = mg_start (&request_dispatcher, http_server->itvencoder, options);
 
-        httpserver->thread_pool = g_thread_pool_new (thread_pool_func, httpserver, max_threads, TRUE, &e);
+        http_server->thread_pool = g_thread_pool_new (thread_pool_func, http_server, kMaxThreads, TRUE, &e);
         if (e != NULL) {
                 GST_ERROR ("Create thread pool error %s", e->message);
                 g_error_free (e);
                 return -1;
         }
 
-        httpserver->server_thread = g_thread_create (httpserver_listen_thread, httpserver, TRUE, &e);
+        http_server->user_callback = user_callback;
+        http_server->user_data = user_data;
+
+        http_server->server_thread = g_thread_create (httpserver_listen_thread, http_server, TRUE, &e);
         if (e != NULL) {
                 GST_ERROR ("Create httpserver thread error %s", e->message);
                 g_error_free (e);

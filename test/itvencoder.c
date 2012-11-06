@@ -47,7 +47,7 @@ main(int argc, char *argv[])
         }
 
         httpserver = httpserver_new ("itvencoder", itvencoder, NULL);
-        httpserver_start (httpserver);
+        httpserver_start (httpserver, NULL, NULL);
         GST_INFO ("\nChannel starting ----------------------------");
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);

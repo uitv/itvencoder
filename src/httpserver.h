@@ -14,23 +14,42 @@
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
 
-enum http_status {
+enum request_method {
+        HTTP_GET,
+        HTTP_PUT
+};
+
+enum http_version {
+        HTTP_1_1
+};
+
+struct http_headers {
+        gchar *name;
+        gchar *value;
+};
+
+enum session_status {
         HTTP_CONNECTED,
         HTTP_REQUEST,
         HTTP_CONTINUE
 };
 
 #define kRequestBufferSize 1024
+#define kMaxThreads 10
 
-typedef struct _EventData {
+typedef struct _RequestData {
         gint sock;
         struct sockaddr client_addr;
         GTimeVal birth_time;
         guint64 bytes_send;
-        enum http_status status;
+        enum session_status status; /* live over http need keeping tcp link */
         gchar raw_request[kRequestBufferSize];
-        gpointer user_data;
-} EventData;
+        enum request_method method;
+        gchar uri[256];
+        enum http_version version;
+        gint num_headers;
+        struct http_headers headers[64];
+} RequestData;
 
 struct _HTTPServer {
         GObject parent;
@@ -43,7 +62,9 @@ struct _HTTPServer {
         gint epollfd;
         GThread *server_thread;
         GThreadPool *thread_pool;
-        GQueue *event_data_queue;
+        GFunc user_callback;
+        gpointer user_data;
+        GQueue *request_data_queue;
 };
 
 struct _HTTPServerClass {
@@ -59,6 +80,6 @@ struct _HTTPServerClass {
 #define httpserver_new(...)       (g_object_new(TYPE_HTTPSERVER, ## __VA_ARGS__, NULL))
 
 GType httpserver_get_type (void);
-gint httpserver_start (HTTPServer *httpserver);
+gint httpserver_start (HTTPServer *httpserver, GFunc user_callback, gpointer user_data);
 
 #endif /* __HTTPSERVER_H__ */
