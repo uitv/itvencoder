@@ -46,7 +46,7 @@ main(int argc, char *argv[])
                 GST_INFO ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
 
-        httpserver = httpserver_new ("itvencoder", itvencoder, NULL);
+        httpserver = httpserver_new ("itvencoder", itvencoder, "port", 20129, NULL);
         httpserver_start (httpserver, NULL, NULL);
         GST_INFO ("\nChannel starting ----------------------------");
         for (i=0; i<itvencoder->channel_array->len; i++) {

@@ -21,6 +21,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         HTTPSERVER_PROP_0,
         HTTPSERVER_PROP_ITVENCODER,
+        HTTPSERVER_PROP_PORT,
 };
 
 static void httpserver_class_init (HTTPServerClass *httpserverclass);
@@ -148,6 +149,17 @@ httpserver_class_init (HTTPServerClass *httpserverclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, HTTPSERVER_PROP_ITVENCODER, param);
+
+        param = g_param_spec_int (
+                "port",
+                "portf",
+                "server port",
+                1000,
+                65535,
+                20129,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, HTTPSERVER_PROP_PORT, param);
 }
 
 static void
@@ -155,7 +167,6 @@ httpserver_init (HTTPServer *httpserver)
 {
         gint i;
 
-        httpserver->listen_port = 9999;
         httpserver->server_thread = NULL;
         httpserver->thread_pool = NULL;
         httpserver->request_data_queue = g_queue_new ();
@@ -188,6 +199,9 @@ httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         case HTTPSERVER_PROP_ITVENCODER:
                 HTTPSERVER(obj)->itvencoder = g_value_get_object (value); 
                 break;
+        case HTTPSERVER_PROP_PORT:
+                HTTPSERVER(obj)->listen_port = g_value_get_int (value);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
@@ -204,6 +218,9 @@ httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         switch(prop_id) {
         case HTTPSERVER_PROP_ITVENCODER:
                 g_value_set_object (value, httpserver->itvencoder);
+                break;
+        case HTTPSERVER_PROP_PORT:
+                g_value_set_int (value, httpserver->listen_port);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
