@@ -295,7 +295,7 @@ parse_request (RequestData *request_data)
                 uri++;
         }
         if (i <= 255) {
-                uri = '\0';
+                *uri = '\0';
         } else { /* Bad request, uri too long */
                 return 2;
         }
@@ -314,6 +314,15 @@ parse_request (RequestData *request_data)
 
         /* TODO : parse headers */
         return 0;
+}
+
+static int
+setNonblocking(int fd)
+{
+        int flags;
+        if (-1 ==(flags = fcntl(fd, F_GETFL, 0)))
+                flags = 0;
+        return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 static gpointer
@@ -367,6 +376,7 @@ httpserver_listen_thread (gpointer data)
                 return NULL;
         }
 
+        setNonblocking (listen_sock);
         http_server->listen_sock = listen_sock;
         http_server->epollfd = epoll_create1(0);
         if (http_server->epollfd == -1) {
@@ -398,15 +408,6 @@ httpserver_listen_thread (gpointer data)
                         }
                 }
         }
-}
-
-static int
-setNonblocking(int fd)
-{
-        int flags;
-        if (-1 ==(flags = fcntl(fd, F_GETFL, 0)))
-                flags = 0;
-        return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
 static void
@@ -464,13 +465,11 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else { /* request */
                 request_data = e->data.ptr;
                 ret = read_request (request_data);
-                if (ret > 0) {
-                        GST_INFO ("Request arrived %d : %s", request_data->sock, request_data->raw_request);
-                        write (request_data->sock, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nokokokokok", 75);
-                        close (request_data->sock);
-                } else {
+                if (ret <= 0) {
                         GST_ERROR ("no data");
                         close (request_data->sock);
+                        g_queue_push_head (http_server->request_data_queue, request_data);
+                        return;
                 }
 
                 ret = parse_request (request_data);
@@ -480,6 +479,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 http_server->user_callback (request_data, http_server->user_data);
                         } else {
                                 GST_ERROR ("Missing user call back");
+                                write (request_data->sock, header_404, sizeof(header_404));
+                                close (request_data->sock);
+                                g_queue_push_head (http_server->request_data_queue, request_data);
                         }
                 } else { /* Bad Request */
                         GST_WARNING ("Bad request, return is %d", ret);

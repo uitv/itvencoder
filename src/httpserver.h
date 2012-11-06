@@ -11,6 +11,13 @@
 #include "mongoose.h"
 #include "itvencoder.h"
 
+#define header_404 "HTTP/1.1 404 Not Found\r\n" \
+                   "Server: iTVEncoder-0.1.0\r\n" \
+                   "Content-Type: text/html\r\n" \
+                   "Content-Size: 18\r\n" \
+                   "Connection: Close\r\n\r\n" \
+                   "<h1>Not found</h1>"
+
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
 
@@ -36,7 +43,7 @@ enum session_status {
 
 #define kRequestBufferSize 1024
 #define kMaxThreads 10 /* number of threads in thread pool */
-#define kMaxRequests 512
+#define kMaxRequests 128
 
 typedef struct _RequestData {
         gint sock;
