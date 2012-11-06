@@ -35,7 +35,8 @@ enum session_status {
 };
 
 #define kRequestBufferSize 1024
-#define kMaxThreads 10
+#define kMaxThreads 10 /* number of threads in thread pool */
+#define kMaxRequests 512
 
 typedef struct _RequestData {
         gint sock;

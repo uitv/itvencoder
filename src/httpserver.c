@@ -23,8 +23,6 @@ enum {
         HTTPSERVER_PROP_ITVENCODER,
 };
 
-#define MAXEVENTS 512
-
 static void httpserver_class_init (HTTPServerClass *httpserverclass);
 static void httpserver_init (HTTPServer *httpserver);
 static GObject *httpserver_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
@@ -161,7 +159,7 @@ httpserver_init (HTTPServer *httpserver)
         httpserver->server_thread = NULL;
         httpserver->thread_pool = NULL;
         httpserver->request_data_queue = g_queue_new ();
-        for (i=0; i<MAXEVENTS; i++) {
+        for (i=0; i<kMaxRequests; i++) {
                 g_queue_push_head (httpserver->request_data_queue, (RequestData *)g_malloc (sizeof (RequestData)));
         }
 }
@@ -266,7 +264,7 @@ read_request (RequestData *request_data)
                 }
         }
 
-        buf[read_pos] = 0; /* string */
+        buf[read_pos] = '\0'; /* string */
         return read_pos;
 }
 
@@ -299,7 +297,7 @@ parse_request (RequestData *request_data)
         if (i <= 255) {
                 uri = '\0';
         } else { /* Bad request, uri too long */
-                return 1;
+                return 2;
         }
 
         while (*buf == ' ') { /* skip space */
@@ -309,7 +307,7 @@ parse_request (RequestData *request_data)
         if (strncmp (buf, "HTTP/1.1", 8) == 0) { /* http version must be 1.1 */
                 request_data->version = HTTP_1_1; 
         } else { /* Bad request, must be http 1.1 */
-                return 1;
+                return 3;
         }
 
         buf += 8;
@@ -326,7 +324,7 @@ httpserver_listen_thread (gpointer data)
         struct addrinfo *result, *rp;
         gint ret, listen_sock;
         gchar *port = g_strdup_printf ("%d", http_server->listen_port);
-        struct epoll_event event, events[MAXEVENTS];
+        struct epoll_event event, events[kMaxRequests];
         GError *e = NULL;
 
         memset (&hints, 0, sizeof (struct addrinfo));
@@ -387,11 +385,11 @@ httpserver_listen_thread (gpointer data)
         while (1) {
                 int n, i;
 
-                n = epoll_wait (http_server->epollfd, events, MAXEVENTS, -1);
+                n = epoll_wait (http_server->epollfd, events, kMaxRequests, -1);
                 if (n == -1) {
                         GST_ERROR ("epoll_wait %d", errno);
                 }
-                for (i = 0; i < n; i++) {
+                for (i = 0; i < n; i++) { /* push to thread pool queue */
                         g_thread_pool_push (http_server->thread_pool, &events[i], &e);
                         if (e != NULL) { // FIXME
                                 GST_ERROR ("Thread pool push error %s", e->message);
@@ -470,6 +468,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                         GST_INFO ("Request arrived %d : %s", request_data->sock, request_data->raw_request);
                         write (request_data->sock, "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 10\r\n\r\nokokokokok", 75);
                         close (request_data->sock);
+                } else {
+                        GST_ERROR ("no data");
+                        close (request_data->sock);
                 }
 
                 ret = parse_request (request_data);
@@ -480,8 +481,8 @@ thread_pool_func (gpointer data, gpointer user_data)
                         } else {
                                 GST_ERROR ("Missing user call back");
                         }
-                } else if (ret == 1) { /* Bad Request */
-                        GST_WARNING ("Bad request");
+                } else { /* Bad Request */
+                        GST_WARNING ("Bad request, return is %d", ret);
                 }
         }
 }
