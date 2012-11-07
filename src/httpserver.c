@@ -292,12 +292,16 @@ parse_request (RequestData *request_data)
         gchar *uri = &(request_data->uri[0]);
         gint i;
 
+        if ((strstr (buf, "\n\n") == NULL) && (strstr(buf, "\r\n\r\n") == NULL)) {
+                return 1;
+        }
+
         if (strncmp (buf, "GET", 3) == 0) {
                 request_data->method = HTTP_GET;
         } else if (strncmp (buf, "PUT", 3) == 0) {
                 request_data->method = HTTP_PUT;
         } else {
-                return 1; /* Bad request */
+                return 2; /* Bad request */
         }
 
         buf += 3;
@@ -314,7 +318,7 @@ parse_request (RequestData *request_data)
         if (i <= 255) {
                 *uri = '\0';
         } else { /* Bad request, uri too long */
-                return 2;
+                return 3;
         }
 
         while (*buf == ' ') { /* skip space */
@@ -324,7 +328,7 @@ parse_request (RequestData *request_data)
         if (strncmp (buf, "HTTP/1.1", 8) == 0) { /* http version must be 1.1 */
                 request_data->version = HTTP_1_1; 
         } else { /* Bad request, must be http 1.1 */
-                return 3;
+                return 4;
         }
 
         buf += 8;
