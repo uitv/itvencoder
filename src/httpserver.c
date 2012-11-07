@@ -77,11 +77,8 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
 {
         const struct mg_request_info *request_info = mg_get_request_info(conn);
         ITVEncoder *itvencoder = (ITVEncoder *)mg_get_user_data (conn);
-        Channel *channel;
         gchar *message_404 = "No such encoder channel.";
 
-        channel = g_array_index (itvencoder->channel_array, gpointer, 1);
-        gchar *s = channel->decoder_pipeline->pipeline_string;
         switch (event) {
         case MG_NEW_REQUEST:
                 switch (request_info->uri[1]) {
@@ -112,18 +109,6 @@ static void *request_dispatcher (enum mg_event event, struct mg_connection *conn
                         }
                         return "";
                 }
-                mg_printf(conn,
-                          "HTTP/1.1 200 OK\r\n"
-                          "Content-Type: text/plain\r\n"
-                          "Server: %s-%s\r\n"
-                          "Content-Length: %d\r\n"
-                          "\r\n"
-                          "%s\n%s",
-                          ENCODER_NAME,
-                          ENCODER_VERSION,
-                          strlen (request_info->uri) + strlen (s) + 1,
-                          request_info->uri,
-                          s);
                 return "";
         default:
                 GST_INFO ("event is %d", event);
