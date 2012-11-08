@@ -272,23 +272,11 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
 {
         GstBuffer *buffer;
         EncoderPipeline *encoder_pipeline = (EncoderPipeline *)user_data;
-        GSList *socket_list;
-        gint socket;
 
         GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        socket_list = encoder_pipeline->httprequest_socket_list;
-        while (socket_list != NULL) {
-                socket = GPOINTER_TO_INT(socket_list->data);
-                if (write (socket, "bc\r\n", 4) < 0) {
-			GST_INFO ("write http socket error, maybe have been closed, remove it");
-			encoder_pipeline->httprequest_socket_list = g_slist_remove (encoder_pipeline->httprequest_socket_list, GINT_TO_POINTER (socket));
-		}
-                write (socket, GST_BUFFER_DATA(buffer), 188);
-                write (socket, "\r\n", 2);
-                socket_list = g_slist_next (socket_list);
-        } 
+
         gst_buffer_unref (buffer);
 }
 
@@ -479,7 +467,6 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         encoder_pipeline->current_audio_position = -1;
         encoder_pipeline->audio_enough = FALSE;
         encoder_pipeline->video_enough = FALSE;
-        encoder_pipeline->httprequest_socket_list = NULL;
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;

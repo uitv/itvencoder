@@ -40,7 +40,6 @@ struct _EncoderPipeline {
         gboolean video_enough; /* appsrc enaugh_data signal */
         gint current_audio_position; // encoder read position
         gboolean audio_enough;
-        GSList *httprequest_socket_list;
 };
 
 struct _Channel {

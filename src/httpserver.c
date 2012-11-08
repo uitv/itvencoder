@@ -395,7 +395,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 } else {
                                         GST_ERROR ("Missing user call back");
                                         gchar *buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, sizeof (buf));
+                                        write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         close (request_data->sock);
                                         g_queue_push_head (http_server->request_data_queue, request_data);
@@ -403,7 +403,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         } else { /* Bad Request */
                                 GST_ERROR ("Bad request, return is %d", ret);
                                 gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
-                                write (request_data->sock, buf, sizeof (buf));
+                                write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                                 close (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data);

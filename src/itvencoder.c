@@ -230,8 +230,6 @@ http_get_encoder (gchar *uri, ITVEncoder *itvencoder)
                         if (atoi (e) < channel->encoder_pipeline_array->len) {
                                 GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
                                 encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
-                                //socket = mg_get_socket (conn);
-                                encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
                                 ret = 0;
                         } 
                         g_free (e);
@@ -261,6 +259,9 @@ request_dispatcher (gpointer data, gpointer user_data)
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         if (http_get_encoder (request_data->uri, itvencoder) == 0) {
+                                buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
                                 return HTTP_CONTINUE;
                         } else {
                                 buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
