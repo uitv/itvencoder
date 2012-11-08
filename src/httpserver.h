@@ -8,18 +8,31 @@
 
 #include <netinet/in.h>
 #include <gst/gst.h>
-#include "mongoose.h"
-#include "itvencoder.h"
 
-#define header_404 "HTTP/1.1 404 Not Found\r\n" \
-                   "Server: iTVEncoder-0.1.0\r\n" \
-                   "Content-Type: text/html\r\n" \
-                   "Content-Size: 18\r\n" \
-                   "Connection: Close\r\n\r\n" \
-                   "<h1>Not found</h1>"
+#include "version.h"
+
+#define http_404 "HTTP/1.1 404 Not Found\r\n" \
+                 "Server: %s-%s\r\n" \
+                 "Content-Type: text/html\r\n" \
+                 "Content-Size: 18\r\n" \
+                 "Connection: Close\r\n\r\n" \
+                 "<h1>Not found</h1>"
+
+#define http_400 "HTTP/1.1 400 Bad Request\r\n" \
+                 "Server: %s-%s\r\n" \
+                 "Content-Type: text/html\r\n" \
+                 "Content-Size: 20\r\n" \
+                 "Connection: Close\r\n\r\n" \
+                 "<h1>Bad Request</h1>"
+
+#define http_chunked "HTTP/1.1 200 OK\r\n" \
+                     "Content-Type: video/mpeg\r\n" \
+                     "Server: %s-%s\r\n" \
+                     "Transfer-Encoding: chunked\r\n\r\n"
 
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
+typedef int (*http_callback_t) (gpointer data, gpointer user_data);
 
 enum request_method {
         HTTP_GET,
@@ -38,7 +51,8 @@ struct http_headers {
 enum session_status {
         HTTP_CONNECTED,
         HTTP_REQUEST,
-        HTTP_CONTINUE
+        HTTP_CONTINUE,
+        HTTP_FINISH
 };
 
 #define kRequestBufferSize 1024
@@ -57,12 +71,12 @@ typedef struct _RequestData {
         enum http_version version;
         gint num_headers;
         struct http_headers headers[64];
+        gpointer user_data;
 } RequestData;
 
 struct _HTTPServer {
         GObject parent;
 
-        ITVEncoder *itvencoder;
         struct mg_context *ctx;
 
         gint listen_port;
@@ -70,7 +84,7 @@ struct _HTTPServer {
         gint epollfd;
         GThread *server_thread;
         GThreadPool *thread_pool;
-        GFunc user_callback;
+        http_callback_t user_callback;
         gpointer user_data;
         GQueue *request_data_queue;
 };
@@ -88,6 +102,6 @@ struct _HTTPServerClass {
 #define httpserver_new(...)       (g_object_new(TYPE_HTTPSERVER, ## __VA_ARGS__, NULL))
 
 GType httpserver_get_type (void);
-gint httpserver_start (HTTPServer *httpserver, GFunc user_callback, gpointer user_data);
+gint httpserver_start (HTTPServer *httpserver, http_callback_t user_callback, gpointer user_data);
 
 #endif /* __HTTPSERVER_H__ */

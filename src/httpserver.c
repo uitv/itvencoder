@@ -29,92 +29,9 @@ static void httpserver_init (HTTPServer *httpserver);
 static GObject *httpserver_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static void *request_dispatcher (enum mg_event event, struct mg_connection *conn);
-static gint http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder);
 static gpointer httpserver_listen_thread (gpointer data);
 static void thread_pool_func (gpointer data, gpointer user_data);
 static gint read_request (RequestData *request_data);
-
-static gint
-http_get_encoder (struct mg_connection *conn, ITVEncoder *itvencoder)
-{
-        gchar *uri;
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c, *e;
-        Channel *channel;
-        EncoderPipeline *encoder;
-        gint ret=-1, socket;
-
-        uri = mg_get_request_info (conn)->uri;
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < itvencoder->channel_array->len) {
-                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
-                        e = g_match_info_fetch_named (match_info, "encoder");
-                        if (atoi (e) < channel->encoder_pipeline_array->len) {
-                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
-                                encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
-                                socket = mg_get_socket (conn);
-                                encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
-                                ret = 0;
-                        } 
-                        g_free (e);
-                } 
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-        return ret;
-}
-
-static void *request_dispatcher (enum mg_event event, struct mg_connection *conn)
-{
-        const struct mg_request_info *request_info = mg_get_request_info(conn);
-        ITVEncoder *itvencoder = (ITVEncoder *)mg_get_user_data (conn);
-        gchar *message_404 = "No such encoder channel.";
-
-        switch (event) {
-        case MG_NEW_REQUEST:
-                switch (request_info->uri[1]) {
-                case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        if (http_get_encoder (conn, itvencoder) != 0) {
-                                mg_printf (conn,
-                                        "HTTP/1.1 404 Not Found\r\n"
-                                        "Server: %s-%s\r\n"
-                                        "Content-Type: text/html\r\n"
-                                        "Connection: close\r\n"
-                                        "Content-Length: %d\r\n\r\n"
-                                        "%s",
-                                        ENCODER_NAME,
-                                        ENCODER_VERSION,
-                                        strlen (message_404),
-                                        message_404
-                                );
-                        } else {
-                                mg_printf(conn,
-                                        "HTTP/1.1 200 OK\r\n"
-                                        "Content-Type: video/mpeg\r\n"
-                                        "Server: %s-%s\r\n"
-                                        "Transfer-Encoding: chunked\r\n"
-                                        "\r\n",
-                                        ENCODER_NAME,
-                                        ENCODER_VERSION
-                                );
-                        }
-                        return "";
-                }
-                return "";
-        default:
-                GST_INFO ("event is %d", event);
-                return NULL;
-        }
-}
 
 static void
 httpserver_class_init (HTTPServerClass *httpserverclass)
@@ -125,15 +42,6 @@ httpserver_class_init (HTTPServerClass *httpserverclass)
         g_object_class->constructor = httpserver_constructor;
         g_object_class->set_property = httpserver_set_property;
         g_object_class->get_property = httpserver_get_property;
-
-        param = g_param_spec_object (
-                "itvencoder",
-                "itvencoderf",
-                "itvencoder context",
-                TYPE_ITVENCODER,
-                G_PARAM_WRITABLE | G_PARAM_READABLE
-        );
-        g_object_class_install_property (g_object_class, HTTPSERVER_PROP_ITVENCODER, param);
 
         param = g_param_spec_int (
                 "port",
@@ -181,9 +89,6 @@ httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         GST_LOG ("httpserver set property");
 
         switch(prop_id) {
-        case HTTPSERVER_PROP_ITVENCODER:
-                HTTPSERVER(obj)->itvencoder = g_value_get_object (value); 
-                break;
         case HTTPSERVER_PROP_PORT:
                 HTTPSERVER(obj)->listen_port = g_value_get_int (value);
                 break;
@@ -201,9 +106,6 @@ httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         GST_LOG ("httpserver get property");
 
         switch(prop_id) {
-        case HTTPSERVER_PROP_ITVENCODER:
-                g_value_set_object (value, httpserver->itvencoder);
-                break;
         case HTTPSERVER_PROP_PORT:
                 g_value_set_int (value, httpserver->listen_port);
                 break;
@@ -470,39 +372,51 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
         } else { /* request */
                 request_data = e->data.ptr;
-                ret = read_request (request_data);
-                if (ret <= 0) {
-                        GST_ERROR ("no data");
-                        close (request_data->sock);
-                        g_queue_push_head (http_server->request_data_queue, request_data);
-                        return;
-                }
+                if (request_data->status == HTTP_CONNECTED) {
+                        ret = read_request (request_data);
+                        if (ret <= 0) {
+                                GST_ERROR ("no data");
+                                close (request_data->sock);
+                                g_queue_push_head (http_server->request_data_queue, request_data);
+                                return;
+                        }
 
-                ret = parse_request (request_data);
-                if (ret == 0) { /* parse complete, call back user function */
-                        GST_INFO ("Request uri %s", request_data->uri);
-                        if (http_server->user_callback != NULL) {
-                                http_server->user_callback (request_data, http_server->user_data);
-                        } else {
-                                GST_ERROR ("Missing user call back");
-                                write (request_data->sock, header_404, sizeof(header_404));
+                        ret = parse_request (request_data);
+                        if (ret == 0) { /* parse complete, call back user function */
+                                GST_INFO ("Request uri %s", request_data->uri);
+                                if (http_server->user_callback != NULL) {
+                                        request_data->status = HTTP_REQUEST;
+                                        gint cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                                        if (cb_ret == HTTP_CONTINUE) {
+                                        } else if (cb_ret == HTTP_FINISH) {
+                                                close (request_data->sock);
+                                                g_queue_push_head (http_server->request_data_queue, request_data);
+                                        }
+                                } else {
+                                        GST_ERROR ("Missing user call back");
+                                        gchar *buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, sizeof (buf));
+                                        g_free (buf);
+                                        close (request_data->sock);
+                                        g_queue_push_head (http_server->request_data_queue, request_data);
+                                }
+                        } else { /* Bad Request */
+                                GST_ERROR ("Bad request, return is %d", ret);
+                                gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
+                                write (request_data->sock, buf, sizeof (buf));
+                                g_free (buf);
                                 close (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data);
                         }
-                } else { /* Bad Request */
-                        GST_WARNING ("Bad request, return is %d", ret);
                 }
         }
 }
 
 gint
-httpserver_start (HTTPServer *http_server, GFunc user_callback, gpointer user_data)
+httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpointer user_data)
 {
-        const char *options[] = {"listening_ports", "8000", "enable_keep_alive", "yes", NULL};
         GError *e = NULL;
         RequestData *request_data;
-
-        http_server->ctx = mg_start (&request_dispatcher, http_server->itvencoder, options);
 
         http_server->thread_pool = g_thread_pool_new (thread_pool_func, http_server, kMaxThreads, TRUE, &e);
         if (e != NULL) {

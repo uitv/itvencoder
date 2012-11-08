@@ -8,15 +8,10 @@
 
 #include <gst/gst.h>
 
+#include "version.h"
 #include "config.h"
 #include "channel.h"
-
-#define ENCODER_NAME "iTVEncoder"
-
-#define VERSION_MAJOR "0" /* major progress */
-#define VERSION_MINOR "1" /* minor progress */
-#define VERSION_MICRO "0" /* bug fix */
-#define ENCODER_VERSION  (VERSION_MAJOR "." VERSION_MINOR "." VERSION_MICRO)
+#include "httpserver.h"
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
@@ -37,6 +32,7 @@ struct _ITVEncoder {
         guint           total_channel_number;
         guint           working_channel_number; 
         GArray          *channel_array;
+        HTTPServer *httpserver;
 };
 
 struct _ITVEncoderClass {
@@ -53,5 +49,6 @@ struct _ITVEncoderClass {
 
 GType itvencoder_get_type (void);
 GTimeVal itvencoder_get_start_time (ITVEncoder *itvencoder);
+gint itvencoder_start (ITVEncoder *itvencoder);
 
 #endif /* __ITVENCODER_H__ */

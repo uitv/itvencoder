@@ -4,6 +4,7 @@
  */
 
 #include <gst/gst.h>
+#include <string.h>
 #include "itvencoder.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -13,6 +14,8 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
+static gint request_dispatcher (gpointer data, gpointer user_data);
+static gint http_get_encoder (gchar *uri, ITVEncoder *itvencoder);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -110,6 +113,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                            channel->encoder_pipeline_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
+        itvencoder->httpserver = httpserver_new ("port", 20129, NULL);
 }
 
 GType
@@ -181,3 +185,99 @@ itvencoder_get_start_time (ITVEncoder *itvencoder)
 
         return itvencoder->start_time;
 }
+
+gint
+itvencoder_start (ITVEncoder *itvencoder)
+{
+        int i, j;
+        Channel *channel;
+
+        for (i=0; i<itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                GST_INFO ("\nchannel %s has %d encoder pipeline.>>>>>>>>>>>>>>>>>>>>>>>>>\nchannel decoder pipeline string is %s",
+                        channel->name,
+                        channel->encoder_pipeline_array->len,
+                        channel->decoder_pipeline->pipeline_string);
+                channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
+                for (j=0; j<channel->encoder_pipeline_array->len; j++) {
+                        EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                        GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string);
+                        channel_set_encoder_pipeline_state (channel, j, GST_STATE_PLAYING);
+                }
+        }
+        httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder);
+
+        return 0;
+}
+
+static gint
+http_get_encoder (gchar *uri, ITVEncoder *itvencoder)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c, *e;
+        Channel *channel;
+        EncoderPipeline *encoder;
+        gint ret=-1, socket;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < itvencoder->channel_array->len) {
+                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
+                        e = g_match_info_fetch_named (match_info, "encoder");
+                        if (atoi (e) < channel->encoder_pipeline_array->len) {
+                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
+                                encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
+                                //socket = mg_get_socket (conn);
+                                encoder->httprequest_socket_list = g_slist_append (encoder->httprequest_socket_list, GINT_TO_POINTER (socket));
+                                ret = 0;
+                        } 
+                        g_free (e);
+                } 
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+        return ret;
+}
+
+static gint
+request_dispatcher (gpointer data, gpointer user_data)
+{
+        RequestData *request_data = data;
+        ITVEncoder *itvencoder = user_data;
+        gchar *buf;
+
+        GST_INFO ("hello");
+
+        switch (request_data->status) {
+        case HTTP_REQUEST:
+                GST_INFO ("uri is %s", request_data->uri);
+                switch (request_data->uri[1]) {
+                case 'c': /* uri is /channel..., maybe request for encoder streaming */
+                        if (http_get_encoder (request_data->uri, itvencoder) == 0) {
+                                return HTTP_CONTINUE;
+                        } else {
+                                buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return HTTP_FINISH;
+                        }
+                default:
+                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                        return HTTP_FINISH;
+                }
+        case HTTP_CONTINUE:
+                return HTTP_CONTINUE;
+        default:
+                GST_ERROR ("Unknown status %d", request_data->status);
+        }
+}
+

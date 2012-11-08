@@ -46,24 +46,7 @@ main(int argc, char *argv[])
                 GST_INFO ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
 
-        httpserver = httpserver_new ("itvencoder", itvencoder, "port", 20129, NULL);
-        httpserver_start (httpserver, NULL, NULL);
-        GST_INFO ("\nChannel starting ----------------------------");
-        for (i=0; i<itvencoder->channel_array->len; i++) {
-                channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO ("\nchannel %s has %d encoder pipeline.>>>>>>>>>>>>>>>>>>>>>>>>>\nchannel decoder pipeline string is %s",
-                        channel->name,
-                        channel->encoder_pipeline_array->len,
-                        channel->decoder_pipeline->pipeline_string);
-                channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
-                for (j=0; j<channel->encoder_pipeline_array->len; j++) {
-                        EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
-                        GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string);
-                        channel_set_encoder_pipeline_state (channel, j, GST_STATE_PLAYING);
-                }
-        }
-
-        GST_INFO ("\nChannel %s Running................................................", channel->name);
+        itvencoder_start (itvencoder);
         g_main_loop_run (loop);
         return 0;
 }
