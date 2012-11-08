@@ -53,19 +53,10 @@ channel_class_init (ChannelClass *channelclass)
 static void
 channel_init (Channel *channel)
 {
-        guint i;
-
         GST_LOG ("channel object init");
 
         channel->system_clock = gst_system_clock_obtain ();
         channel->decoder_pipeline = g_malloc (sizeof (DecoderPipeline)); //TODO free!
-        channel->decoder_pipeline->current_audio_position = -1;
-        for (i=0; i<AUDIO_RING_SIZE; i++)
-                channel->decoder_pipeline->audio_ring[i] = NULL;
-        channel->decoder_pipeline->current_video_position = -1;
-        for (i=0; i<VIDEO_RING_SIZE; i++)
-                channel->decoder_pipeline->video_ring[i] = NULL;
-
         channel->encoder_pipeline_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
@@ -224,8 +215,16 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
                 NULL
         };
         UserData *user_data;
+        gint i;
 
         GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
+
+        channel->decoder_pipeline->current_audio_position = -1;
+        for (i=0; i<AUDIO_RING_SIZE; i++)
+                channel->decoder_pipeline->audio_ring[i] = NULL;
+        channel->decoder_pipeline->current_video_position = -1;
+        for (i=0; i<VIDEO_RING_SIZE; i++)
+                channel->decoder_pipeline->video_ring[i] = NULL;
 
         p = gst_parse_launch (pipeline_string, &e);
         if (e != NULL) {
@@ -272,12 +271,18 @@ GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_dat
 {
         GstBuffer *buffer;
         EncoderPipeline *encoder_pipeline = (EncoderPipeline *)user_data;
+        gint i;
 
         GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-
-        gst_buffer_unref (buffer);
+        i = encoder_pipeline->current_output_position + 1;
+        i = i % OUTPUT_RING_SIZE;
+        GST_DEBUG ("output current position %d, buffer size: %d", i, GST_BUFFER_SIZE(buffer));
+        encoder_pipeline->current_output_position = i;
+        if (encoder_pipeline->output_ring[i] != NULL)
+                gst_buffer_unref (encoder_pipeline->output_ring[i]);
+        encoder_pipeline->output_ring[i] = buffer;
 }
 
 typedef struct _EncoderAppsrcUserData {
@@ -408,6 +413,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 NULL
         };
         EncoderAppsrcUserData *user_data;
+        gint i;
 
         GST_LOG ("channel add encoder pipeline : %s", pipeline_string);
 
@@ -467,6 +473,10 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         encoder_pipeline->current_audio_position = -1;
         encoder_pipeline->audio_enough = FALSE;
         encoder_pipeline->video_enough = FALSE;
+        encoder_pipeline->current_output_position = -1;
+        for (i=0; i<OUTPUT_RING_SIZE; i++)
+                encoder_pipeline->output_ring[i] = NULL;
+
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;
