@@ -14,8 +14,8 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static gint request_dispatcher (gpointer data, gpointer user_data);
-static gint http_get_encoder (gchar *uri, ITVEncoder *itvencoder);
+static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
+static EncoderPipeline * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -210,15 +210,14 @@ itvencoder_start (ITVEncoder *itvencoder)
         return 0;
 }
 
-static gint
-http_get_encoder (gchar *uri, ITVEncoder *itvencoder)
+static EncoderPipeline *
+get_encoder (gchar *uri, ITVEncoder *itvencoder)
 {
         GRegex *regex = NULL;
         GMatchInfo *match_info = NULL;
         gchar *c, *e;
         Channel *channel;
-        EncoderPipeline *encoder;
-        gint ret=-1, socket;
+        EncoderPipeline *encoder = NULL;
 
         regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
@@ -230,7 +229,6 @@ http_get_encoder (gchar *uri, ITVEncoder *itvencoder)
                         if (atoi (e) < channel->encoder_pipeline_array->len) {
                                 GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
                                 encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
-                                ret = 0;
                         } 
                         g_free (e);
                 } 
@@ -241,15 +239,35 @@ http_get_encoder (gchar *uri, ITVEncoder *itvencoder)
                 g_match_info_free (match_info);
         if (regex != NULL)
                 g_regex_unref (regex);
-        return ret;
+
+        return encoder;
 }
 
-static gint
+typedef struct _RequestDataUserData {
+        gint current_send_position;
+        gpointer encoder;
+} RequestDataUserData;
+
+/**
+ * request_dispatcher:
+ * @data: RequestData type pointer
+ * @user_data: itvencoder type pointer
+ *
+ * Process http request.
+ *
+ * Returns: positive value if have not completed the processing, for example live streaming.
+ *      0 if have completed the processing.
+ */
+static GstClockTime
 request_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
+        int i = 0, j;
+        EncoderPipeline *encoder;
+        GstBuffer *buffer;
+        RequestDataUserData *request_user_data;
 
         GST_INFO ("hello");
 
@@ -258,27 +276,62 @@ request_dispatcher (gpointer data, gpointer user_data)
                 GST_INFO ("uri is %s", request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        if (http_get_encoder (request_data->uri, itvencoder) == 0) {
+                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
+                        request_user_data->encoder = get_encoder (request_data->uri, itvencoder);
+                        request_user_data->current_send_position = 0;
+                        request_data->user_data = request_user_data;
+                        if (request_data->user_data != NULL) {
                                 buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
-                                return HTTP_CONTINUE;
+                                return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms
                         } else {
                                 buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
-                                return HTTP_FINISH;
+                                return 0;
                         }
                 default:
                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                        return HTTP_FINISH;
+                        return 0;
                 }
         case HTTP_CONTINUE:
-                return HTTP_CONTINUE;
+                request_user_data = request_data->user_data;
+                encoder = request_user_data->encoder;
+                while (1) {
+                        gchar *size = "524\r\n"; // 1316 = 188*7
+                        gchar *end = "\r\n";
+                        struct iovec iov[9];
+
+                        i = request_user_data->current_send_position + 7;
+                        i %= 7;
+                        if (i < encoder->current_output_position) {
+                                iov[0].iov_base = size;
+                                iov[0].iov_len = 5;
+                                for (j=7; j>0; j--) {
+                                        iov[j].iov_base = GST_BUFFER_DATA (encoder->output_ring[i-j]);
+                                        iov[j].iov_len = 188;
+                                }
+                                iov[8].iov_base = end;
+                                iov[8].iov_len = 2;
+                                writev (request_data->sock, iov, 9);
+                                request_user_data->current_send_position = i;
+                        } else {
+                                break; 
+                        }
+                }
+                return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms;
+        case HTTP_FINISH:
+                g_free (request_data->user_data);
+                return 0;
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
+                buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
+                write (request_data->sock, buf, strlen (buf));
+                g_free (buf);
+                return 0;
         }
 }
 

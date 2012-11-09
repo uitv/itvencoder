@@ -447,7 +447,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
+        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
         user_data->index = channel->encoder_pipeline_array->len;
         user_data->type = 'v';
         user_data->channel = channel;
@@ -460,7 +460,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData));
+        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
         user_data->index = channel->encoder_pipeline_array->len;
         user_data->type = 'a';
         user_data->channel = channel;

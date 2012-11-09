@@ -10,7 +10,7 @@
 
 #define AUDIO_RING_SIZE 256 //TODO: configuration or computer from codec type.
 #define VIDEO_RING_SIZE 128
-#define OUTPUT_RING_SIZE (1024*7) // 8*188 = 1316 , 1316 < 1500 (mtu)
+#define OUTPUT_RING_SIZE (1024*7) // 7*188 = 1316 , 1316 < 1500 (mtu)
 
 typedef struct _DecoderPipeline   DecoderPipeline;
 typedef struct _EncoderPipeline   EncoderPipeline;

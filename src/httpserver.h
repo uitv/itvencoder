@@ -32,7 +32,7 @@
 
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
-typedef int (*http_callback_t) (gpointer data, gpointer user_data);
+typedef GstClockTime (*http_callback_t) (gpointer data, gpointer user_data);
 
 enum request_method {
         HTTP_GET,
@@ -65,6 +65,7 @@ typedef struct _RequestData {
         GTimeVal birth_time;
         guint64 bytes_send;
         enum session_status status; /* live over http need keeping tcp link */
+        GstClockTime wakeup_time;
         gchar raw_request[kRequestBufferSize];
         enum request_method method;
         gchar uri[256];
@@ -77,12 +78,16 @@ typedef struct _RequestData {
 struct _HTTPServer {
         GObject parent;
 
-        struct mg_context *ctx;
+        GstClock *system_clock;
 
         gint listen_port;
         gint listen_sock;
         gint epollfd;
         GThread *server_thread;
+        GMutex *idle_queue_mutex;
+        GCond *idle_queue_cond;
+        GTree *idle_queue;
+        GThread *idle_thread;
         GThreadPool *thread_pool;
         http_callback_t user_callback;
         gpointer user_data;

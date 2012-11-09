@@ -30,6 +30,8 @@ static GObject *httpserver_constructor (GType type, guint n_construct_properties
 static void httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gpointer httpserver_listen_thread (gpointer data);
+static gint compare_func (gconstpointer a, gconstpointer b);
+static gpointer idle_thread (gpointer data);
 static void thread_pool_func (gpointer data, gpointer user_data);
 static gint read_request (RequestData *request_data);
 
@@ -55,10 +57,21 @@ httpserver_class_init (HTTPServerClass *httpserverclass)
         g_object_class_install_property (g_object_class, HTTPSERVER_PROP_PORT, param);
 }
 
+static gint
+compare_func (gconstpointer a, gconstpointer b)
+{
+        GstClockTime aa = *(GstClockTime *)a;
+        GstClockTime bb = *(GstClockTime *)b;
+
+        return aa - bb;
+}
+
 static void
 httpserver_init (HTTPServer *httpserver)
 {
         gint i;
+
+        httpserver->system_clock = gst_system_clock_obtain ();
 
         httpserver->server_thread = NULL;
         httpserver->thread_pool = NULL;
@@ -66,6 +79,12 @@ httpserver_init (HTTPServer *httpserver)
         for (i=0; i<kMaxRequests; i++) {
                 g_queue_push_head (httpserver->request_data_queue, (RequestData *)g_malloc (sizeof (RequestData)));
         }
+
+        httpserver->idle_queue_mutex = g_mutex_new (); //FIXME: release, deprecated api in new version of glib.
+        httpserver->idle_queue_cond = g_cond_new ();
+        httpserver->idle_queue = g_tree_new (compare_func);
+
+        httpserver->system_clock = gst_system_clock_obtain ();
 }
 
 static GObject *
@@ -318,6 +337,69 @@ httpserver_listen_thread (gpointer data)
         }
 }
 
+typedef struct _ForeachFuncData {
+        GSList **wakeup_list; /* point to list of wakeuped */
+        HTTPServer *http_server;
+} ForeachFuncData;
+
+static gboolean
+gtree_foreach_func (gpointer key, gpointer value, gpointer data)
+{
+        ForeachFuncData *func_data = data;
+        HTTPServer *http_server = func_data->http_server;
+        GstClockTime current_time;
+        GError *e = NULL;
+        GSList **wakeup_list = func_data->wakeup_list;
+        
+        current_time = gst_clock_get_time (http_server->system_clock);
+        if (current_time > *(GstClockTime *)key) {
+                GST_WARNING ("current time %lld, wakeuptime %lld", current_time, *(GstClockTime *)key);
+                g_thread_pool_push (http_server->thread_pool, value, &e);
+                *wakeup_list = g_slist_append (*wakeup_list, key);
+                if (*wakeup_list == NULL) GST_ERROR (":(:(:(:(:(:(:(:(");
+                else GST_WARNING (":):):):):):):)");
+                if (e != NULL) { // FIXME
+                        GST_ERROR ("Thread pool push error %s", e->message);
+                        g_error_free (e);
+                }
+                return FALSE;
+        } else {
+                return TRUE;
+        }
+}
+
+static void
+gslist_foreach_func (gpointer data, gpointer user_data)
+{
+        GstClockTime *wakeup = data;
+        HTTPServer *http_server = user_data;
+
+        GST_WARNING ("glist foreach func %lld, listen port %d", *wakeup, http_server->listen_port);
+        g_tree_remove (http_server->idle_queue, wakeup);
+}
+
+static gpointer
+idle_thread (gpointer data)
+{
+        HTTPServer *http_server = (HTTPServer *)data;
+        ForeachFuncData func_data;
+        GSList *wakeup_list = NULL;
+
+        func_data.http_server = http_server;
+        func_data.wakeup_list = &wakeup_list;
+        while (1) {
+                g_mutex_lock (http_server->idle_queue_mutex);
+                while (g_tree_nnodes (http_server->idle_queue) == 0) {
+                        GST_WARNING ("waiting.....");
+                        g_cond_wait (http_server->idle_queue_cond, http_server->idle_queue_mutex);
+                        GST_WARNING ("wait got");
+                }
+                g_tree_foreach (http_server->idle_queue, gtree_foreach_func, &func_data);
+                g_slist_foreach (wakeup_list, gslist_foreach_func, http_server);
+                g_mutex_unlock (http_server->idle_queue_mutex);
+        }
+}
+
 static void
 thread_pool_func (gpointer data, gpointer user_data)
 {
@@ -328,11 +410,15 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint accepted_sock;
         RequestData *request_data;
         gint ret;
+        GstClockTime cb_ret;
         
-        if ((e->events & EPOLLERR) || (e->events & EPOLLHUP)) { //FIXME
-                /* An error has occured on this fd, or the socket is not ready for reading(why were we notified then?) */
-                GST_ERROR ("epoll error %d" /*fd %d"*/, errno/*, e->data.fd*/);
-                //close (e.data.fd); 
+        if ((e->events & EPOLLERR) ) { //FIXME
+                GST_ERROR ("epoll error %s", g_strerror (errno));
+                return;
+        }
+
+        if ( (e->events & EPOLLHUP)) { //FIXME
+                GST_ERROR ("epoll hup %s", g_strerror (errno));
                 return;
         }
 
@@ -351,7 +437,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 GST_WARNING ("event queue empty");
                                 close (accepted_sock);
                         } else {
-                                GST_INFO ("new request arrived, accepted_sock %d", accepted_sock);
+                                GST_WARNING ("new request arrived, accepted_sock %d", accepted_sock);
                                 int on = 1;
                                 setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                                 setNonblocking (accepted_sock);
@@ -383,20 +469,24 @@ thread_pool_func (gpointer data, gpointer user_data)
 
                         ret = parse_request (request_data);
                         if (ret == 0) { /* parse complete, call back user function */
-                                GST_INFO ("Request uri %s", request_data->uri);
-                                if (http_server->user_callback != NULL) {
-                                        request_data->status = HTTP_REQUEST;
-                                        gint cb_ret = http_server->user_callback (request_data, http_server->user_data);
-                                        if (cb_ret == HTTP_CONTINUE) {
-                                        } else if (cb_ret == HTTP_FINISH) {
-                                                close (request_data->sock);
-                                                g_queue_push_head (http_server->request_data_queue, request_data);
+                                GST_WARNING ("Request uri %s", request_data->uri);
+                                request_data->status = HTTP_REQUEST;
+                                cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                                GST_WARNING ("callback return %lld", cb_ret);
+                                if (cb_ret > 0) {
+                                        request_data->status = HTTP_CONTINUE;
+                                        request_data->wakeup_time = cb_ret;
+                                        g_mutex_lock (http_server->idle_queue_mutex);
+                                        while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
+                                                /* avoid time conflict */
+                                                request_data->wakeup_time++;
                                         }
+                                        GST_WARNING ("insert idle queue");
+                                        g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data);
+                                        g_mutex_unlock (http_server->idle_queue_mutex);
+                                        g_cond_signal (http_server->idle_queue_cond);
+                                        GST_WARNING ("insert idle queue end");
                                 } else {
-                                        GST_ERROR ("Missing user call back");
-                                        gchar *buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
                                         close (request_data->sock);
                                         g_queue_push_head (http_server->request_data_queue, request_data);
                                 }
@@ -405,6 +495,23 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
+                                close (request_data->sock);
+                                g_queue_push_head (http_server->request_data_queue, request_data);
+                        }
+                } else if (request_data->status == HTTP_CONTINUE) {
+                        cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                        if (cb_ret > 0) {
+                                request_data->wakeup_time = cb_ret;
+                                g_mutex_lock (http_server->idle_queue_mutex);
+                                while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
+                                        /* avoid time conflict */
+                                        request_data->wakeup_time++;
+                                }
+                                GST_WARNING ("insert idle queue");
+                                g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data);
+                                g_mutex_unlock (http_server->idle_queue_mutex);
+                                g_cond_signal (http_server->idle_queue_cond);
+                        } else {//FIXME
                                 close (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data);
                         }
@@ -434,6 +541,16 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
                 g_error_free (e);
                 return -1;
         }
+
+        http_server->idle_thread = g_thread_create (idle_thread, http_server, TRUE, &e);
+        if (e != NULL) {
+                GST_ERROR ("Create idle thread error %s", e->message);
+                g_error_free (e);
+                return -1;
+        }
+
+        http_server->idle_thread = g_thread_create (idle_thread, http_server, TRUE, &e);
+
 
         return 0;
 }
