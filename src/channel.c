@@ -313,7 +313,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
         		encoder_pipeline->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->decoder_pipeline->current_audio_position ||
-                                channel->decoder_pipeline->current_audio_position == -1) {
+                                channel->decoder_pipeline->current_audio_position == -1) { /*FIXME: condition variable*/
                                 GST_LOG ("waiting audio decoder ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
