@@ -166,11 +166,12 @@ read_request (RequestData *request_data)
         gint count, read_pos = 0;
         gchar *buf = &(request_data->raw_request[0]);
 
+        GST_ERROR ("read sock %d request address %lld", request_data->sock, request_data);
         while (1) {
                 count = read (request_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
                 if (count == -1) {
                         if (errno != EAGAIN) {
-                                GST_ERROR ("read error number %d", errno);
+                                GST_ERROR ("read error %s", g_strerror (errno));
                                 return -1;
                         } else { /* errno == EAGAIN means read complete */
                                 GST_INFO ("read complete\n");
@@ -234,7 +235,9 @@ parse_request (RequestData *request_data)
 
         if (strncmp (buf, "HTTP/1.1", 8) == 0) { /* http version must be 1.1 */
                 request_data->version = HTTP_1_1; 
-        } else { /* Bad request, must be http 1.1 */
+        } else if (strncmp (buf, "HTTP/1.0", 8) == 0) {
+                request_data->version = HTTP_1_0;
+        }else { /* Bad request, must be http 1.1 */
                 return 4;
         }
 
@@ -331,6 +334,7 @@ httpserver_listen_thread (gpointer data)
                         if (event_list[i].events & (EPOLLERR | EPOLLHUP)) { //FIXME
                                 GST_ERROR ("epoll wait error");
                         }
+                        GST_ERROR ("push to pool address %lld", &event_list[i]);
                         g_thread_pool_push (http_server->thread_pool, &event_list[i], &e);
                         if (e != NULL) { // FIXME
                                 GST_ERROR ("Thread pool push error %s", e->message);
@@ -357,7 +361,9 @@ gtree_foreach_func (gpointer key, gpointer value, gpointer data)
         
         current_time = gst_clock_get_time (http_server->system_clock);
         if (current_time > *(GstClockTime *)key) {
-                //GST_WARNING ("return false-> current time %lld, wakeuptime %lld", current_time, *(GstClockTime *)key);
+                struct epoll_event *ee = value;
+                RequestData *request_data = ee->data.ptr;
+                GST_WARNING ("return false-> current time %lld, wakeuptime %lld, sock %d, request address %lld wakeup time %lld", current_time, *(GstClockTime *)key, request_data->sock, request_data, request_data->wakeup_time);
                 g_thread_pool_push (http_server->thread_pool, value, &e);
                 *wakeup_list = g_slist_append (*wakeup_list, key);
                 if (e != NULL) { // FIXME
@@ -422,7 +428,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         GstClockTime cb_ret;
         
         if (ee->data.ptr == NULL) { /* new connection */
-                while (1) { /* repeat accept until -1 returned */
+                for (;;) { /* repeat accept until -1 returned */
                         accepted_sock = accept (http_server->listen_sock, &in_addr, &in_len);
                         if (accepted_sock == -1) {
                                 if (( errno == EAGAIN) || (errno == EWOULDBLOCK)) { /* We have processed all incoming connections. */
@@ -441,6 +447,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                                 setNonblocking (accepted_sock);
                                 request_data = g_queue_pop_tail (http_server->request_data_queue);
+                                GST_ERROR ("request data address %lld", request_data);
                                 request_data->client_addr = in_addr;
                                 request_data->sock = accepted_sock;
                                 g_get_current_time (&(request_data->birth_time));
@@ -457,6 +464,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
         } else { /* request */
                 request_data = ee->data.ptr;
+                GST_ERROR ("task sock %d, request address %lld, wakeup time %lld", request_data->sock, request_data, request_data->wakeup_time);
                 if (ee->events & (EPOLLERR | EPOLLHUP)) {
                         GST_ERROR ("Error sock is %d", request_data->sock);
                         GST_ERROR ("Error status is %d", request_data->status);
@@ -464,6 +472,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
                 if (request_data->status == HTTP_CONNECTED) {
                         ret = read_request (request_data);
+                        GST_ERROR (request_data->raw_request);
                         if (ret <= 0) {
                                 GST_ERROR ("no data");
                                 close (request_data->sock);
@@ -521,7 +530,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 //}
                                 //GST_WARNING ("insert idle queue, queue height %d", g_tree_height (http_server->idle_queue));
                                 g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), ee);
-                                //GST_WARNING ("insert idle queue, queue height %d", g_tree_height (http_server->idle_queue));
+                                GST_WARNING ("insert idle queue, sock %d address %lld wakeup time %lld queue height %d", request_data->sock, request_data, request_data->wakeup_time, g_tree_height (http_server->idle_queue));
                                 g_cond_signal (http_server->idle_queue_cond);
                                 g_mutex_unlock (http_server->idle_queue_mutex);
                         } else {//FIXME
@@ -530,6 +539,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 g_queue_push_head (http_server->request_data_queue, request_data);
                         }
                 } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
+                        GST_ERROR ("request finish %d", request_data->sock);
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret == 0) {
                                 close (request_data->sock);

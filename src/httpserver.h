@@ -40,6 +40,7 @@ enum request_method {
 };
 
 enum http_version {
+        HTTP_1_0,
         HTTP_1_1
 };
 

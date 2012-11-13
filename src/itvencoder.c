@@ -275,7 +275,7 @@ request_dispatcher (gpointer data, gpointer user_data)
 
         switch (request_data->status) {
         case HTTP_REQUEST:
-                GST_WARNING ("uri is %s", request_data->uri);
+                GST_WARNING ("socket is %d uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
@@ -304,7 +304,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 }
         case HTTP_CONTINUE:
-                //GST_ERROR ("http continue");
+                //GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
                 i = request_user_data->current_send_position + 1;
