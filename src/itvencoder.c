@@ -277,8 +277,9 @@ request_dispatcher (gpointer data, gpointer user_data)
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
-                        request_user_data->encoder = get_encoder (request_data->uri, itvencoder);
-                        request_user_data->current_send_position = 0;
+                        encoder = get_encoder (request_data->uri, itvencoder);
+                        request_user_data->encoder = encoder;
+                        request_user_data->current_send_position = encoder->current_output_position; /*real time*/
                         request_data->user_data = request_user_data;
                         if (request_data->user_data != NULL) {
                                 buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
@@ -302,23 +303,23 @@ request_dispatcher (gpointer data, gpointer user_data)
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
                 while (1) {
-                        gchar *size = "524\r\n"; // 1316 = 188*7
+                        //gchar *size = "524\r\n"; // 1316 = 188*7
+                        gchar *size = "bc\r\n"; // 1316 = 188*7
                         gchar *end = "\r\n";
-                        struct iovec iov[9];
+                        struct iovec iov[3];
 
-                        i = request_user_data->current_send_position + 7;
+                        i = request_user_data->current_send_position + 1;
                         i %= OUTPUT_RING_SIZE;
+                        GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
                         if (i < encoder->current_output_position && encoder->current_output_position >= 0) {
                                 iov[0].iov_base = size;
-                                iov[0].iov_len = 5;
-                                for (j=7; j>0; j--) {
-                                        iov[j].iov_base = GST_BUFFER_DATA (encoder->output_ring[i-j]);
-                                        iov[j].iov_len = 188;
-                                }
-                                iov[8].iov_base = end;
-                                iov[8].iov_len = 2;
+                                iov[0].iov_len = 4;
+                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
+                                iov[1].iov_len = 188;
+                                iov[2].iov_base = end;
+                                iov[2].iov_len = 2;
                                 GST_ERROR ("write data");
-                                writev (request_data->sock, iov, 9);
+                                writev (request_data->sock, iov, 3);
                                 request_user_data->current_send_position = i;
                         } else {
                                 break; 
