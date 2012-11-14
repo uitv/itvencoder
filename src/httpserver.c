@@ -163,7 +163,7 @@ httpserver_get_type (void)
 static gint
 read_request (RequestData *request_data)
 {
-        gint count, read_pos = 0;
+        gint count, read_pos = request_data->request_length;
         gchar *buf = &(request_data->raw_request[0]);
 
         GST_ERROR ("read sock %d request address %lld", request_data->sock, request_data);
@@ -188,6 +188,7 @@ read_request (RequestData *request_data)
                         }
                 }
         }
+        request_data->request_length = read_pos;
 
         buf[read_pos] = '\0'; /* string */
         return read_pos;
@@ -452,6 +453,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 request_data->sock = accepted_sock;
                                 g_get_current_time (&(request_data->birth_time));
                                 request_data->status = HTTP_CONNECTED;
+                                request_data->request_length = 0;
                                 ee->data.ptr = request_data;
                                 ee->events = EPOLLIN | EPOLLOUT | EPOLLET;
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, ee);
@@ -471,6 +473,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->status = HTTP_FINISH;
                 }
                 if (request_data->status == HTTP_CONNECTED) {
+                        if (!(ee->events & EPOLLIN)) {
+                                GST_ERROR ("Not a read events, continue........................");
+                                return;
+                        }
                         ret = read_request (request_data);
                         GST_ERROR (request_data->raw_request);
                         if (ret <= 0) {
@@ -479,8 +485,8 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 ee->data.ptr = NULL;
                                 g_queue_push_head (http_server->request_data_queue, request_data);
                                 return;
-                        }
-
+                        } 
+                                
                         ret = parse_request (request_data);
                         if (ret == 0) { /* parse complete, call back user function */
                                 //GST_WARNING ("Request uri %s", request_data->uri);
@@ -505,7 +511,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                                         ee->data.ptr = NULL;
                                         g_queue_push_head (http_server->request_data_queue, request_data);
                                 }
-                        } else { /* Bad Request */
+                        } else if (ret == 1) { // need read more data
+                                return;
+                        } else {/* Bad Request */
                                 GST_ERROR ("Bad request, return is %d", ret);
                                 gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
                                 write (request_data->sock, buf, strlen (buf));

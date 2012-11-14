@@ -68,6 +68,7 @@ typedef struct _RequestData {
         enum session_status status; /* live over http need keeping tcp link */
         GstClockTime wakeup_time;
         gchar raw_request[kRequestBufferSize];
+        gint request_length;
         enum request_method method;
         gchar uri[256];
         enum http_version version;
