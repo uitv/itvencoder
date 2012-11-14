@@ -364,7 +364,7 @@ gtree_foreach_func (gpointer key, gpointer value, gpointer data)
         if (current_time > *(GstClockTime *)key) {
                 struct epoll_event *ee = value;
                 RequestData *request_data = ee->data.ptr;
-                GST_WARNING ("return false-> current time %lld, wakeuptime %lld, sock %d, request address %lld wakeup time %lld", current_time, *(GstClockTime *)key, request_data->sock, request_data, request_data->wakeup_time);
+                GST_WARNING ("return false-> current time %lld, key %lld, sock %d, request address %lld wakeup time %lld", current_time, *(GstClockTime *)key, request_data->sock, request_data, request_data->wakeup_time);
                 g_thread_pool_push (http_server->thread_pool, value, &e);
                 *wakeup_list = g_slist_append (*wakeup_list, key);
                 if (e != NULL) { // FIXME
@@ -384,7 +384,7 @@ gslist_foreach_func (gpointer data, gpointer user_data)
         GstClockTime *wakeup = data;
         HTTPServer *http_server = user_data;
 
-        //GST_WARNING ("glist foreach func %lld, listen port %d", *wakeup, http_server->listen_port);
+        GST_WARNING ("glist foreach func %lld, listen port %d", *wakeup, http_server->listen_port);
         g_tree_remove (http_server->idle_queue, wakeup);
         //GST_WARNING ("return from glist foreach function");
 }
@@ -470,7 +470,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                 if (ee->events & (EPOLLERR | EPOLLHUP)) {
                         GST_ERROR ("Error sock is %d", request_data->sock);
                         GST_ERROR ("Error status is %d", request_data->status);
-                        request_data->status = HTTP_FINISH;
+                        if (request_data->status != HTTP_FINISH) {
+                                request_data->status = HTTP_FINISH;
+                                return;
+                        }
                 }
                 if (request_data->status == HTTP_CONNECTED) {
                         if (!(ee->events & EPOLLIN)) {
@@ -550,6 +553,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         GST_ERROR ("request finish %d", request_data->sock);
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret == 0) {
+                                epoll_ctl (http_server->epollfd, EPOLL_CTL_DEL, request_data->sock, ee);
                                 close (request_data->sock);
                                 ee->data.ptr = NULL;
                                 g_queue_push_head (http_server->request_data_queue, request_data);

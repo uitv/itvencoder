@@ -278,25 +278,25 @@ request_dispatcher (gpointer data, gpointer user_data)
                 GST_WARNING ("socket is %d uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
                         encoder = get_encoder (request_data->uri, itvencoder);
-                        request_user_data->encoder = encoder;
-                        while (encoder->current_output_position <= 0) {
-                                g_usleep (50);
-                        }
-                        request_user_data->current_send_position = encoder->current_output_position - 1; /*real time*/
-                        request_data->user_data = request_user_data;
-                        if (request_data->user_data != NULL) {
-                                buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
-                        } else {
+                        if (encoder == NULL) {
                                 buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                                 return 0;
                         }
+                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
+                        GST_ERROR ("request_user_data %lld", request_user_data);
+                        request_user_data->encoder = encoder;
+                        while (encoder->current_output_position <= 0) {
+                                g_usleep (50); /*FIXME*/
+                        }
+                        request_user_data->current_send_position = encoder->current_output_position - 1; /*real time*/
+                        request_data->user_data = request_user_data;
+                        buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                        return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                 default:
                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -304,12 +304,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 }
         case HTTP_CONTINUE:
-                //GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
+                GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
                 i = request_user_data->current_send_position + 1;
                 i %= OUTPUT_RING_SIZE;
-                //GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
+                GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
                 for (;;) {
                         if ((i == encoder->current_output_position) || (encoder->current_output_position == -1)) {
                                 //GST_ERROR ("waiting a while??");
@@ -321,14 +321,16 @@ request_dispatcher (gpointer data, gpointer user_data)
                         iov[1].iov_len = 188;
                         iov[2].iov_base = end;
                         iov[2].iov_len = 2;
-                        //GST_ERROR ("write data");
+                        GST_ERROR ("write data, sock %d", request_data->sock);
                         writev (request_data->sock, iov, 3);
                         request_user_data->current_send_position = i;
                         i = (i + 1) % OUTPUT_RING_SIZE;
                 }
                 return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms;
         case HTTP_FINISH:
+                GST_ERROR ("finish status user_data %lld----------------------", request_data->user_data);
                 g_free (request_data->user_data);
+                request_data->user_data = NULL;
                 return 0;
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
