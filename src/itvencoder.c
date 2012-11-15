@@ -304,12 +304,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 }
         case HTTP_CONTINUE:
-                GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
+                //GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
                 i = request_user_data->current_send_position + 1;
                 i %= OUTPUT_RING_SIZE;
-                GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
+                //GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
                 for (;;) {
                         if ((i == encoder->current_output_position) || (encoder->current_output_position == -1)) {
                                 //GST_ERROR ("waiting a while??");
@@ -321,7 +321,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                         iov[1].iov_len = 188;
                         iov[2].iov_base = end;
                         iov[2].iov_len = 2;
-                        GST_ERROR ("write data, sock %d", request_data->sock);
+                        //GST_ERROR ("write data, sock %d", request_data->sock);
                         writev (request_data->sock, iov, 3);
                         request_user_data->current_send_position = i;
                         i = (i + 1) % OUTPUT_RING_SIZE;

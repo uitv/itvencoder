@@ -93,6 +93,7 @@ struct _HTTPServer {
         GThreadPool *thread_pool;
         http_callback_t user_callback;
         gpointer user_data;
+        gpointer request_data_pointers[kMaxRequests];
         GQueue *request_data_queue;
 };
 
