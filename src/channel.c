@@ -187,6 +187,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 if (channel->decoder_pipeline->audio_ring[i] != NULL)
                         gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
                 channel->decoder_pipeline->audio_ring[i] = buffer;
+                channel->decoder_pipeline->current_audio_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
         case 'v':
                 channel->decoder_pipeline->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
@@ -197,6 +198,7 @@ static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer u
                 if (channel->decoder_pipeline->video_ring[i] != NULL)
                         gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
                 channel->decoder_pipeline->video_ring[i] = buffer;
+                channel->decoder_pipeline->current_video_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
         default:
                 GST_ERROR ("error");

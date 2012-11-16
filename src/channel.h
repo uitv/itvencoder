@@ -26,9 +26,11 @@ struct _DecoderPipeline {
         /* decoder produce, encoder consume */
         GstBuffer       *audio_ring[AUDIO_RING_SIZE];
         gint            current_audio_position; // decoder write position
+        GstClockTime current_audio_timestamp;
 
         GstBuffer       *video_ring[VIDEO_RING_SIZE];
         gint            current_video_position; // decoder write position
+        GstClockTime current_video_timestamp;
 };
 
 struct _EncoderPipeline {
