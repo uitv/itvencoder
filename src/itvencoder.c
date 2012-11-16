@@ -268,8 +268,8 @@ request_dispatcher (gpointer data, gpointer user_data)
         EncoderPipeline *encoder;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
-        gchar *size = "bc\r\n", *end = "\r\n";
-        struct iovec iov[3];
+        gchar *size = "524\r\n", *end = "\r\n";
+        struct iovec iov[9];
 
         GST_LOG ("hello");
 
@@ -288,10 +288,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
                         GST_ERROR ("request_user_data %lld", request_user_data);
                         request_user_data->encoder = encoder;
-                        while (encoder->current_output_position <= 0) {
+                        while (encoder->current_output_position <= 7) {
                                 g_usleep (50); /*FIXME*/
                         }
-                        request_user_data->current_send_position = encoder->current_output_position - 1; /*real time*/
+                        request_user_data->current_send_position = encoder->current_output_position - 7; /*real time*/
+                        request_user_data->current_send_position = (request_user_data->current_send_position / 7) * 7;
                         request_data->user_data = request_user_data;
                         buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -307,24 +308,36 @@ request_dispatcher (gpointer data, gpointer user_data)
                 //GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
-                i = request_user_data->current_send_position + 1;
+                i = request_user_data->current_send_position;
                 i %= OUTPUT_RING_SIZE;
                 //GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
                 for (;;) {
-                        if ((i == encoder->current_output_position) || (encoder->current_output_position == -1)) {
+                        if ((i / 7) == ((encoder->current_output_position) / 7)) { //catch up, stop write
                                 //GST_ERROR ("waiting a while??");
                                 break;
                         }
                         iov[0].iov_base = size;
-                        iov[0].iov_len = 4;
+                        iov[0].iov_len = 5;
                         iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
                         iov[1].iov_len = 188;
-                        iov[2].iov_base = end;
-                        iov[2].iov_len = 2;
+                        iov[2].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+1]);
+                        iov[2].iov_len = 188;
+                        iov[3].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+2]);
+                        iov[3].iov_len = 188;
+                        iov[4].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+3]);
+                        iov[4].iov_len = 188;
+                        iov[5].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+4]);
+                        iov[5].iov_len = 188;
+                        iov[6].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+5]);
+                        iov[6].iov_len = 188;
+                        iov[7].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+6]);
+                        iov[7].iov_len = 188;
+                        iov[8].iov_base = end;
+                        iov[8].iov_len = 2;
                         //GST_ERROR ("write data, sock %d", request_data->sock);
-                        writev (request_data->sock, iov, 3);
+                        writev (request_data->sock, iov, 9);
+                        i = (i + 7) % OUTPUT_RING_SIZE;
                         request_user_data->current_send_position = i;
-                        i = (i + 1) % OUTPUT_RING_SIZE;
                 }
                 return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms;
         case HTTP_FINISH:
