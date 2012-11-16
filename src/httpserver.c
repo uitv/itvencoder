@@ -542,6 +542,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_unlock (http_server->idle_queue_mutex);
                 } else {//FIXME
                         GST_ERROR ("return value is 0");
+                        g_mutex_lock (http_server->idle_queue_mutex);
+                        g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
+                        g_mutex_unlock (http_server->idle_queue_mutex);
                         close (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
@@ -550,6 +553,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == 0) {
                         GST_ERROR ("finish ok oko ko");
+                        g_mutex_lock (http_server->idle_queue_mutex);
+                        g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
+                        g_mutex_unlock (http_server->idle_queue_mutex);
                         close (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
