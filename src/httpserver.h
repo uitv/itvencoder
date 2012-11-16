@@ -63,7 +63,7 @@ enum session_status {
 typedef struct _RequestData {
         gint sock;
         struct sockaddr client_addr;
-        GTimeVal birth_time;
+        GstClockTime birth_time;
         guint64 bytes_send;
         guint32 events; /* epoll events */
         enum session_status status; /* live over http need keeping tcp link */

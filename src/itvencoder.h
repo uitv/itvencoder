@@ -25,7 +25,7 @@ struct _ITVEncoder {
         guint           memory_usage;
         guint           memory_total;
 
-        GTimeVal        start_time;
+        GstClockTime start_time;
         GstClock *system_clock;
 
         Config          *config;
@@ -48,7 +48,7 @@ struct _ITVEncoderClass {
 #define itvencoder_new(...)       (g_object_new(TYPE_ITVENCODER, ## __VA_ARGS__, NULL))
 
 GType itvencoder_get_type (void);
-GTimeVal itvencoder_get_start_time (ITVEncoder *itvencoder);
+GstClockTime itvencoder_get_start_time (ITVEncoder *itvencoder);
 gint itvencoder_start (ITVEncoder *itvencoder);
 
 #endif /* __ITVENCODER_H__ */

@@ -35,9 +35,9 @@ itvencoder_init (ITVEncoder *itvencoder)
 
         GST_LOG ("itvencoder_init");
 
-        g_get_current_time (&itvencoder->start_time);
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
+        itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
         id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
         ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
@@ -178,13 +178,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         return TRUE;
 }
 
-GTimeVal
+GstClockTime
 itvencoder_get_start_time (ITVEncoder *itvencoder)
 {
         GST_LOG ("itvencoder get start time");
-
-        GTimeVal invalid_time = {0,0};
-        g_return_val_if_fail (IS_ITVENCODER (itvencoder), invalid_time);
 
         return itvencoder->start_time;
 }

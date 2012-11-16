@@ -74,8 +74,6 @@ httpserver_init (HTTPServer *httpserver)
 {
         gint i;
 
-        httpserver->system_clock = gst_system_clock_obtain ();
-
         httpserver->server_thread = NULL;
         httpserver->thread_pool = NULL;
         httpserver->request_data_queue = g_queue_new ();
@@ -294,7 +292,7 @@ accept_socket (HTTPServer *http_server)
                         GST_ERROR ("------------> poped request data address %lld", request_data);
                         request_data->client_addr = in_addr;
                         request_data->sock = accepted_sock;
-                        g_get_current_time (&(request_data->birth_time));
+                        request_data->birth_time = gst_clock_get_time (http_server->system_clock);
                         request_data->status = HTTP_CONNECTED;
                         request_data->request_length = 0;
                         ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
@@ -521,6 +519,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else if (request_data->status == HTTP_CONTINUE) {
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret > 0) {
+                        int iiii=0;
                         request_data->wakeup_time = cb_ret;
                         g_mutex_lock (http_server->idle_queue_mutex);
                         if (g_tree_nnodes (http_server->idle_queue) > 0) {
@@ -528,6 +527,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                         /* avoid time conflict */
                                         GST_ERROR ("look up, tree node number %d find %lld", g_tree_nnodes (http_server->idle_queue), request_data->wakeup_time);
                                         request_data->wakeup_time++;
+                                        if (iiii++==10) exit(0);
                                 }
                         }
                         g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
