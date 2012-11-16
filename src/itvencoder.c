@@ -37,6 +37,7 @@ itvencoder_init (ITVEncoder *itvencoder)
 
         g_get_current_time (&itvencoder->start_time);
         itvencoder->system_clock = gst_system_clock_obtain ();
+        g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
         id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
         ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);

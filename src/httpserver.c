@@ -89,6 +89,7 @@ httpserver_init (HTTPServer *httpserver)
         httpserver->idle_queue = g_tree_new ((GCompareFunc)compare_func);
 
         httpserver->system_clock = gst_system_clock_obtain ();
+        g_object_set (httpserver->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
 }
 
 static GObject *
@@ -399,6 +400,7 @@ listen_thread (gpointer data)
                                         }
                                 }
                                 if (event_list[i].events & (EPOLLERR | EPOLLHUP)) { //FIXME
+                                        GST_WARNING ("event on sock %d", request_data->sock);
                                         request_data->status = HTTP_FINISH;
                                 }
                         }
@@ -540,7 +542,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
-                GST_ERROR ("request finish %d", request_data->sock);
+                GST_WARNING ("request finish %d", request_data->sock);
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);
