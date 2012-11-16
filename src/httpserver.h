@@ -65,6 +65,7 @@ typedef struct _RequestData {
         struct sockaddr client_addr;
         GTimeVal birth_time;
         guint64 bytes_send;
+        guint32 events; /* epoll events */
         enum session_status status; /* live over http need keeping tcp link */
         GstClockTime wakeup_time;
         gchar raw_request[kRequestBufferSize];

@@ -386,17 +386,19 @@ listen_thread (gpointer data)
                         if (event_list[i].data.ptr == NULL) {
                                 accept_socket (http_server);
                         } else {
+                                RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
                                 if (event_list[i].events & EPOLLIN) {
-                                        GST_ERROR ("push to pool, request data address %lld", &event_list[i].data.ptr);
-                                        g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
-                                        if (e != NULL) { // FIXME
-                                                GST_ERROR ("Thread pool push error %s", e->message);
-                                                g_error_free (e);
-                                                //return NULL;
+                                        if (request_data->status == HTTP_CONNECTED) {
+                                                g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
+                                                if (e != NULL) { // FIXME
+                                                        GST_ERROR ("Thread pool push error %s", e->message);
+                                                        g_error_free (e);
+                                                }
+                                        } else {
+                                                request_data->events = EPOLLIN; //TODO
                                         }
                                 }
                                 if (event_list[i].events & (EPOLLERR | EPOLLHUP)) { //FIXME
-                                        RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
                                         request_data->status = HTTP_FINISH;
                                 }
                         }
@@ -477,7 +479,6 @@ thread_pool_func (gpointer data, gpointer user_data)
         
         if (request_data->status == HTTP_CONNECTED) {
                 ret = read_request (request_data);
-                GST_ERROR (request_data->raw_request);
                 if (ret <= 0) {
                         GST_ERROR ("no data");
                         close (request_data->sock);
