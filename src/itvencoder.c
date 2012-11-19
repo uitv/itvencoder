@@ -264,7 +264,7 @@ request_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
-        int i = 0, j;
+        int i = 0, ret;
         EncoderPipeline *encoder;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
@@ -298,6 +298,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
+                case 'i': /* uri is /itvencoder/..... */
+                        buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                        return 0; 
                 default:
                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -305,15 +310,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 }
         case HTTP_CONTINUE:
-                //GST_ERROR ("http continue, socket is %d uri is %s", request_data->sock, request_data->uri);
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
                 i = request_user_data->current_send_position;
                 i %= OUTPUT_RING_SIZE;
-                //GST_ERROR ("i--> %d current output position %d", i, encoder->current_output_position);
                 for (;;) {
                         if ((i / 7) == ((encoder->current_output_position) / 7)) { //catch up, stop write
-                                //GST_ERROR ("waiting a while??");
                                 break;
                         }
                         iov[0].iov_base = size;
@@ -334,10 +336,13 @@ request_dispatcher (gpointer data, gpointer user_data)
                         iov[7].iov_len = 188;
                         iov[8].iov_base = end;
                         iov[8].iov_len = 2;
-                        //GST_ERROR ("write data, sock %d", request_data->sock);
-                        writev (request_data->sock, iov, 9);
+                        ret = writev (request_data->sock, iov, 9);
                         i = (i + 7) % OUTPUT_RING_SIZE;
                         request_user_data->current_send_position = i;
+                        if (ret != 1323) {
+                                GST_ERROR ("write error %d", ret);
+                                break;
+                        } 
                 }
                 return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms;
         case HTTP_FINISH:

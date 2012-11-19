@@ -30,6 +30,13 @@
                      "Server: %s-%s\r\n" \
                      "Transfer-Encoding: chunked\r\n\r\n"
 
+#define itvencoder_ver "HTTP/1.1 200 OK\r\n" \
+                       "Server: %s-%s\r\n" \
+                       "Content-Type: text/plain\r\n" \
+                       "Content-Size: %d\r\n" \
+                       "Connection: Close\r\n\r\n" \
+                       "%s-%s"
+
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;
 typedef GstClockTime (*http_callback_t) (gpointer data, gpointer user_data);
