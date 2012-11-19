@@ -53,6 +53,7 @@ enum session_status {
         HTTP_CONNECTED,
         HTTP_REQUEST,
         HTTP_CONTINUE,
+        HTTP_IDLE,
         HTTP_FINISH
 };
 

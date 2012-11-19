@@ -387,6 +387,7 @@ listen_thread (gpointer data)
                         } else {
                                 RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
                                 if (event_list[i].events & EPOLLIN) {
+                                        GST_WARNING ("event on sock %d events EPOLLIN", request_data->sock);
                                         if (request_data->status == HTTP_CONNECTED) {
                                                 g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
                                                 if (e != NULL) { // FIXME
@@ -396,11 +397,29 @@ listen_thread (gpointer data)
                                         } else {
                                                 request_data->events = EPOLLIN; //TODO
                                         }
+                                } 
+                                if (event_list[i].events & EPOLLERR) {
+                                        GST_WARNING ("event on sock %d events EPOLLERR", request_data->sock);
+                                } 
+                                if (event_list[i].events & EPOLLHUP) {
+                                        GST_WARNING ("event on sock %d events EPOLLHUP", request_data->sock);
                                 }
-                                if (event_list[i].events & (EPOLLERR | EPOLLHUP)) { //FIXME
-                                        GST_WARNING ("event on sock %d", request_data->sock);
-                                        request_data->status = HTTP_FINISH;
+                                if (event_list[i].events & EPOLLRDBAND) {
+                                        GST_WARNING ("event on sock %d events EPOLLRDBAND", request_data->sock);
                                 }
+                                if (event_list[i].events & EPOLLRDNORM) { 
+                                        GST_WARNING ("event on sock %d events EPOLLRDNORM", request_data->sock);
+                                }
+                                if (event_list[i].events & EPOLLWRNORM) {
+                                        GST_WARNING ("event on sock %d events EPOLLWRNORM", request_data->sock);
+                                }
+                                if (event_list[i].events & EPOLLWRBAND) {
+                                        GST_WARNING ("event on sock %d events EPOLLWRBAND", request_data->sock);
+                                }
+                                if (event_list[i].events & EPOLLRDHUP) {
+                                        GST_WARNING ("event on sock %d events EPOLLRDHUP", request_data->sock);
+                                }
+                                request_data->events = event_list[i].events;
                         }
                 }
         }
@@ -437,6 +456,7 @@ gslist_foreach_func (gpointer data, gpointer user_data)
         GError *e = NULL;
 
         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
+        request_data->status = HTTP_CONTINUE;
         g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
         if (e != NULL) { // FIXME
                 GST_ERROR ("Thread pool push error %s", e->message);
@@ -477,6 +497,12 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint ret;
         GstClockTime cb_ret;
         
+        if (request_data->events & EPOLLHUP) {
+                GST_ERROR ("EPOLLHUP sock %d", request_data->sock);
+                request_data->status = HTTP_FINISH;
+                request_data->events = 0;
+        }
+
         if (request_data->status == HTTP_CONNECTED) {
                 ret = read_request (request_data);
                 if (ret <= 0) {
@@ -494,10 +520,14 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 request_data->status = HTTP_CONTINUE;
                                 request_data->wakeup_time = cb_ret;
                                 g_mutex_lock (http_server->idle_queue_mutex);
+                                if (request_data->status != HTTP_CONTINUE) {
+                                        GST_ERROR ("insert a un continue request to idle queue !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                                }
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
                                         /* avoid time conflict */
                                         request_data->wakeup_time++;
                                 }
+                                request_data->status = HTTP_IDLE;
                                 g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
                                 g_cond_signal (http_server->idle_queue_cond);
                                 g_mutex_unlock (http_server->idle_queue_mutex);
@@ -522,6 +552,9 @@ thread_pool_func (gpointer data, gpointer user_data)
                         int iiii=0;
                         request_data->wakeup_time = cb_ret;
                         g_mutex_lock (http_server->idle_queue_mutex);
+                        if (request_data->status != HTTP_CONTINUE) {
+                                GST_ERROR ("insert a un continue request to idle queue !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                        }
                         if (g_tree_nnodes (http_server->idle_queue) > 0) {
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
                                         /* avoid time conflict */
@@ -530,6 +563,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                         if (iiii++==10) exit(0);
                                 }
                         }
+                        request_data->status = HTTP_IDLE;
                         g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
                         g_cond_signal (http_server->idle_queue_cond);
                         g_mutex_unlock (http_server->idle_queue_mutex);

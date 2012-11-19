@@ -1,1 +1,2 @@
 - In playing status, open another url, vlc use the same tcp connection, this will cause itvencoder problem. add a events field.
+- SIGPIPE

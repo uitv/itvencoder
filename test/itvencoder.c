@@ -20,6 +20,8 @@ main(int argc, char *argv[])
         GMainLoop *loop;
         gint i, j;
 
+        signal (SIGPIPE, SIG_IGN);
+
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
