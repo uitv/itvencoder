@@ -497,7 +497,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint ret;
         GstClockTime cb_ret;
         
-        if (request_data->events & EPOLLHUP) {
+        if ((request_data->events & EPOLLHUP) && (request_data->status == HTTP_CONTINUE)) {
                 GST_ERROR ("EPOLLHUP sock %d", request_data->sock);
                 request_data->status = HTTP_FINISH;
                 request_data->events = 0;
