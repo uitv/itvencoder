@@ -1,10 +1,10 @@
 CFLAGS += $(shell pkg-config --cflags gstreamer-0.10)
 CFLAGS += -I../src
-CFLAGS += -I../third/jansson-2.4/src
+CFLAGS += -I.
 CFLAGS += -g
 LDFLAGS += $(shell pkg-config --libs gstreamer-0.10)
 LDFLAGS += -lgstapp-0.10
-STATIC_JANSSON = ../third/jansson-2.4/src/.libs/libjansson.a
+STATIC_JANSSON = libjansson.a
 
 itvencoder_deppend = itvencoder.c \
                      ../src/itvencoder.c \
