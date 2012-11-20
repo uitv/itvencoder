@@ -251,7 +251,7 @@ config_get_selected_pipeline_key (ChannelConfig *channel_config, gchar *pipeline
                         return NULL;
                 }
                 selected_pipeline_key = (gchar *)json_string_value (j3);
-                selected_pipeline_key = g_strconcat (key, "-", selected_pipeline_key);
+                selected_pipeline_key = g_strconcat (key, "-", selected_pipeline_key, NULL);
                 g_free (key);
                 key = selected_pipeline_key;
         }

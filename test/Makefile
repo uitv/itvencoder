@@ -22,7 +22,7 @@ itvencoder_src = itvencoder.c \
 		 ../src/channel.c \
 		 ../src/httpserver.c 
 
-all: itvencoder config
+all: itvencoder
 
 itvencoder: $(itvencoder_deppend)
 	gcc $(CFLAGS) $(LDFLAGS) $(itvencoder_src) $(STATIC_JANSSON) -o itvencoder
