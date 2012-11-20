@@ -24,10 +24,12 @@ struct _DecoderPipeline {
         GstClockTime last_audio_heartbeat;
 
         /* decoder produce, encoder consume */
+        GstCaps *audio_caps;
         GstBuffer       *audio_ring[AUDIO_RING_SIZE];
         gint            current_audio_position; // decoder write position
         GstClockTime current_audio_timestamp;
 
+        GstCaps *video_caps;
         GstBuffer       *video_ring[VIDEO_RING_SIZE];
         gint            current_video_position; // decoder write position
         GstClockTime current_video_timestamp;
@@ -73,6 +75,8 @@ struct _ChannelClass {
 GType channel_get_type (void);
 guint channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string);
+gint channel_get_decoder_appsink_caps (Channel *channel);
+void channel_set_encoder_appsrc_caps (Channel *channel);
 gint channel_set_decoder_pipeline_state (Channel *channel, GstState state);
 gint channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state);
 

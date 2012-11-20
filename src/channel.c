@@ -58,6 +58,8 @@ channel_init (Channel *channel)
         channel->system_clock = gst_system_clock_obtain ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->decoder_pipeline = g_malloc (sizeof (DecoderPipeline)); //TODO free!
+        channel->decoder_pipeline->audio_caps = NULL;
+        channel->decoder_pipeline->video_caps = NULL;
         channel->encoder_pipeline_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
@@ -483,6 +485,64 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         g_array_append_val (channel->encoder_pipeline_array, encoder_pipeline);
 
         return 0;
+}
+
+gint
+channel_get_decoder_appsink_caps (Channel *channel)
+{
+        gint i;
+
+        i = 0;
+        while ((channel->decoder_pipeline->audio_caps == NULL) || (channel->decoder_pipeline->video_caps == NULL)) {
+                if (channel->decoder_pipeline->audio_ring[0] != NULL) {
+                        channel->decoder_pipeline->audio_caps = GST_BUFFER_CAPS (channel->decoder_pipeline->audio_ring[0]);
+                }
+                
+                if (channel->decoder_pipeline->video_ring[0] != NULL) {
+                        channel->decoder_pipeline->video_caps = GST_BUFFER_CAPS (channel->decoder_pipeline->video_ring[0]);
+                }
+                
+                if ((channel->decoder_pipeline->audio_caps != NULL) && (channel->decoder_pipeline->video_caps != NULL)) {
+                        break;
+                } else {
+                        g_usleep (100000); /* 100 ms */
+                }
+
+                if (i++ == 50) break;
+        }
+
+        if (channel->decoder_pipeline->audio_caps != NULL) {
+                GST_WARNING (gst_caps_to_string (channel->decoder_pipeline->audio_caps));
+        }
+        if (channel->decoder_pipeline->audio_caps != NULL) {
+                GST_WARNING (gst_caps_to_string (channel->decoder_pipeline->video_caps));
+        }
+
+        if (i < 50 )
+                return 0;
+        else
+                return -1;
+}
+
+void
+channel_set_encoder_appsrc_caps (Channel *channel)
+{
+        gint i;
+        GstElement *appsrc;
+
+        for (i=0; i<channel->encoder_pipeline_array->len; i++) {
+                EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, i);
+                if (encoder_pipeline->pipeline != NULL) {
+                        if (channel->decoder_pipeline->video_caps != NULL) {
+                                appsrc = gst_bin_get_by_name (GST_BIN (encoder_pipeline->pipeline), "videosrc");
+                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->decoder_pipeline->video_caps);
+                        }
+                        if (channel->decoder_pipeline->audio_caps != NULL) {
+                                appsrc = gst_bin_get_by_name (GST_BIN (encoder_pipeline->pipeline), "audiosrc");
+                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->decoder_pipeline->audio_caps);
+                        }
+                }
+        }
 }
 
 gint
