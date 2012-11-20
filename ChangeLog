@@ -2,5 +2,6 @@ releases are sorted from youngest to oldest.
 
 v-0.1.1 2012-11-16 zhangping
 - native http server.
+- video deinterlace.
 - channel monitor.
-
+- get caps of decoder pipeline appsink and set caps of encoder pipeline appsrc.
