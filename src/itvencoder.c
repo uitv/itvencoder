@@ -247,6 +247,7 @@ get_encoder (gchar *uri, ITVEncoder *itvencoder)
 
 typedef struct _RequestDataUserData {
         gint current_send_position;
+	gint last_send_count;
         gpointer encoder;
 } RequestDataUserData;
 
@@ -266,7 +267,7 @@ request_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
-        int i = 0, ret;
+        int i = 0, j, ret;
         EncoderPipeline *encoder;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
@@ -287,8 +288,8 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
-                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));
-                        GST_ERROR ("request_user_data %lld", request_user_data);
+                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
+			request_user_data->last_send_count = 0;
                         request_user_data->encoder = encoder;
                         while (encoder->current_output_position <= 7) {
                                 g_usleep (50); /*FIXME*/
@@ -320,33 +321,67 @@ request_dispatcher (gpointer data, gpointer user_data)
                         if ((i / 7) == ((encoder->current_output_position) / 7)) { //catch up, stop write
                                 break;
                         }
-                        iov[0].iov_base = size;
-                        iov[0].iov_len = 5;
-                        iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
-                        iov[1].iov_len = 188;
-                        iov[2].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+1]);
-                        iov[2].iov_len = 188;
-                        iov[3].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+2]);
-                        iov[3].iov_len = 188;
-                        iov[4].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+3]);
-                        iov[4].iov_len = 188;
-                        iov[5].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+4]);
-                        iov[5].iov_len = 188;
-                        iov[6].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+5]);
-                        iov[6].iov_len = 188;
-                        iov[7].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+6]);
-                        iov[7].iov_len = 188;
-                        iov[8].iov_base = end;
-                        iov[8].iov_len = 2;
+			if (request_user_data->last_send_count == 0) {
+                        	iov[0].iov_base = size;
+                        	iov[0].iov_len = 5;
+                        	iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
+                        	iov[1].iov_len = 188;
+                        	iov[2].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+1]);
+                        	iov[2].iov_len = 188;
+                        	iov[3].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+2]);
+                        	iov[3].iov_len = 188;
+                        	iov[4].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+3]);
+                        	iov[4].iov_len = 188;
+                        	iov[5].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+4]);
+                        	iov[5].iov_len = 188;
+                        	iov[6].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+5]);
+                        	iov[6].iov_len = 188;
+                        	iov[7].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+6]);
+                        	iov[7].iov_len = 188;
+                        	iov[8].iov_base = end;
+                        	iov[8].iov_len = 2;
+			} else {
+				if (request_user_data->last_send_count < 5) {
+					iov[0].iov_base = size + request_user_data->last_send_count;
+					iov[0].iov_len = 5 - request_user_data->last_send_count;
+				} else {
+					iov[0].iov_base = NULL;
+					iov[0].iov_len = 0;
+				}
+				for (j=0; j<7; j++) {
+					if (request_user_data->last_send_count < (5 + j * 188)) {
+						/* this buffer has not been send */
+                        			iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]);
+                        			iov[j + 1].iov_len = 188;
+					} else if (request_user_data->last_send_count < (5 + (j + 1) * 188)) {
+						/* this buffer has been send partialy */
+                        			iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]) + (request_user_data->last_send_count - 5) % 188;
+                        			iov[j + 1].iov_len = 188 - (request_user_data->last_send_count - 5) % 188;
+					} else {
+						/* this buffer has been send */
+                        			iov[j + 1].iov_base = NULL;
+                        			iov[j + 1].iov_len = 0;
+					}
+				}
+				if (request_user_data->last_send_count <= 1321) {
+					iov[8].iov_base = end;
+					iov[8].iov_len = 2;
+				} else {
+					iov[8].iov_base = end + (request_user_data->last_send_count - 1321);
+					iov[8].iov_len = 1323 - request_user_data->last_send_count;
+				}
+			}
                         ret = writev (request_data->sock, iov, 9);
-                        i = (i + 7) % OUTPUT_RING_SIZE;
-                        request_user_data->current_send_position = i;
-                        if (ret != 1323) {
-                                GST_ERROR ("write error %d", ret);
-                                break;
-                        } 
+                        if (request_user_data->last_send_count + ret < 1323) {
+				request_user_data->last_send_count += ret;
+                		return GST_CLOCK_TIME_NONE; // 50ms;
+                        } else {
+				request_user_data->last_send_count = 0;
+                        	i = (i + 7) % OUTPUT_RING_SIZE;
+                        	request_user_data->current_send_position = i;
+			}
                 }
-                return gst_clock_get_time (itvencoder->system_clock)  + 50 * GST_MSECOND; // 50ms;
+                return gst_clock_get_time (itvencoder->system_clock)  + 10 * GST_MSECOND; // 50ms;
         case HTTP_FINISH:
                 GST_ERROR ("finish status user_data %lld----------------------", request_data->user_data);
                 g_free (request_data->user_data);

@@ -61,6 +61,7 @@ enum session_status {
         HTTP_REQUEST,
         HTTP_CONTINUE,
         HTTP_IDLE,
+	HTTP_BLOCK,
         HTTP_FINISH
 };
 
@@ -95,14 +96,22 @@ struct _HTTPServer {
         gint listen_sock;
         gint epollfd;
         GThread *server_thread;
+
         GMutex *idle_queue_mutex;
         GCond *idle_queue_cond;
         GTree *idle_queue;
         GThread *idle_thread;
+
+	GMutex *block_queue_mutex;
+	GCond *block_queue_cond;
+	GQueue *block_queue;
+	GThread *block_thread;
+
         GThreadPool *thread_pool;
+
         http_callback_t user_callback;
         gpointer user_data;
-        gpointer request_data_pointers[kMaxRequests];
+        gpointer request_data_pointers[kMaxRequests]; //FIXME: use pointer array?
         GQueue *request_data_queue;
 };
 
