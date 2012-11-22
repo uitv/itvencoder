@@ -61,7 +61,7 @@ enum session_status {
         HTTP_REQUEST,
         HTTP_CONTINUE,
         HTTP_IDLE,
-	HTTP_BLOCK,
+        HTTP_BLOCK,
         HTTP_FINISH
 };
 
@@ -102,10 +102,10 @@ struct _HTTPServer {
         GTree *idle_queue;
         GThread *idle_thread;
 
-	GMutex *block_queue_mutex;
-	GCond *block_queue_cond;
-	GQueue *block_queue;
-	GThread *block_thread;
+        GMutex *block_queue_mutex;
+        GCond *block_queue_cond;
+        GQueue *block_queue;
+        GThread *block_thread;
 
         GThreadPool *thread_pool;
 
