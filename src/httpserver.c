@@ -173,7 +173,6 @@ read_request (RequestData *request_data)
         gint count, read_pos = request_data->request_length;
         gchar *buf = &(request_data->raw_request[0]);
 
-        GST_ERROR ("read sock %d request address %lld", request_data->sock, request_data);
         while (1) {
                 count = read (request_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
                 if (count == -1) {
@@ -285,16 +284,15 @@ accept_socket (HTTPServer *http_server)
                         }
                 }
                 if (g_queue_get_length (http_server->request_data_queue) == 0) {
-                        GST_WARNING ("event queue empty");
+                        GST_ERROR ("event queue empty");
                         close (accepted_sock);
                 } else {
-                        GST_WARNING ("new request arrived, accepted_sock %d", accepted_sock);
+                        GST_INFO ("new request arrived, accepted_sock %d", accepted_sock);
                         int on = 1;
                         setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                         setNonblocking (accepted_sock);
                         request_data_pointer = g_queue_pop_tail (http_server->request_data_queue);
                         request_data = *request_data_pointer;
-                        GST_ERROR ("------------> poped request data address %lld", request_data);
                         request_data->client_addr = in_addr;
                         request_data->sock = accepted_sock;
                         request_data->birth_time = gst_clock_get_time (http_server->system_clock);
@@ -576,10 +574,12 @@ thread_pool_func (gpointer data, gpointer user_data)
                 } 
 
                 ret = parse_request (request_data);
-                if (ret == 0) { /* parse complete, call back user function */
+                if (ret == 0) {
+                        /* parse complete, call back user function */
                         request_data->status = HTTP_REQUEST;
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret > 0) {
+                                GST_DEBUG ("insert idle queue end");
                                 request_data->wakeup_time = cb_ret;
                                 g_mutex_lock (http_server->idle_queue_mutex);
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
@@ -590,14 +590,15 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
                                 g_cond_signal (http_server->idle_queue_cond);
                                 g_mutex_unlock (http_server->idle_queue_mutex);
-                                GST_WARNING ("insert idle queue end");
                         } else { //FIXME
                                 close (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         }
-                } else if (ret == 1) { // need read more data
+                } else if (ret == 1) {
+                        /* need read more data */
                         return;
-                } else {/* Bad Request */
+                } else {
+                        /* Bad Request */
                         GST_ERROR ("Bad request, return is %d", ret);
                         gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -622,7 +623,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         if (g_tree_nnodes (http_server->idle_queue) > 0) {
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
                                         /* avoid time conflict */
-                                        GST_ERROR ("look up, tree node number %d find %lld", g_tree_nnodes (http_server->idle_queue), request_data->wakeup_time);
+                                        GST_DEBUG ("look up, tree node number %d find %lld", g_tree_nnodes (http_server->idle_queue), request_data->wakeup_time);
                                         request_data->wakeup_time++;
                                         if (iiii++==10) exit(0);
                                 }
@@ -640,7 +641,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
-                GST_WARNING ("request finish %d", request_data->sock);
+                GST_INFO ("request finish %d", request_data->sock);
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);

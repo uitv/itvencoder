@@ -278,7 +278,7 @@ request_dispatcher (gpointer data, gpointer user_data)
 
         switch (request_data->status) {
         case HTTP_REQUEST:
-                GST_WARNING ("socket is %d uri is %s", request_data->sock, request_data->uri);
+                GST_INFO ("socket is %d uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         encoder = get_encoder (request_data->uri, itvencoder);
@@ -383,7 +383,6 @@ request_dispatcher (gpointer data, gpointer user_data)
                 }
                 return gst_clock_get_time (itvencoder->system_clock)  + 10 * GST_MSECOND; // 50ms;
         case HTTP_FINISH:
-                GST_ERROR ("finish status user_data %lld----------------------", request_data->user_data);
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;
                 return 0;
