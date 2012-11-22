@@ -393,7 +393,7 @@ listen_thread (gpointer data)
                                 RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
                                 request_data->events = event_list[i].events;
                                 if (event_list[i].events & EPOLLIN) {
-                                        GST_WARNING ("event on sock %d events EPOLLIN", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLIN", request_data->sock);
                                         if (request_data->status == HTTP_CONNECTED) {
                                                 g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
                                                 if (e != NULL) { // FIXME
@@ -403,7 +403,7 @@ listen_thread (gpointer data)
                                         } 
                                 } 
                                 if (event_list[i].events & EPOLLOUT) {
-                                        GST_WARNING ("event on sock %d events EPOLLOUT", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLOUT", request_data->sock);
                                         if (request_data->status == HTTP_BLOCK) {
                                                 g_mutex_lock (http_server->block_queue_mutex);
                                                 g_cond_signal (http_server->block_queue_cond);
@@ -411,7 +411,7 @@ listen_thread (gpointer data)
                                         }
                                 }
                                 if (event_list[i].events & EPOLLERR) {
-                                        GST_WARNING ("event on sock %d events EPOLLERR", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLERR", request_data->sock);
                                         if (request_data->status == HTTP_BLOCK) {
                                                 g_mutex_lock (http_server->block_queue_mutex);
                                                 g_cond_signal (http_server->block_queue_cond);
@@ -419,7 +419,7 @@ listen_thread (gpointer data)
                                         }
                                 } 
                                 if (event_list[i].events & EPOLLHUP) {
-                                        GST_WARNING ("event on sock %d events EPOLLHUP", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLHUP", request_data->sock);
                                         if (request_data->status == HTTP_BLOCK) {
                                                 g_mutex_lock (http_server->block_queue_mutex);
                                                 g_cond_signal (http_server->block_queue_cond);
@@ -427,19 +427,19 @@ listen_thread (gpointer data)
                                         }
                                 }
                                 if (event_list[i].events & EPOLLRDBAND) {
-                                        GST_WARNING ("event on sock %d events EPOLLRDBAND", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLRDBAND", request_data->sock);
                                 }
                                 if (event_list[i].events & EPOLLRDNORM) { 
-                                        GST_WARNING ("event on sock %d events EPOLLRDNORM", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLRDNORM", request_data->sock);
                                 }
                                 if (event_list[i].events & EPOLLWRNORM) {
-                                        GST_WARNING ("event on sock %d events EPOLLWRNORM", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLWRNORM", request_data->sock);
                                 }
                                 if (event_list[i].events & EPOLLWRBAND) {
-                                        GST_WARNING ("event on sock %d events EPOLLWRBAND", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLWRBAND", request_data->sock);
                                 }
                                 if (event_list[i].events & EPOLLRDHUP) {
-                                        GST_WARNING ("event on sock %d events EPOLLRDHUP", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events EPOLLRDHUP", request_data->sock);
                                 }
                         }
                 }
@@ -608,7 +608,6 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else if (request_data->status == HTTP_CONTINUE) {
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == GST_CLOCK_TIME_NONE) {
-                        GST_WARNING ("block sock %d", request_data->sock);
                         g_mutex_lock (http_server->block_queue_mutex);
                         request_data->status = HTTP_BLOCK;
                         g_queue_push_head (http_server->block_queue, request_data_pointer);
