@@ -87,9 +87,9 @@ httpserver_init (HTTPServer *http_server)
         http_server->idle_queue_cond = g_cond_new ();
         http_server->idle_queue = g_tree_new ((GCompareFunc)compare_func);
 
-	http_server->block_queue_mutex = g_mutex_new ();
-	http_server->block_queue_cond = g_cond_new ();
-	http_server->block_queue = g_queue_new ();
+        http_server->block_queue_mutex = g_mutex_new ();
+        http_server->block_queue_cond = g_cond_new ();
+        http_server->block_queue = g_queue_new ();
 
         http_server->system_clock = gst_system_clock_obtain ();
         g_object_set (http_server->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
@@ -402,29 +402,29 @@ listen_thread (gpointer data)
                                                 }
                                         } 
                                 } 
-				if (event_list[i].events & EPOLLOUT) {
-					GST_WARNING ("event on sock %d events EPOLLOUT", request_data->sock);
-					if (request_data->status == HTTP_BLOCK) {
-						g_mutex_lock (http_server->block_queue_mutex);
-						g_cond_signal (http_server->block_queue_cond);
-						g_mutex_unlock (http_server->block_queue_mutex);	
-					}
-				}
+                                if (event_list[i].events & EPOLLOUT) {
+                                        GST_WARNING ("event on sock %d events EPOLLOUT", request_data->sock);
+                                        if (request_data->status == HTTP_BLOCK) {
+                                                g_mutex_lock (http_server->block_queue_mutex);
+                                                g_cond_signal (http_server->block_queue_cond);
+                                                g_mutex_unlock (http_server->block_queue_mutex);        
+                                        }
+                                }
                                 if (event_list[i].events & EPOLLERR) {
                                         GST_WARNING ("event on sock %d events EPOLLERR", request_data->sock);
-					if (request_data->status == HTTP_BLOCK) {
-						g_mutex_lock (http_server->block_queue_mutex);
-						g_cond_signal (http_server->block_queue_cond);
-						g_mutex_unlock (http_server->block_queue_mutex);	
-					}
+                                        if (request_data->status == HTTP_BLOCK) {
+                                                g_mutex_lock (http_server->block_queue_mutex);
+                                                g_cond_signal (http_server->block_queue_cond);
+                                                g_mutex_unlock (http_server->block_queue_mutex);        
+                                        }
                                 } 
                                 if (event_list[i].events & EPOLLHUP) {
                                         GST_WARNING ("event on sock %d events EPOLLHUP", request_data->sock);
-					if (request_data->status == HTTP_BLOCK) {
-						g_mutex_lock (http_server->block_queue_mutex);
-						g_cond_signal (http_server->block_queue_cond);
-						g_mutex_unlock (http_server->block_queue_mutex);	
-					}
+                                        if (request_data->status == HTTP_BLOCK) {
+                                                g_mutex_lock (http_server->block_queue_mutex);
+                                                g_cond_signal (http_server->block_queue_cond);
+                                                g_mutex_unlock (http_server->block_queue_mutex);        
+                                        }
                                 }
                                 if (event_list[i].events & EPOLLRDBAND) {
                                         GST_WARNING ("event on sock %d events EPOLLRDBAND", request_data->sock);
@@ -449,6 +449,7 @@ listen_thread (gpointer data)
 typedef struct _ForeachFuncData {
         GSList **wakeup_list; /* point to list of wakeuped */
         HTTPServer *http_server;
+        GTimeVal wakeup_time;
 } ForeachFuncData;
 
 static gboolean
@@ -464,6 +465,8 @@ gtree_foreach_func (gpointer key, gpointer value, gpointer data)
                 *wakeup_list = g_slist_append (*wakeup_list, value);
                 return FALSE;
         } else {
+                func_data->wakeup_time.tv_sec = (*(GstClockTime *)key) / 1000000000;
+                func_data->wakeup_time.tv_usec = ((*(GstClockTime *)key) % 1000000000) / 1000;
                 return TRUE;
         }
 }
@@ -499,11 +502,16 @@ idle_thread (gpointer data)
                 while (g_tree_nnodes (http_server->idle_queue) == 0) {
                         g_cond_wait (http_server->idle_queue_cond, http_server->idle_queue_mutex);
                 }
+                func_data.wakeup_time.tv_sec = 0;
                 g_tree_foreach (http_server->idle_queue, gtree_foreach_func, &func_data);
                 if (wakeup_list != NULL) {
                         g_slist_foreach (wakeup_list, gslist_foreach_func, http_server);
                         g_slist_free (wakeup_list);
                         wakeup_list = NULL;
+                }
+                if (func_data.wakeup_time.tv_sec != 0) {
+                        /* more than one idle request in the idle queue, wait until. */
+                        g_cond_timed_wait (http_server->idle_queue_cond, http_server->idle_queue_mutex, &(func_data.wakeup_time));
                 }
                 g_mutex_unlock (http_server->idle_queue_mutex);
         }
@@ -512,16 +520,16 @@ idle_thread (gpointer data)
 static void
 block_queue_foreach_func (gpointer data, gpointer user_data)
 {
-	RequestData **request_data_pointer = data;
-	RequestData *request_data = *request_data_pointer;
-	HTTPServer *http_server = user_data;
-	GError *e = NULL;
+        RequestData **request_data_pointer = data;
+        RequestData *request_data = *request_data_pointer;
+        HTTPServer *http_server = user_data;
+        GError *e = NULL;
 
-	if (request_data->events & (EPOLLOUT | EPOLLHUP | EPOLLERR)) {
-		/* EPOLLHUP indicate request must be removed from block queue */
-		g_queue_remove (http_server->block_queue, request_data_pointer);
-		g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
-	}
+        if (request_data->events & (EPOLLOUT | EPOLLHUP | EPOLLERR)) {
+                /* EPOLLHUP indicate request must be removed from block queue */
+                g_queue_remove (http_server->block_queue, request_data_pointer);
+                g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
+        }
         if (e != NULL) { // FIXME
                 GST_ERROR ("Thread pool push error %s", e->message);
                 g_error_free (e);
@@ -531,14 +539,14 @@ block_queue_foreach_func (gpointer data, gpointer user_data)
 static gpointer
 block_thread (gpointer data)
 {
-	HTTPServer *http_server = (HTTPServer *)data;
+        HTTPServer *http_server = (HTTPServer *)data;
 
-	for (;;) {
-		g_mutex_lock (http_server->block_queue_mutex);
-		g_cond_wait (http_server->block_queue_cond, http_server->block_queue_mutex);
-		g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
-		g_mutex_unlock (http_server->block_queue_mutex);
-	}
+        for (;;) {
+                g_mutex_lock (http_server->block_queue_mutex);
+                g_cond_wait (http_server->block_queue_cond, http_server->block_queue_mutex);
+                g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
+                g_mutex_unlock (http_server->block_queue_mutex);
+        }
 }
 
 static void
@@ -551,12 +559,12 @@ thread_pool_func (gpointer data, gpointer user_data)
         GstClockTime cb_ret;
         
         if (request_data->events & EPOLLHUP) {
-		request_data->status = HTTP_FINISH;
+                request_data->status = HTTP_FINISH;
                 request_data->events = 0;
         } else if ((request_data->events & EPOLLOUT) && (request_data->status == HTTP_BLOCK)) {
-		request_data->status = HTTP_CONTINUE;
-		request_data->events = 0;
-	}
+                request_data->status = HTTP_CONTINUE;
+                request_data->events = 0;
+        }
 
         if (request_data->status == HTTP_CONNECTED) {
                 ret = read_request (request_data);
@@ -599,12 +607,12 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
-		if (cb_ret == GST_CLOCK_TIME_NONE) {
-			GST_WARNING ("block sock %d", request_data->sock);
-			g_mutex_lock (http_server->block_queue_mutex);
-			request_data->status = HTTP_BLOCK;
-			g_queue_push_head (http_server->block_queue, request_data_pointer);
-			g_mutex_unlock (http_server->block_queue_mutex);
+                if (cb_ret == GST_CLOCK_TIME_NONE) {
+                        GST_WARNING ("block sock %d", request_data->sock);
+                        g_mutex_lock (http_server->block_queue_mutex);
+                        request_data->status = HTTP_BLOCK;
+                        g_queue_push_head (http_server->block_queue, request_data_pointer);
+                        g_mutex_unlock (http_server->block_queue_mutex);
                 } else if (cb_ret > 0) {
                         int iiii=0;
                         request_data->wakeup_time = cb_ret;
