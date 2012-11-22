@@ -14,23 +14,23 @@ typedef struct _Config          Config;
 typedef struct _ConfigClass     ConfigClass;
 
 struct _ChannelConfig {
-        gchar           *config_path;
-        gchar           *name;
-        json_t          *config;
-        gboolean        dirty;
+        gchar *config_path;
+        gchar *name;
+        json_t *config;
+        gboolean dirty;
 };
 
 struct _Config {
-        GObject         parent;
+        GObject parent;
 
-        gchar           *config_file_path;
-        json_t          *config;
-        gboolean        dirty; // config have been modified?
-        GArray          *channel_config_array; // array of json_t * type
+        gchar *config_file_path;
+        json_t *config;
+        gboolean dirty; // config have been modified?
+        GArray *channel_config_array; // array of json_t * type
 };
 
 struct _ConfigClass {
-        GObjectClass    parent;
+        GObjectClass parent;
 
         gint (*config_load_config_file_func)(Config *config);
         gint (*config_save_config_file_func)(Config *config);

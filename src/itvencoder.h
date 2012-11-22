@@ -17,26 +17,26 @@ typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
 
 struct _ITVEncoder {
-        GObject         parent;
+        GObject parent;
     
-        guint           serve_port;
+        guint serve_port;
 
-        guint           percent_cpu_usage;
-        guint           memory_usage;
-        guint           memory_total;
+        guint percent_cpu_usage;
+        guint memory_usage;
+        guint memory_total;
 
         GstClockTime start_time;
         GstClock *system_clock;
 
-        Config          *config;
-        guint           total_channel_number;
-        guint           working_channel_number; 
-        GArray          *channel_array;
+        Config *config;
+        guint total_channel_number;
+        guint working_channel_number; 
+        GArray *channel_array;
         HTTPServer *httpserver;
 };
 
 struct _ITVEncoderClass {
-        GObjectClass    parent;
+        GObjectClass parent;
 };
 
 #define TYPE_ITVENCODER           (itvencoder_get_type())

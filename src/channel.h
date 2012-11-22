@@ -25,21 +25,21 @@ struct _DecoderPipeline {
 
         /* decoder produce, encoder consume */
         GstCaps *audio_caps;
-        GstBuffer       *audio_ring[AUDIO_RING_SIZE];
-        gint            current_audio_position; // decoder write position
+        GstBuffer *audio_ring[AUDIO_RING_SIZE];
+        gint current_audio_position; // decoder write position
         GstClockTime current_audio_timestamp;
 
         GstCaps *video_caps;
-        GstBuffer       *video_ring[VIDEO_RING_SIZE];
-        gint            current_video_position; // decoder write position
+        GstBuffer *video_ring[VIDEO_RING_SIZE];
+        gint current_video_position; // decoder write position
         GstClockTime current_video_timestamp;
 };
 
 struct _EncoderPipeline {
-        gchar           *pipeline_string;
-        GstElement      *pipeline;
-        GstClockTime    last_video_heartbeat;
-        GstClockTime    last_audio_heartbeat;
+        gchar *pipeline_string;
+        GstElement *pipeline;
+        GstClockTime last_video_heartbeat;
+        GstClockTime last_audio_heartbeat;
         
         gint current_video_position; // encoder read position
         gboolean video_enough; /* appsrc enaugh_data signal */
@@ -51,11 +51,11 @@ struct _EncoderPipeline {
 };
 
 struct _Channel {
-        GObject         parent;
+        GObject parent;
 
-        gchar           *name; // same as the name in channel config file
+        gchar *name; // same as the name in channel config file
         DecoderPipeline *decoder_pipeline; 
-        GArray          *encoder_pipeline_array;
+        GArray *encoder_pipeline_array;
 
         GstClock *system_clock;
 };
