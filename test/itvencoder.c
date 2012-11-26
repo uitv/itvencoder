@@ -8,6 +8,13 @@
 GST_DEBUG_CATEGORY(ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
 
+Log *_log;
+
+static void sighandler (gint number)
+{
+        log_reopen (_log);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -18,11 +25,11 @@ main(int argc, char *argv[])
         Channel *channel;
         gchar *name;
         HTTPServer *httpserver;
-        Log *log;
         GMainLoop *loop;
         gint i, j;
 
         signal (SIGPIPE, SIG_IGN);
+        signal (SIGUSR1, sighandler);
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -37,8 +44,8 @@ main(int argc, char *argv[])
         GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
-        log = log_new ("log_path", "/home/zhangping/itvencoder.log", NULL);
-        log_set_log_handler (log);
+        _log = log_new ("log_path", "/home/zhangping/itvencoder.log", NULL);
+        log_set_log_handler (_log);
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
         GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));

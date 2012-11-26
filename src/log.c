@@ -148,3 +148,11 @@ log_set_log_handler (Log *log)
         log->log_hd = g_fopen (log->log_path, "w");
         gst_debug_add_log_function (log_func, &(log->log_hd));
 }
+
+gint
+log_reopen (Log *log)
+{
+        log->log_hd = g_freopen (log->log_path, "w", log->log_hd);
+
+        return 0;
+}
