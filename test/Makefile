@@ -14,13 +14,16 @@ itvencoder_deppend = itvencoder.c \
 		     ../src/channel.c \
 		     ../src/channel.h \
 		     ../src/httpserver.c \
-		     ../src/httpserver.h 
+		     ../src/httpserver.h \
+		     ../src/log.c \
+		     ../src/log.h
 
 itvencoder_src = itvencoder.c \
                  ../src/config.c \
 		 ../src/itvencoder.c \
 		 ../src/channel.c \
-		 ../src/httpserver.c 
+		 ../src/httpserver.c \
+		 ../src/log.c
 
 all: itvencoder
 
