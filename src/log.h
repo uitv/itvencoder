@@ -15,7 +15,8 @@ typedef struct _LogClass LogClass;
 struct _Log {
         GObject parent;
 
-        FILE *stream;
+        gchar *log_path;
+        gint log_hd;
 };
 
 struct _LogClass {
@@ -31,5 +32,7 @@ struct _LogClass {
 #define log_new(...)       (g_object_new(TYPE_LOG, ## __VA_ARGS__, NULL))
 
 GType log_get_type (void);
+
+gint log_set_log_handler (Log *log);
 
 #endif /* __LOG_H__ */

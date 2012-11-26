@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gst/gst.h>
+#include "log.h"
 #include "httpserver.h"
 #include "itvencoder.h"
 
@@ -17,6 +18,7 @@ main(int argc, char *argv[])
         Channel *channel;
         gchar *name;
         HTTPServer *httpserver;
+        Log *log;
         GMainLoop *loop;
         gint i, j;
 
@@ -35,6 +37,8 @@ main(int argc, char *argv[])
         GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
+        log = log_new ("log_path", "/home/zhangping/itvencoder.log", NULL);
+        log_set_log_handler (log);
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
         GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
