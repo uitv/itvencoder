@@ -212,6 +212,38 @@ itvencoder_start (ITVEncoder *itvencoder)
         return 0;
 }
 
+gint
+itvencoder_decoder_pipeline_stop (ITVEncoder *itvencoder, gint index)
+{
+        Channel *channel = NULL;
+
+        channel = g_array_index (itvencoder->channel_array, gpointer, index);
+        if (channel == NULL) {
+                GST_WARNING ("Channel not found %d", index);
+                return 1;
+        }
+
+        channel_set_decoder_pipeline_state (channel, GST_STATE_NULL);
+
+        return 0;
+}
+
+gint
+itvencoder_decoder_pipeline_start (ITVEncoder *itvencoder, gint index)
+{
+        Channel *channel = NULL;
+
+        channel = g_array_index (itvencoder->channel_array, gpointer, index);
+        if (channel == NULL) {
+                GST_WARNING ("Channel not found %d", index);
+                return 1;
+        }
+
+        channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
+
+        return 0;
+}
+
 static EncoderPipeline *
 get_encoder (gchar *uri, ITVEncoder *itvencoder)
 {
@@ -221,7 +253,7 @@ get_encoder (gchar *uri, ITVEncoder *itvencoder)
         Channel *channel;
         EncoderPipeline *encoder = NULL;
 
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)", G_REGEX_OPTIMIZE, 0, NULL);
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
         if (g_match_info_matches (match_info)) {
                 c = g_match_info_fetch_named (match_info, "channel");
