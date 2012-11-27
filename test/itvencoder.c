@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gst/gst.h>
+#include <string.h>
 #include "log.h"
 #include "httpserver.h"
 #include "itvencoder.h"
@@ -13,6 +14,22 @@ Log *_log;
 static void sighandler (gint number)
 {
         log_reopen (_log);
+}
+
+static gint create_pid_file ()
+{
+        pid_t pid;
+        FILE *fd;
+
+        pid = getpid ();
+        fd = fopen ("/var/run/itvencoder.pid", "w");
+        fprintf (fd, "%d\n", pid);
+        fclose (fd);
+}
+
+static gint remove_pid_file ()
+{
+        unlink ("/var/run/itvencoder.pid");
 }
 
 int
@@ -30,6 +47,7 @@ main(int argc, char *argv[])
 
         signal (SIGPIPE, SIG_IGN);
         signal (SIGUSR1, sighandler);
+        create_pid_file (); //FIXME remove when process exit
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -44,7 +62,7 @@ main(int argc, char *argv[])
         GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
-        _log = log_new ("log_path", "/home/zhangping/itvencoder.log", NULL);
+        _log = log_new ("log_path", "/var/log/itvencoder.log", NULL);
         log_set_log_handler (_log);
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
