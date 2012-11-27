@@ -133,6 +133,10 @@ static void log_func (GstDebugCategory *category,
         GTimeVal timeval;
         gchar *date;
 
+        if (level > gst_debug_category_get_threshold (category)) {
+                return;
+        }
+
         g_get_current_time (&timeval);
         date = g_time_val_to_iso8601 (&timeval);
         fprintf (log_hd, "%s: %s" CAT_FMT "%s\n",
