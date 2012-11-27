@@ -22,9 +22,16 @@ static gint create_pid_file ()
         FILE *fd;
 
         pid = getpid ();
+        printf ("%d\n\n\n", pid);
         fd = fopen ("/var/run/itvencoder.pid", "w");
+        if (fd == NULL) {
+                perror ("open /var/run/itvencoder.pid file error\n");
+                return 1;
+        }
         fprintf (fd, "%d\n", pid);
         fclose (fd);
+
+        return 0;
 }
 
 static gint remove_pid_file ()
@@ -47,7 +54,9 @@ main(int argc, char *argv[])
 
         signal (SIGPIPE, SIG_IGN);
         signal (SIGUSR1, sighandler);
-        create_pid_file (); //FIXME remove when process exit
+        if (create_pid_file () != 0) { //FIXME remove when process exit
+                exit (1);
+        }
 
         gst_init(&argc, &argv);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -62,7 +71,7 @@ main(int argc, char *argv[])
         GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
-        _log = log_new ("log_path", "/var/log/itvencoder.log", NULL);
+        _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
         log_set_log_handler (_log);
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);

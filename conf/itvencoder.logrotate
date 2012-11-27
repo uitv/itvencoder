@@ -1,0 +1,12 @@
+/var/log/itvencoder/*log
+{
+    rotate 100
+    size 2M
+    missingok
+    notifempty
+    sharedscripts
+    delaycompress
+    postrotate
+	/bin/kill -USR1 `cat /var/run/itvencoder.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
