@@ -204,6 +204,7 @@ parse_request (RequestData *request_data)
 {
         gchar *buf = request_data->raw_request;
         gchar *uri = &(request_data->uri[0]);
+        gchar *parameters = &(request_data->parameters[0]);
         gint i;
 
         if ((strstr (buf, "\n\n") == NULL) && (strstr(buf, "\r\n\r\n") == NULL)) {
@@ -224,7 +225,7 @@ parse_request (RequestData *request_data)
         }
 
         i = 0;
-        while (*buf != ' ' && i++ < 255) { /* max length of uri is 255*/
+        while (*buf != ' ' && *buf != '?' && i++ < 255) { /* max length of uri is 255*/
                 *uri = *buf;
                 buf++;
                 uri++;
@@ -232,6 +233,21 @@ parse_request (RequestData *request_data)
         if (i <= 255) {
                 *uri = '\0';
         } else { /* Bad request, uri too long */
+                return 3;
+        }
+
+        if (*buf == '?') { /* have parameters */
+                i = 0;
+                buf++;
+                while (*buf != ' ' && i++ < 1024) {
+                        *parameters = *buf;
+                        buf++;
+                        parameters++;
+                }
+        }
+        if (i <= 1024) {
+                *parameters = '\0';
+        } else { /* Bad request, parameters too long */
                 return 3;
         }
 

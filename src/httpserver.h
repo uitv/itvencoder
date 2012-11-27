@@ -81,6 +81,7 @@ typedef struct _RequestData {
         gint request_length;
         enum request_method method;
         gchar uri[256];
+        gchar parameters[1025];
         enum http_version version;
         gint num_headers;
         struct http_headers headers[64];
