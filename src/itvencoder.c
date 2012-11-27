@@ -271,8 +271,8 @@ request_dispatcher (gpointer data, gpointer user_data)
         EncoderPipeline *encoder;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
-        gchar *size = "524\r\n", *end = "\r\n";
-        struct iovec iov[9];
+        gchar *size = "ff90\r\n", *end = "\r\n";
+        struct iovec iov[350];
 
         GST_LOG ("hello");
 
@@ -291,11 +291,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                         request_user_data->last_send_count = 0;
                         request_user_data->encoder = encoder;
-                        while (encoder->current_output_position <= 7) {
+                        while (encoder->current_output_position <= 348) {
                                 g_usleep (50); /*FIXME*/
                         }
-                        request_user_data->current_send_position = encoder->current_output_position - 7; /*real time*/
-                        request_user_data->current_send_position = (request_user_data->current_send_position / 7) * 7;
+                        request_user_data->current_send_position = encoder->current_output_position - 348; /*real time*/
+                        request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
                         request_data->user_data = request_user_data;
                         buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -318,66 +318,56 @@ request_dispatcher (gpointer data, gpointer user_data)
                 i = request_user_data->current_send_position;
                 i %= OUTPUT_RING_SIZE;
                 for (;;) {
-                        if ((i / 7) == ((encoder->current_output_position) / 7)) { //catch up, stop write
+                        if ((i / 348) == ((encoder->current_output_position) / 348)) { //catch up, stop write
                                 break;
                         }
                         if (request_user_data->last_send_count == 0) {
                                 iov[0].iov_base = size;
-                                iov[0].iov_len = 5;
-                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
-                                iov[1].iov_len = 188;
-                                iov[2].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+1]);
-                                iov[2].iov_len = 188;
-                                iov[3].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+2]);
-                                iov[3].iov_len = 188;
-                                iov[4].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+3]);
-                                iov[4].iov_len = 188;
-                                iov[5].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+4]);
-                                iov[5].iov_len = 188;
-                                iov[6].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+5]);
-                                iov[6].iov_len = 188;
-                                iov[7].iov_base = GST_BUFFER_DATA (encoder->output_ring[i+6]);
-                                iov[7].iov_len = 188;
-                                iov[8].iov_base = end;
-                                iov[8].iov_len = 2;
+                                iov[0].iov_len = 6;
+                                for (j=0; j<348; j++) {
+                                        iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]);
+                                        iov[j + 1].iov_len = 188;
+                                }
+                                iov[349].iov_base = end;
+                                iov[349].iov_len = 2;
                         } else {
-                                if (request_user_data->last_send_count < 5) {
+                                if (request_user_data->last_send_count < 6) {
                                         iov[0].iov_base = size + request_user_data->last_send_count;
-                                        iov[0].iov_len = 5 - request_user_data->last_send_count;
+                                        iov[0].iov_len = 6 - request_user_data->last_send_count;
                                 } else {
                                         iov[0].iov_base = NULL;
                                         iov[0].iov_len = 0;
                                 }
-                                for (j=0; j<7; j++) {
-                                        if (request_user_data->last_send_count < (5 + j * 188)) {
+                                for (j=0; j<348; j++) {
+                                        if (request_user_data->last_send_count < (6 + j * 188)) {
                                                 /* this buffer has not been send */
                                                 iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]);
                                                 iov[j + 1].iov_len = 188;
-                                        } else if (request_user_data->last_send_count < (5 + (j + 1) * 188)) {
+                                        } else if (request_user_data->last_send_count < (6 + (j + 1) * 188)) {
                                                 /* this buffer has been send partialy */
-                                                iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]) + (request_user_data->last_send_count - 5) % 188;
-                                                iov[j + 1].iov_len = 188 - (request_user_data->last_send_count - 5) % 188;
+                                                iov[j + 1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i + j]) + (request_user_data->last_send_count - 6) % 188;
+                                                iov[j + 1].iov_len = 188 - (request_user_data->last_send_count - 6) % 188;
                                         } else {
                                                 /* this buffer has been send */
                                                 iov[j + 1].iov_base = NULL;
                                                 iov[j + 1].iov_len = 0;
                                         }
                                 }
-                                if (request_user_data->last_send_count <= 1321) {
-                                        iov[8].iov_base = end;
-                                        iov[8].iov_len = 2;
+                                if (request_user_data->last_send_count <= 65430) {
+                                        iov[349].iov_base = end;
+                                        iov[349].iov_len = 2;
                                 } else {
-                                        iov[8].iov_base = end + (request_user_data->last_send_count - 1321);
-                                        iov[8].iov_len = 1323 - request_user_data->last_send_count;
+                                        iov[349].iov_base = end + (request_user_data->last_send_count - 65430);
+                                        iov[349].iov_len = 65432 - request_user_data->last_send_count;
                                 }
                         }
-                        ret = writev (request_data->sock, iov, 9);
-                        if (request_user_data->last_send_count + ret < 1323) {
+                        ret = writev (request_data->sock, iov, 350);
+                        if (request_user_data->last_send_count + ret < 65432) {
                                 request_user_data->last_send_count += ret;
                                 return GST_CLOCK_TIME_NONE; // 50ms;
                         } else {
                                 request_user_data->last_send_count = 0;
-                                i = (i + 7) % OUTPUT_RING_SIZE;
+                                i = (i + 348) % OUTPUT_RING_SIZE;
                                 request_user_data->current_send_position = i;
                         }
                 }
