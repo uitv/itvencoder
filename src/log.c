@@ -119,7 +119,7 @@ log_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
         }
 }
 
-#define CAT_FMT "%s %s:%d:%s"
+#define CAT_FMT "%s %s:%d:%s: "
 static void log_func (GstDebugCategory *category,
                       GstDebugLevel level,
                       const gchar *file,
