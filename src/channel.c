@@ -23,10 +23,10 @@ static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer user_data);
-static GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_data);
-static void encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer user_data);
-static void encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data);
+static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_data);
+static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
+static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
+static void encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data);
 
 static void
 channel_class_init (ChannelClass *channelclass)
@@ -144,7 +144,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
 
         switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS:
-                GST_LOG ("End of stream\n");
+                GST_INFO ("End of stream\n");
                 break;
         case GST_MESSAGE_ERROR: 
                 gst_message_parse_error (msg, &error, &debug);
@@ -154,10 +154,10 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                 break;
         case GST_MESSAGE_STATE_CHANGED:
                 gst_message_parse_state_changed (msg, &old, &new, &pending);
-                GST_DEBUG ("%s state from %d to %d", (gchar *)data, old, new);
+                GST_INFO ("%s state from %s to %s", (gchar *)data, gst_element_state_get_name (old), gst_element_state_get_name (new));
                 break;
         default:
-                GST_DEBUG ("%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
+                GST_INFO ("%s message: %s", (gchar *)data, GST_MESSAGE_TYPE_NAME (msg));
                 break;
         }
 
@@ -169,7 +169,7 @@ typedef struct _UserData {
         Channel *channel;
 } UserData;
 
-static GstFlowReturn decoder_appsink_callback_func (GstAppSink * elt, gpointer user_data)
+static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         gchar type = ((UserData *)user_data)->type;
@@ -216,7 +216,7 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
-                decoder_appsink_callback_func,
+                decoder_appsink_callback,
                 NULL
         };
         UserData *user_data;
@@ -272,7 +272,7 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 }
 
 static
-GstFlowReturn encoder_appsink_callback_func (GstAppSink * elt, gpointer user_data)
+GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         EncoderPipeline *encoder_pipeline = (EncoderPipeline *)user_data;
@@ -297,7 +297,7 @@ typedef struct _EncoderAppsrcUserData {
 } EncoderAppsrcUserData;
 
 static void
-encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer user_data)
+encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data)
 {
         gint index = ((EncoderAppsrcUserData *)user_data)->index;
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
@@ -377,7 +377,7 @@ encoder_appsrc_need_data_callback_func (GstAppSrc *src, guint length, gpointer u
 }
 
 static void
-encoder_appsrc_enough_data_callback_func (GstAppSrc *src, gpointer user_data)
+encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data)
 {
         gint index = ((EncoderAppsrcUserData *)user_data)->index;
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
@@ -407,14 +407,14 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
         GstBus *bus;
         EncoderPipeline *encoder_pipeline;
         GstAppSrcCallbacks callbacks = {
-                encoder_appsrc_need_data_callback_func,
-                encoder_appsrc_enough_data_callback_func,
+                encoder_appsrc_need_data_callback,
+                encoder_appsrc_enough_data_callback,
                 NULL
         };
         GstAppSinkCallbacks encoder_appsink_callbacks = {
                 NULL,
                 NULL,
-                encoder_appsink_callback_func,
+                encoder_appsink_callback,
                 NULL
         };
         EncoderAppsrcUserData *user_data;
