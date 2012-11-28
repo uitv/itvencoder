@@ -236,8 +236,8 @@ parse_request (RequestData *request_data)
                 return 3;
         }
 
+        i = 0;
         if (*buf == '?') { /* have parameters */
-                i = 0;
                 buf++;
                 while (*buf != ' ' && i++ < 1024) {
                         *parameters = *buf;
