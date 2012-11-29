@@ -16,9 +16,9 @@ static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 static gint decoder_pipeline_stop (DecoderPipeline *decoder_pipeline);
 static gint decoder_pipeline_start (DecoderPipeline *decoder_pipeline);
-static gint encoder_pipeline_stop (EncoderPipeline *encoder_pipeline);
-static gint encoder_pipeline_start (EncoderPipeline *encoder_pipeline);
-static EncoderPipeline * get_encoder (gchar *uri, ITVEncoder *itvencoder);
+static gint encoder_pipeline_stop (Encoder *encoder_pipeline);
+static gint encoder_pipeline_start (Encoder *encoder_pipeline);
+static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
 
 static void
@@ -74,7 +74,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                                 GST_ERROR ("One encoder pipeline is must");
                                 exit (-1); //TODO : exit or return?
                         }
-                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                        if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 1 error");
                                 exit (-1);
                         }
@@ -84,7 +84,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                                 GST_INFO ("One encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                        if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 2 error");
                                 exit (-1);
                         }
@@ -94,7 +94,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                                 GST_INFO ("Two encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                        if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 3 error");
                                 exit (-1);
                         }
@@ -104,7 +104,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                                 GST_INFO ("Three encoder pipelines found.");
                                 break; //TODO : exit or return?
                         }
-                        if (channel_add_encoder_pipeline (channel, pipeline_string) != 0) {
+                        if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 4 error");
                                 exit (-1);
                         }
@@ -173,7 +173,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                           channel->name,
                           GST_TIME_ARGS (channel->decoder_pipeline->last_audio_heartbeat));
                 for (j=0; j<channel->encoder_pipeline_array->len; j++) {
-                        EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                        Encoder *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
                         GST_INFO ("%s encoder pipeline video last heart beat %" GST_TIME_FORMAT,
                                   channel->name,
                                   GST_TIME_ARGS (encoder_pipeline->last_video_heartbeat));
@@ -218,7 +218,7 @@ itvencoder_start (ITVEncoder *itvencoder)
                 channel_get_decoder_appsink_caps (channel);
                 channel_set_encoder_appsrc_caps (channel);
                 for (j=0; j<channel->encoder_pipeline_array->len; j++) {
-                        EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                        Encoder *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string);
                         channel_set_encoder_pipeline_state (channel, j, GST_STATE_PLAYING);
                 }
@@ -245,7 +245,7 @@ decoder_pipeline_start (DecoderPipeline *decoder_pipeline)
 }
 
 static gint
-encoder_pipeline_stop (EncoderPipeline *encoder_pipeline)
+encoder_pipeline_stop (Encoder *encoder_pipeline)
 {
         encoder_pipeline->state = GST_STATE_NULL;
         gst_element_set_state (encoder_pipeline->pipeline, GST_STATE_NULL);
@@ -254,7 +254,7 @@ encoder_pipeline_stop (EncoderPipeline *encoder_pipeline)
 }
 
 static gint
-encoder_pipeline_start (EncoderPipeline *encoder_pipeline)
+encoder_pipeline_start (Encoder *encoder_pipeline)
 {
         gint i;
 
@@ -270,14 +270,14 @@ encoder_pipeline_start (EncoderPipeline *encoder_pipeline)
         return 0;
 }
 
-static EncoderPipeline *
+static Encoder *
 get_encoder (gchar *uri, ITVEncoder *itvencoder)
 {
         GRegex *regex = NULL;
         GMatchInfo *match_info = NULL;
         gchar *c, *e;
         Channel *channel;
-        EncoderPipeline *encoder = NULL;
+        Encoder *encoder = NULL;
 
         regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
@@ -326,7 +326,7 @@ request_dispatcher (gpointer data, gpointer user_data)
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
         int i = 0, j, ret;
-        EncoderPipeline *encoder;
+        Encoder *encoder;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
         gchar *size = "ff90\r\n", *end = "\r\n";

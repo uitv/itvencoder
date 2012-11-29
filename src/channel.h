@@ -13,7 +13,7 @@
 #define OUTPUT_RING_SIZE (1024*348) // 348*188 = 65424 ~= 64k
 
 typedef struct _DecoderPipeline   DecoderPipeline;
-typedef struct _EncoderPipeline   EncoderPipeline;
+typedef struct _Encoder Encoder;
 typedef struct _Channel           Channel;
 typedef struct _ChannelClass      ChannelClass;
 
@@ -35,7 +35,7 @@ struct _DecoderPipeline {
         GstClockTime current_video_timestamp;
 };
 
-struct _EncoderPipeline {
+struct _Encoder {
         gchar *pipeline_string;
         GstElement *pipeline;
         GstState state; /* state of the pipeline */
@@ -75,7 +75,7 @@ struct _ChannelClass {
 
 GType channel_get_type (void);
 guint channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string);
-guint channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string);
+guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_get_decoder_appsink_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Channel *channel);
 gint channel_set_decoder_pipeline_state (Channel *channel, GstState state);

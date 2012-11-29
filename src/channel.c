@@ -275,7 +275,7 @@ static
 GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
-        EncoderPipeline *encoder_pipeline = (EncoderPipeline *)user_data;
+        Encoder *encoder_pipeline = (Encoder *)user_data;
         gint i;
 
         GST_LOG ("encoder appsink callback func");
@@ -302,12 +302,12 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         gint index = ((EncoderAppsrcUserData *)user_data)->index;
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
-        EncoderPipeline *encoder_pipeline;
+        Encoder *encoder_pipeline;
         gint i;
 
         GST_LOG ("encoder %d appsrc need data callback func type %c; length %d", index, type, length);
 
-        encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
+        encoder_pipeline = (Encoder *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
         case 'a':
                 encoder_pipeline->audio_enough = FALSE;
@@ -378,11 +378,11 @@ encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data)
         gint index = ((EncoderAppsrcUserData *)user_data)->index;
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
-        EncoderPipeline *encoder_pipeline;
+        Encoder *encoder_pipeline;
 
         GST_LOG ("encoder appsrc enough data callback func type %c", type);
 
-        encoder_pipeline = (EncoderPipeline *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
+        encoder_pipeline = (Encoder *)g_array_index (channel->encoder_pipeline_array, gpointer, index);
         switch (type) {
         case 'a':
                 encoder_pipeline->audio_enough = TRUE;
@@ -396,12 +396,12 @@ encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data)
 }
 
 guint
-channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
+channel_add_encoder (Channel *channel, gchar *pipeline_string)
 {
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
         GstBus *bus;
-        EncoderPipeline *encoder_pipeline;
+        Encoder *encoder_pipeline;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback,
                 encoder_appsrc_enough_data_callback,
@@ -434,7 +434,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 g_free (encoder_pipeline);
                 return -1;
         }
-        encoder_pipeline = g_malloc (sizeof (EncoderPipeline)); //TODO free!
+        encoder_pipeline = g_malloc (sizeof (Encoder)); //TODO free!
         if (encoder_pipeline == NULL) {
                 GST_ERROR ("g_malloc memeory error.");
                 return -1;
@@ -528,7 +528,7 @@ channel_set_encoder_appsrc_caps (Channel *channel)
         GstElement *appsrc;
 
         for (i=0; i<channel->encoder_pipeline_array->len; i++) {
-                EncoderPipeline *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, i);
+                Encoder *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, i);
                 if (encoder_pipeline->pipeline != NULL) {
                         if (channel->decoder_pipeline->video_caps != NULL) {
                                 appsrc = gst_bin_get_by_name (GST_BIN (encoder_pipeline->pipeline), "videosrc");
@@ -555,7 +555,7 @@ channel_set_decoder_pipeline_state (Channel *channel, GstState state)
 gint
 channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state)
 {
-        EncoderPipeline *encoder_pipeline;
+        Encoder *encoder_pipeline;
 
         GST_LOG ("channel set encoder pipeline state index %d", index);
 
