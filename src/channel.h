@@ -55,7 +55,7 @@ struct _Channel {
         GObject parent;
 
         gchar *name; // same as the name in channel config file
-        Source *decoder_pipeline; 
+        Source *source; 
         GArray *encoder_array;
 
         GstClock *system_clock;
@@ -74,11 +74,11 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
-guint channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string);
+guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_get_decoder_appsink_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Channel *channel);
-gint channel_set_decoder_pipeline_state (Channel *channel, GstState state);
+gint channel_set_source_state (Channel *channel, GstState state);
 gint channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state);
 
 #endif /* __CHANNEL_H__ */

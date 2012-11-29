@@ -57,9 +57,9 @@ channel_init (Channel *channel)
 
         channel->system_clock = gst_system_clock_obtain ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
-        channel->decoder_pipeline = g_malloc (sizeof (Source)); //TODO free!
-        channel->decoder_pipeline->audio_caps = NULL;
-        channel->decoder_pipeline->video_caps = NULL;
+        channel->source = g_malloc (sizeof (Source)); //TODO free!
+        channel->source->audio_caps = NULL;
+        channel->source->video_caps = NULL;
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 
@@ -181,26 +181,26 @@ static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_d
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         switch (type) {
         case 'a':
-                channel->decoder_pipeline->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
-                i = channel->decoder_pipeline->current_audio_position + 1;
+                channel->source->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
+                i = channel->source->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
-                channel->decoder_pipeline->current_audio_position = i;
-                if (channel->decoder_pipeline->audio_ring[i] != NULL)
-                        gst_buffer_unref (channel->decoder_pipeline->audio_ring[i]);
-                channel->decoder_pipeline->audio_ring[i] = buffer;
-                channel->decoder_pipeline->current_audio_timestamp = GST_BUFFER_TIMESTAMP (buffer);
+                channel->source->current_audio_position = i;
+                if (channel->source->audio_ring[i] != NULL)
+                        gst_buffer_unref (channel->source->audio_ring[i]);
+                channel->source->audio_ring[i] = buffer;
+                channel->source->current_audio_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
         case 'v':
-                channel->decoder_pipeline->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
-                i = channel->decoder_pipeline->current_video_position + 1;
+                channel->source->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
+                i = channel->source->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
-                channel->decoder_pipeline->current_video_position = i;
-                if (channel->decoder_pipeline->video_ring[i] != NULL)
-                        gst_buffer_unref (channel->decoder_pipeline->video_ring[i]);
-                channel->decoder_pipeline->video_ring[i] = buffer;
-                channel->decoder_pipeline->current_video_timestamp = GST_BUFFER_TIMESTAMP (buffer);
+                channel->source->current_video_position = i;
+                if (channel->source->video_ring[i] != NULL)
+                        gst_buffer_unref (channel->source->video_ring[i]);
+                channel->source->video_ring[i] = buffer;
+                channel->source->current_video_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
         default:
                 GST_ERROR ("error");
@@ -208,7 +208,7 @@ static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_d
 }
 
 guint
-channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
+channel_set_source (Channel *channel, gchar *pipeline_string)
 {
         GError *e = NULL;
         GstElement *appsink, *p;
@@ -224,12 +224,12 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
 
         GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
 
-        channel->decoder_pipeline->current_audio_position = -1;
+        channel->source->current_audio_position = -1;
         for (i=0; i<AUDIO_RING_SIZE; i++)
-                channel->decoder_pipeline->audio_ring[i] = NULL;
-        channel->decoder_pipeline->current_video_position = -1;
+                channel->source->audio_ring[i] = NULL;
+        channel->source->current_video_position = -1;
         for (i=0; i<VIDEO_RING_SIZE; i++)
-                channel->decoder_pipeline->video_ring[i] = NULL;
+                channel->source->video_ring[i] = NULL;
 
         p = gst_parse_launch (pipeline_string, &e);
         if (e != NULL) {
@@ -241,8 +241,8 @@ channel_set_decoder_pipeline (Channel *channel, gchar *pipeline_string)
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
         gst_bus_add_watch (bus, bus_callback, "decoderpipeline");
 
-        channel->decoder_pipeline->pipeline = p;
-        channel->decoder_pipeline->pipeline_string = pipeline_string;
+        channel->source->pipeline = p;
+        channel->source->pipeline_string = pipeline_string;
 
         /* set video sink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "videosink"); //TODO release
@@ -317,8 +317,8 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 for (;;) {
                         encoder->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
-                        if (i == channel->decoder_pipeline->current_audio_position ||
-                                channel->decoder_pipeline->current_audio_position == -1) { /*FIXME: condition variable*/
+                        if (i == channel->source->current_audio_position ||
+                                channel->source->current_audio_position == -1) { /*FIXME: condition variable*/
                                 GST_DEBUG ("waiting audio decoder ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
@@ -328,9 +328,9 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 break;
                         }
                         GST_DEBUG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
-                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->decoder_pipeline->audio_ring[i])),
-                                   channel->decoder_pipeline->current_audio_position);
-                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->decoder_pipeline->audio_ring[i])) != GST_FLOW_OK) {
+                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
+                                   channel->source->current_audio_position);
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->audio_ring[i])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer audio failure.");
                                 break;
                         }
@@ -346,8 +346,8 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 for (;;) {
                         encoder->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current decoder buffer */
-                        if (i == channel->decoder_pipeline->current_video_position ||
-                                channel->decoder_pipeline->current_video_position == -1) {
+                        if (i == channel->source->current_video_position ||
+                                channel->source->current_video_position == -1) {
                                 GST_DEBUG ("waiting video decoder ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
@@ -357,9 +357,9 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 break;
                         }
                         GST_DEBUG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
-                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->decoder_pipeline->video_ring[i])),
-                                   channel->decoder_pipeline->current_video_position);
-                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->decoder_pipeline->video_ring[i])) != GST_FLOW_OK) {
+                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
+                                   channel->source->current_video_position);
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer video failure.");
                                 break;
                         }
@@ -490,16 +490,16 @@ channel_get_decoder_appsink_caps (Channel *channel)
         gint i;
 
         i = 0;
-        while ((channel->decoder_pipeline->audio_caps == NULL) || (channel->decoder_pipeline->video_caps == NULL)) {
-                if (channel->decoder_pipeline->audio_ring[0] != NULL) {
-                        channel->decoder_pipeline->audio_caps = GST_BUFFER_CAPS (channel->decoder_pipeline->audio_ring[0]);
+        while ((channel->source->audio_caps == NULL) || (channel->source->video_caps == NULL)) {
+                if (channel->source->audio_ring[0] != NULL) {
+                        channel->source->audio_caps = GST_BUFFER_CAPS (channel->source->audio_ring[0]);
                 }
                 
-                if (channel->decoder_pipeline->video_ring[0] != NULL) {
-                        channel->decoder_pipeline->video_caps = GST_BUFFER_CAPS (channel->decoder_pipeline->video_ring[0]);
+                if (channel->source->video_ring[0] != NULL) {
+                        channel->source->video_caps = GST_BUFFER_CAPS (channel->source->video_ring[0]);
                 }
                 
-                if ((channel->decoder_pipeline->audio_caps != NULL) && (channel->decoder_pipeline->video_caps != NULL)) {
+                if ((channel->source->audio_caps != NULL) && (channel->source->video_caps != NULL)) {
                         break;
                 } else {
                         g_usleep (100000); /* 100 ms */
@@ -508,11 +508,11 @@ channel_get_decoder_appsink_caps (Channel *channel)
                 if (i++ == 50) break;
         }
 
-        if (channel->decoder_pipeline->audio_caps != NULL) {
-                GST_WARNING (gst_caps_to_string (channel->decoder_pipeline->audio_caps));
+        if (channel->source->audio_caps != NULL) {
+                GST_WARNING (gst_caps_to_string (channel->source->audio_caps));
         }
-        if (channel->decoder_pipeline->audio_caps != NULL) {
-                GST_WARNING (gst_caps_to_string (channel->decoder_pipeline->video_caps));
+        if (channel->source->audio_caps != NULL) {
+                GST_WARNING (gst_caps_to_string (channel->source->video_caps));
         }
 
         if (i < 50 )
@@ -530,24 +530,24 @@ channel_set_encoder_appsrc_caps (Channel *channel)
         for (i=0; i<channel->encoder_array->len; i++) {
                 Encoder *encoder = g_array_index (channel->encoder_array, gpointer, i);
                 if (encoder->pipeline != NULL) {
-                        if (channel->decoder_pipeline->video_caps != NULL) {
+                        if (channel->source->video_caps != NULL) {
                                 appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "videosrc");
-                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->decoder_pipeline->video_caps);
+                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->video_caps);
                         }
-                        if (channel->decoder_pipeline->audio_caps != NULL) {
+                        if (channel->source->audio_caps != NULL) {
                                 appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "audiosrc");
-                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->decoder_pipeline->audio_caps);
+                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
                         }
                 }
         }
 }
 
 gint
-channel_set_decoder_pipeline_state (Channel *channel, GstState state)
+channel_set_source_state (Channel *channel, GstState state)
 {
         GST_LOG ("set decoder pipeline state");
 
-        gst_element_set_state (channel->decoder_pipeline->pipeline, state);
+        gst_element_set_state (channel->source->pipeline, state);
 
         return 0;
 }

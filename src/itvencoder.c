@@ -14,8 +14,8 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static gint decoder_pipeline_stop (Source *decoder_pipeline);
-static gint decoder_pipeline_start (Source *decoder_pipeline);
+static gint source_stop (Source *source);
+static gint source_start (Source *source);
 static gint encoder_pipeline_stop (Encoder *encoder_pipeline);
 static gint encoder_pipeline_start (Encoder *encoder_pipeline);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
@@ -64,7 +64,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                         GST_ERROR ("no decoder pipeline error");
                         exit (-1); //TODO : exit or return?
                 }
-                if (channel_set_decoder_pipeline (channel, pipeline_string) != 0) {
+                if (channel_set_source (channel, pipeline_string) != 0) {
                         GST_ERROR ("Set decoder pipeline error.");
                         exit (-1);
                 }
@@ -162,16 +162,16 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 GST_INFO ("%s decoder pipeline video last timestamp %" GST_TIME_FORMAT,
                           channel->name,
-                          GST_TIME_ARGS (channel->decoder_pipeline->current_video_timestamp));
+                          GST_TIME_ARGS (channel->source->current_video_timestamp));
                 GST_INFO ("%s decoder pipeline audio last timestamp %" GST_TIME_FORMAT,
                           channel->name,
-                          GST_TIME_ARGS (channel->decoder_pipeline->current_audio_timestamp));
+                          GST_TIME_ARGS (channel->source->current_audio_timestamp));
                 GST_INFO ("%s decoder pipeline video last heart beat %" GST_TIME_FORMAT,
                           channel->name,
-                          GST_TIME_ARGS (channel->decoder_pipeline->last_video_heartbeat));
+                          GST_TIME_ARGS (channel->source->last_video_heartbeat));
                 GST_INFO ("%s decoder pipeline audio last heart beat %" GST_TIME_FORMAT,
                           channel->name,
-                          GST_TIME_ARGS (channel->decoder_pipeline->last_audio_heartbeat));
+                          GST_TIME_ARGS (channel->source->last_audio_heartbeat));
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder_pipeline = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("%s encoder pipeline video last heart beat %" GST_TIME_FORMAT,
@@ -213,8 +213,8 @@ itvencoder_start (ITVEncoder *itvencoder)
                 GST_INFO ("\nchannel %s has %d encoder pipeline.>>>>>>>>>>>>>>>>>>>>>>>>>\nchannel decoder pipeline string is %s",
                         channel->name,
                         channel->encoder_array->len,
-                        channel->decoder_pipeline->pipeline_string);
-                channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
+                        channel->source->pipeline_string);
+                channel_set_source_state (channel, GST_STATE_PLAYING);
                 channel_get_decoder_appsink_caps (channel);
                 channel_set_encoder_appsrc_caps (channel);
                 for (j=0; j<channel->encoder_array->len; j++) {
@@ -229,17 +229,17 @@ itvencoder_start (ITVEncoder *itvencoder)
 }
 
 static gint
-decoder_pipeline_stop (Source *decoder_pipeline)
+source_stop (Source *source)
 {
-        gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_NULL);
+        gst_element_set_state (source->pipeline, GST_STATE_NULL);
 
         return 0;
 }
 
 static gint
-decoder_pipeline_start (Source *decoder_pipeline)
+source_start (Source *source)
 {
-        gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_PLAYING);
+        gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
 
         return 0;
 }
