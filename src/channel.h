@@ -79,6 +79,6 @@ guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_get_decoder_appsink_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Channel *channel);
 gint channel_set_source_state (Channel *channel, GstState state);
-gint channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state);
+gint channel_set_encoder_state (Channel *channel, gint index, GstState state);
 
 #endif /* __CHANNEL_H__ */

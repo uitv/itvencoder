@@ -275,19 +275,19 @@ static
 GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
-        Encoder *encoder_pipeline = (Encoder *)user_data;
+        Encoder *encoder = (Encoder *)user_data;
         gint i;
 
         GST_LOG ("encoder appsink callback func");
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        i = encoder_pipeline->current_output_position + 1;
+        i = encoder->current_output_position + 1;
         i = i % OUTPUT_RING_SIZE;
         GST_DEBUG ("output current position %d, buffer size: %d", i, GST_BUFFER_SIZE(buffer));
-        encoder_pipeline->current_output_position = i;
-        if (encoder_pipeline->output_ring[i] != NULL)
-                gst_buffer_unref (encoder_pipeline->output_ring[i]);
-        encoder_pipeline->output_ring[i] = buffer;
+        encoder->current_output_position = i;
+        if (encoder->output_ring[i] != NULL)
+                gst_buffer_unref (encoder->output_ring[i]);
+        encoder->output_ring[i] = buffer;
 }
 
 typedef struct _EncoderAppsrcUserData {
@@ -553,7 +553,7 @@ channel_set_source_state (Channel *channel, GstState state)
 }
 
 gint
-channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state)
+channel_set_encoder_state (Channel *channel, gint index, GstState state)
 {
         Encoder *encoder;
 

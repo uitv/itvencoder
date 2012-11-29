@@ -16,8 +16,8 @@ static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 static gint source_stop (Source *source);
 static gint source_start (Source *source);
-static gint encoder_pipeline_stop (Encoder *encoder_pipeline);
-static gint encoder_pipeline_start (Encoder *encoder_pipeline);
+static gint encoder_stop (Encoder *encoder);
+static gint encoder_start (Encoder *encoder);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
 
@@ -173,13 +173,13 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                           channel->name,
                           GST_TIME_ARGS (channel->source->last_audio_heartbeat));
                 for (j=0; j<channel->encoder_array->len; j++) {
-                        Encoder *encoder_pipeline = g_array_index (channel->encoder_array, gpointer, j);
+                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("%s encoder pipeline video last heart beat %" GST_TIME_FORMAT,
                                   channel->name,
-                                  GST_TIME_ARGS (encoder_pipeline->last_video_heartbeat));
+                                  GST_TIME_ARGS (encoder->last_video_heartbeat));
                         GST_INFO ("%s encoder pipeline audio last heart beat %" GST_TIME_FORMAT,
                                   channel->name,
-                                  GST_TIME_ARGS (encoder_pipeline->last_audio_heartbeat));
+                                  GST_TIME_ARGS (encoder->last_audio_heartbeat));
                 }
         }
 
@@ -218,9 +218,9 @@ itvencoder_start (ITVEncoder *itvencoder)
                 channel_get_decoder_appsink_caps (channel);
                 channel_set_encoder_appsrc_caps (channel);
                 for (j=0; j<channel->encoder_array->len; j++) {
-                        Encoder *encoder_pipeline = g_array_index (channel->encoder_array, gpointer, j);
-                        GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string);
-                        channel_set_encoder_pipeline_state (channel, j, GST_STATE_PLAYING);
+                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
+                        GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);
+                        channel_set_encoder_state (channel, j, GST_STATE_PLAYING);
                 }
         }
         httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder);
@@ -245,27 +245,27 @@ source_start (Source *source)
 }
 
 static gint
-encoder_pipeline_stop (Encoder *encoder_pipeline)
+encoder_stop (Encoder *encoder)
 {
-        encoder_pipeline->state = GST_STATE_NULL;
-        gst_element_set_state (encoder_pipeline->pipeline, GST_STATE_NULL);
+        encoder->state = GST_STATE_NULL;
+        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
 
         return 0;
 }
 
 static gint
-encoder_pipeline_start (Encoder *encoder_pipeline)
+encoder_start (Encoder *encoder)
 {
         gint i;
 
-        encoder_pipeline->current_video_position = -1;
-        encoder_pipeline->current_audio_position = -1;
-        encoder_pipeline->audio_enough = FALSE;
-        encoder_pipeline->video_enough = FALSE;
-        encoder_pipeline->current_output_position = -1;
+        encoder->current_video_position = -1;
+        encoder->current_audio_position = -1;
+        encoder->audio_enough = FALSE;
+        encoder->video_enough = FALSE;
+        encoder->current_output_position = -1;
 
-        gst_element_set_state (encoder_pipeline->pipeline, GST_STATE_PLAYING);
-        encoder_pipeline->state = GST_STATE_PLAYING;
+        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+        encoder->state = GST_STATE_PLAYING;
 
         return 0;
 }
@@ -383,10 +383,10 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         } else if (request_data->parameters[0] == 's') {
                                 GST_WARNING ("Stop endcoder");
-                                encoder_pipeline_stop (encoder);
+                                encoder_stop (encoder);
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
-                                encoder_pipeline_start (encoder);
+                                encoder_start (encoder);
                         }
                 case 'i': /* uri is /itvencoder/..... */
                         buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
