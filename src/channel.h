@@ -12,10 +12,10 @@
 #define VIDEO_RING_SIZE 128
 #define OUTPUT_RING_SIZE (1024*348) // 348*188 = 65424 ~= 64k
 
-typedef struct _Source   Source;
+typedef struct _Source Source;
 typedef struct _Encoder Encoder;
-typedef struct _Channel           Channel;
-typedef struct _ChannelClass      ChannelClass;
+typedef struct _Channel Channel;
+typedef struct _ChannelClass ChannelClass;
 
 struct _Source {
         gchar *pipeline_string;
@@ -38,6 +38,7 @@ struct _Source {
 struct _Encoder {
         gchar *pipeline_string;
         GstElement *pipeline;
+        gint id;
         GstState state; /* state of the pipeline */
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
@@ -76,6 +77,7 @@ struct _ChannelClass {
 GType channel_get_type (void);
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
+gint channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder);
 gint channel_get_decoder_appsink_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Channel *channel);
 gint channel_set_source_state (Channel *channel, GstState state);

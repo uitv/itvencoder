@@ -398,10 +398,27 @@ encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data)
 guint
 channel_add_encoder (Channel *channel, gchar *pipeline_string)
 {
+        Encoder *encoder;
+
+        encoder = g_malloc (sizeof (Encoder)); //TODO free!
+        if (encoder == NULL) {
+                GST_ERROR ("g_malloc memeory error.");
+                return -1;
+        }
+        encoder->pipeline_string = pipeline_string;
+        encoder->id = channel->encoder_array->len;
+        g_array_append_val (channel->encoder_array, encoder);
+        channel_encoder_initialize_pipeline (channel, encoder);
+
+        return 0;
+}
+
+gint
+channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
+{
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
         GstBus *bus;
-        Encoder *encoder;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback,
                 encoder_appsrc_enough_data_callback,
@@ -416,11 +433,11 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         EncoderAppsrcUserData *user_data;
         gint i;
 
-        GST_LOG ("channel add encoder pipeline : %s", pipeline_string);
+        GST_LOG ("channel add encoder pipeline : %s", encoder->pipeline_string);
 
-        p = gst_parse_launch (pipeline_string, &e);
+        p = gst_parse_launch (encoder->pipeline_string, &e);
         if (e != NULL) {
-                GST_ERROR ("Error parsing pipeline %s: %s", pipeline_string, e->message);
+                GST_ERROR ("Error parsing pipeline %s: %s", encoder->pipeline_string, e->message);
                 g_error_free (e);
                 return -1;
         }
@@ -430,13 +447,8 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
 
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {
-                GST_ERROR ("Channel %s, Intialize %s - Get encoder sink error", channel->name, pipeline_string);
+                GST_ERROR ("Channel %s, Intialize %s - Get encoder sink error", channel->name, encoder->pipeline_string);
                 g_free (encoder);
-                return -1;
-        }
-        encoder = g_malloc (sizeof (Encoder)); //TODO free!
-        if (encoder == NULL) {
-                GST_ERROR ("g_malloc memeory error.");
                 return -1;
         }
         encoder->state = GST_STATE_NULL;
@@ -450,7 +462,7 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
                 return -1;
         }
         user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
-        user_data->index = channel->encoder_array->len;
+        user_data->index = encoder->id;
         user_data->type = 'v';
         user_data->channel = channel;
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
@@ -463,13 +475,12 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
                 return -1;
         }
         user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
-        user_data->index = channel->encoder_array->len;
+        user_data->index = encoder->id;
         user_data->type = 'a';
         user_data->channel = channel;
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
         gst_object_unref (appsrc);
 
-        encoder->pipeline_string = pipeline_string;
         encoder->pipeline = p;
         encoder->current_video_position = -1;
         encoder->current_audio_position = -1;
@@ -478,8 +489,6 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->current_output_position = -1;
         for (i=0; i<OUTPUT_RING_SIZE; i++)
                 encoder->output_ring[i] = NULL;
-
-        g_array_append_val (channel->encoder_array, encoder);
 
         return 0;
 }
