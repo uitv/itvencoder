@@ -14,8 +14,8 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static gint decoder_pipeline_stop (DecoderPipeline *decoder_pipeline);
-static gint decoder_pipeline_start (DecoderPipeline *decoder_pipeline);
+static gint decoder_pipeline_stop (Source *decoder_pipeline);
+static gint decoder_pipeline_start (Source *decoder_pipeline);
 static gint encoder_pipeline_stop (Encoder *encoder_pipeline);
 static gint encoder_pipeline_start (Encoder *encoder_pipeline);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
@@ -229,7 +229,7 @@ itvencoder_start (ITVEncoder *itvencoder)
 }
 
 static gint
-decoder_pipeline_stop (DecoderPipeline *decoder_pipeline)
+decoder_pipeline_stop (Source *decoder_pipeline)
 {
         gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_NULL);
 
@@ -237,7 +237,7 @@ decoder_pipeline_stop (DecoderPipeline *decoder_pipeline)
 }
 
 static gint
-decoder_pipeline_start (DecoderPipeline *decoder_pipeline)
+decoder_pipeline_start (Source *decoder_pipeline)
 {
         gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_PLAYING);
 

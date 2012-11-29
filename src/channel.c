@@ -57,7 +57,7 @@ channel_init (Channel *channel)
 
         channel->system_clock = gst_system_clock_obtain ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
-        channel->decoder_pipeline = g_malloc (sizeof (DecoderPipeline)); //TODO free!
+        channel->decoder_pipeline = g_malloc (sizeof (Source)); //TODO free!
         channel->decoder_pipeline->audio_caps = NULL;
         channel->decoder_pipeline->video_caps = NULL;
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!

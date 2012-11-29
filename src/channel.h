@@ -12,12 +12,12 @@
 #define VIDEO_RING_SIZE 128
 #define OUTPUT_RING_SIZE (1024*348) // 348*188 = 65424 ~= 64k
 
-typedef struct _DecoderPipeline   DecoderPipeline;
+typedef struct _Source   Source;
 typedef struct _Encoder Encoder;
 typedef struct _Channel           Channel;
 typedef struct _ChannelClass      ChannelClass;
 
-struct _DecoderPipeline {
+struct _Source {
         gchar *pipeline_string;
         GstElement *pipeline;
         GstClockTime last_video_heartbeat;
@@ -55,7 +55,7 @@ struct _Channel {
         GObject parent;
 
         gchar *name; // same as the name in channel config file
-        DecoderPipeline *decoder_pipeline; 
+        Source *decoder_pipeline; 
         GArray *encoder_array;
 
         GstClock *system_clock;
