@@ -56,7 +56,7 @@ struct _Channel {
 
         gchar *name; // same as the name in channel config file
         DecoderPipeline *decoder_pipeline; 
-        GArray *encoder_pipeline_array;
+        GArray *encoder_array;
 
         GstClock *system_clock;
 };

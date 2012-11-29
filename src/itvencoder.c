@@ -115,7 +115,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                 GST_INFO ("parse channel %s, name is %s, encoder channel number %d.",
                            channel_config->config_path,
                            channel_config->name,
-                           channel->encoder_pipeline_array->len);
+                           channel->encoder_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
         itvencoder->httpserver = httpserver_new ("port", 20129, NULL);
@@ -172,8 +172,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 GST_INFO ("%s decoder pipeline audio last heart beat %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->decoder_pipeline->last_audio_heartbeat));
-                for (j=0; j<channel->encoder_pipeline_array->len; j++) {
-                        Encoder *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                for (j=0; j<channel->encoder_array->len; j++) {
+                        Encoder *encoder_pipeline = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("%s encoder pipeline video last heart beat %" GST_TIME_FORMAT,
                                   channel->name,
                                   GST_TIME_ARGS (encoder_pipeline->last_video_heartbeat));
@@ -212,13 +212,13 @@ itvencoder_start (ITVEncoder *itvencoder)
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 GST_INFO ("\nchannel %s has %d encoder pipeline.>>>>>>>>>>>>>>>>>>>>>>>>>\nchannel decoder pipeline string is %s",
                         channel->name,
-                        channel->encoder_pipeline_array->len,
+                        channel->encoder_array->len,
                         channel->decoder_pipeline->pipeline_string);
                 channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
                 channel_get_decoder_appsink_caps (channel);
                 channel_set_encoder_appsrc_caps (channel);
-                for (j=0; j<channel->encoder_pipeline_array->len; j++) {
-                        Encoder *encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, j);
+                for (j=0; j<channel->encoder_array->len; j++) {
+                        Encoder *encoder_pipeline = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder_pipeline->pipeline_string);
                         channel_set_encoder_pipeline_state (channel, j, GST_STATE_PLAYING);
                 }
@@ -286,9 +286,9 @@ get_encoder (gchar *uri, ITVEncoder *itvencoder)
                 if (atoi (c) < itvencoder->channel_array->len) {
                         channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
                         e = g_match_info_fetch_named (match_info, "encoder");
-                        if (atoi (e) < channel->encoder_pipeline_array->len) {
+                        if (atoi (e) < channel->encoder_array->len) {
                                 GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
-                                encoder = g_array_index (channel->encoder_pipeline_array, gpointer, atoi (e));
+                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
                         } 
                         g_free (e);
                 } 
