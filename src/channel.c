@@ -439,6 +439,7 @@ channel_add_encoder_pipeline (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("g_malloc memeory error.");
                 return -1;
         }
+        encoder_pipeline->state = GST_STATE_NULL;
         gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &encoder_appsink_callbacks, encoder_pipeline, NULL);
         gst_object_unref (appsink);
 
@@ -554,7 +555,7 @@ channel_set_decoder_pipeline_state (Channel *channel, GstState state)
 gint
 channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state)
 {
-        EncoderPipeline *e;
+        EncoderPipeline *encoder_pipeline;
 
         GST_LOG ("channel set encoder pipeline state index %d", index);
 
@@ -562,8 +563,9 @@ channel_set_encoder_pipeline_state (Channel *channel, gint index, GstState state
                 GST_ERROR ("index exceed the count of encoder number. %d", index);
                 return -1;
         }
-        e = g_array_index (channel->encoder_pipeline_array, gpointer, index);
-        gst_element_set_state (e->pipeline, state);
+        encoder_pipeline = g_array_index (channel->encoder_pipeline_array, gpointer, index);
+        gst_element_set_state (encoder_pipeline->pipeline, state);
+        encoder_pipeline->state = state;
 
         return 0;
 }

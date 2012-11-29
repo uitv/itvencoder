@@ -11,6 +11,13 @@
 
 #include "version.h"
 
+#define http_500 "HTTP/1.1 500 Internal Server Error\r\n" \
+                 "Server: %s-%s\r\n" \
+                 "Content-Type: text/html\r\n" \
+                 "Content-Size: 30\r\n" \
+                 "Connection: Close\r\n\r\n" \
+                 "<h1>Internal Server Error</h1>"
+
 #define http_404 "HTTP/1.1 404 Not Found\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: text/html\r\n" \

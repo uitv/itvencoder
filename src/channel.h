@@ -38,6 +38,7 @@ struct _DecoderPipeline {
 struct _EncoderPipeline {
         gchar *pipeline_string;
         GstElement *pipeline;
+        GstState state; /* state of the pipeline */
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
         

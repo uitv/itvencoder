@@ -14,8 +14,12 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
+static gint decoder_pipeline_stop (DecoderPipeline *decoder_pipeline);
+static gint decoder_pipeline_start (DecoderPipeline *decoder_pipeline);
+static gint encoder_pipeline_stop (EncoderPipeline *encoder_pipeline);
+static gint encoder_pipeline_start (EncoderPipeline *encoder_pipeline);
 static EncoderPipeline * get_encoder (gchar *uri, ITVEncoder *itvencoder);
+static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -212,34 +216,44 @@ itvencoder_start (ITVEncoder *itvencoder)
         return 0;
 }
 
-gint
-itvencoder_decoder_pipeline_stop (ITVEncoder *itvencoder, gint index)
+static gint
+decoder_pipeline_stop (DecoderPipeline *decoder_pipeline)
 {
-        Channel *channel = NULL;
-
-        channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        if (channel == NULL) {
-                GST_WARNING ("Channel not found %d", index);
-                return 1;
-        }
-
-        channel_set_decoder_pipeline_state (channel, GST_STATE_NULL);
+        gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_NULL);
 
         return 0;
 }
 
-gint
-itvencoder_decoder_pipeline_start (ITVEncoder *itvencoder, gint index)
+static gint
+decoder_pipeline_start (DecoderPipeline *decoder_pipeline)
 {
-        Channel *channel = NULL;
+        gst_element_set_state (decoder_pipeline->pipeline, GST_STATE_PLAYING);
 
-        channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        if (channel == NULL) {
-                GST_WARNING ("Channel not found %d", index);
-                return 1;
-        }
+        return 0;
+}
 
-        channel_set_decoder_pipeline_state (channel, GST_STATE_PLAYING);
+static gint
+encoder_pipeline_stop (EncoderPipeline *encoder_pipeline)
+{
+        encoder_pipeline->state = GST_STATE_NULL;
+        gst_element_set_state (encoder_pipeline->pipeline, GST_STATE_NULL);
+
+        return 0;
+}
+
+static gint
+encoder_pipeline_start (EncoderPipeline *encoder_pipeline)
+{
+        gint i;
+
+        encoder_pipeline->current_video_position = -1;
+        encoder_pipeline->current_audio_position = -1;
+        encoder_pipeline->audio_enough = FALSE;
+        encoder_pipeline->video_enough = FALSE;
+        encoder_pipeline->current_output_position = -1;
+
+        gst_element_set_state (encoder_pipeline->pipeline, GST_STATE_PLAYING);
+        encoder_pipeline->state = GST_STATE_PLAYING;
 
         return 0;
 }
@@ -320,19 +334,48 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
-                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
-                        request_user_data->last_send_count = 0;
-                        request_user_data->encoder = encoder;
-                        while (encoder->current_output_position <= 348) {
-                                g_usleep (50); /*FIXME*/
+                        if (request_data->parameters[0] == '\0') { /* default operator is play */
+                                GST_INFO ("Play command");
+                                if (encoder->state != GST_STATE_PLAYING) {
+                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
+                                j = 0;
+                                while (encoder->current_output_position <= 348) {
+                                        g_usleep (50); 
+                                        if (j++ < 20) continue;
+                                        GST_ERROR ("Internal Server Error, maybe encoder output nothing.");
+                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
+                                request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
+                                if (request_user_data == NULL) {
+                                        GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
+                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
+                                request_user_data->last_send_count = 0;
+                                request_user_data->encoder = encoder;
+                                request_user_data->current_send_position = encoder->current_output_position - 348; /*real time*/
+                                request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
+                                request_data->user_data = request_user_data;
+                                buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
+                        } else if (request_data->parameters[0] == 's') {
+                                GST_WARNING ("Stop endcoder");
+                                encoder_pipeline_stop (encoder);
+                        } else if (request_data->parameters[0] == 'p') {
+                                GST_WARNING ("Start endcoder");
+                                encoder_pipeline_start (encoder);
                         }
-                        request_user_data->current_send_position = encoder->current_output_position - 348; /*real time*/
-                        request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
-                        request_data->user_data = request_user_data;
-                        buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
-                        g_free (buf);
-                        return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                 case 'i': /* uri is /itvencoder/..... */
                         buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
                         write (request_data->sock, buf, strlen (buf));
@@ -347,6 +390,12 @@ request_dispatcher (gpointer data, gpointer user_data)
         case HTTP_CONTINUE:
                 request_user_data = request_data->user_data;
                 encoder = request_user_data->encoder;
+                
+                if (encoder->state != GST_STATE_PLAYING) {
+                        /* encoder pipeline's state is not playing, return 0 */
+                        return 0;
+                }
+
                 i = request_user_data->current_send_position;
                 i %= OUTPUT_RING_SIZE;
                 for (;;) {
