@@ -221,6 +221,7 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
         };
         UserData *user_data;
         gint i;
+        gchar *name;
 
         GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
 
@@ -239,7 +240,8 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
         }
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        gst_bus_add_watch (bus, bus_callback, "decoderpipeline");
+        name = g_strdup_printf ("%s-%d", "source", channel->id);
+        gst_bus_add_watch (bus, bus_callback, name);
 
         channel->source->pipeline = p;
         channel->source->pipeline_string = pipeline_string;
@@ -432,6 +434,7 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
         };
         EncoderAppsrcUserData *user_data;
         gint i;
+        gchar *name;
 
         GST_LOG ("channel add encoder pipeline : %s", encoder->pipeline_string);
 
@@ -443,7 +446,8 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
         }
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        gst_bus_add_watch (bus, bus_callback, "encoderpipeline");
+        name = g_strdup_printf ("%s-%d:%s-%d", "source", channel->id, "encoder", encoder->id);
+        gst_bus_add_watch (bus, bus_callback, name);
 
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {

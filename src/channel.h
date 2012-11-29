@@ -55,6 +55,7 @@ struct _Encoder {
 struct _Channel {
         GObject parent;
 
+        gint id;
         gchar *name; // same as the name in channel config file
         Source *source; 
         GArray *encoder_array;

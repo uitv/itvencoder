@@ -59,6 +59,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 channel = channel_new ("name", channel_config->name, NULL);
+                channel->id = i;
                 pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
                 if (pipeline_string == NULL) {
                         GST_ERROR ("no decoder pipeline error");
