@@ -216,7 +216,7 @@ itvencoder_start (ITVEncoder *itvencoder)
                         channel->encoder_array->len,
                         channel->source->pipeline_string);
                 channel_set_source_state (channel, GST_STATE_PLAYING);
-                channel_get_decoder_appsink_caps (channel);
+                channel_source_appsink_get_caps (channel);
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);

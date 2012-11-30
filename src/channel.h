@@ -29,15 +29,15 @@ struct _Source {
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
 
-        /* decoder produce, encoder consume */
+        /* source produce, encoder consume */
         GstCaps *audio_caps;
         GstBuffer *audio_ring[AUDIO_RING_SIZE];
-        gint current_audio_position; // decoder write position
+        gint current_audio_position; // source write position
         GstClockTime current_audio_timestamp;
 
         GstCaps *video_caps;
         GstBuffer *video_ring[VIDEO_RING_SIZE];
-        gint current_video_position; // decoder write position
+        gint current_video_position; // source write position
         GstClockTime current_video_timestamp;
 };
 
@@ -91,7 +91,7 @@ guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_encoder_pipeline_initialize (Encoder *encoder);
 gint channel_encoder_pipeline_release (Encoder *encoder);
-gint channel_get_decoder_appsink_caps (Channel *channel);
+gint channel_source_appsink_get_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Encoder *encoder);
 gint channel_set_source_state (Channel *channel, GstState state);
 gint channel_set_encoder_state (Channel *channel, gint index, GstState state);

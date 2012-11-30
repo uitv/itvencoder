@@ -501,7 +501,7 @@ channel_encoder_pipeline_release (Encoder *encoder)
 }
 
 gint
-channel_get_decoder_appsink_caps (Channel *channel)
+channel_source_appsink_get_caps (Channel *channel)
 {
         gint i;
 
