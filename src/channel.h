@@ -94,6 +94,5 @@ gint channel_encoder_pipeline_release (Encoder *encoder);
 gint channel_source_appsink_get_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Encoder *encoder);
 gint channel_set_source_state (Channel *channel, GstState state);
-gint channel_set_encoder_state (Channel *channel, gint index, GstState state);
 
 #endif /* __CHANNEL_H__ */

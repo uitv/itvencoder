@@ -566,20 +566,3 @@ channel_set_source_state (Channel *channel, GstState state)
         return 0;
 }
 
-gint
-channel_set_encoder_state (Channel *channel, gint index, GstState state)
-{
-        Encoder *encoder;
-
-        GST_LOG ("channel set encoder pipeline state index %d", index);
-
-        if (0 > index || index >= channel->encoder_array->len ) {
-                GST_ERROR ("index exceed the count of encoder number. %d", index);
-                return -1;
-        }
-        encoder = g_array_index (channel->encoder_array, gpointer, index);
-        gst_element_set_state (encoder->pipeline, state);
-        encoder->state = state;
-
-        return 0;
-}
