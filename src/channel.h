@@ -42,6 +42,7 @@ struct _Source {
 };
 
 struct _Encoder {
+        Channel *channel;
         gchar *pipeline_string;
         GstElement *pipeline;
         gint id;
@@ -88,10 +89,10 @@ struct _ChannelClass {
 GType channel_get_type (void);
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
-gint channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder);
-gint channel_encoder_pipeline_release (Channel *channel, Encoder *encoder);
+gint channel_encoder_pipeline_initialize (Encoder *encoder);
+gint channel_encoder_pipeline_release (Encoder *encoder);
 gint channel_get_decoder_appsink_caps (Channel *channel);
-void channel_set_encoder_appsrc_caps (Channel *channel);
+void channel_set_encoder_appsrc_caps (Encoder *encoder);
 gint channel_set_source_state (Channel *channel, GstState state);
 gint channel_set_encoder_state (Channel *channel, gint index, GstState state);
 

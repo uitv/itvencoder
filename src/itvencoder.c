@@ -217,11 +217,10 @@ itvencoder_start (ITVEncoder *itvencoder)
                         channel->source->pipeline_string);
                 channel_set_source_state (channel, GST_STATE_PLAYING);
                 channel_get_decoder_appsink_caps (channel);
-                channel_set_encoder_appsrc_caps (channel);
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);
-                        channel_set_encoder_state (channel, j, GST_STATE_PLAYING);
+                        encoder_start (encoder);
                 }
         }
         httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder);
@@ -250,6 +249,7 @@ encoder_stop (Encoder *encoder)
 {
         encoder->state = GST_STATE_NULL;
         gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+        channel_encoder_pipeline_release (encoder);
 
         return 0;
 }
@@ -259,12 +259,8 @@ encoder_start (Encoder *encoder)
 {
         gint i;
 
-        encoder->current_video_position = -1;
-        encoder->current_audio_position = -1;
-        encoder->audio_enough = FALSE;
-        encoder->video_enough = FALSE;
-        encoder->current_output_position = -1;
-
+        channel_encoder_pipeline_initialize (encoder);
+        channel_set_encoder_appsrc_caps (encoder);
         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
         encoder->state = GST_STATE_PLAYING;
 

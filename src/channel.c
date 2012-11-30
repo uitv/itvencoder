@@ -401,6 +401,8 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("g_malloc memeory error.");
                 return -1;
         }
+
+        encoder->channel = channel;
         encoder->pipeline_string = pipeline_string;
         encoder->id = channel->encoder_array->len;
         encoder->name = g_strdup_printf ("channel-%d:encoder-%d", channel->id, encoder->id);
@@ -414,13 +416,11 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->audio_cb_user_data.type = 'a';
         encoder->audio_cb_user_data.channel = channel;
 
-        channel_encoder_pipeline_initialize (channel, encoder);
-
         return 0;
 }
 
 gint
-channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
+channel_encoder_pipeline_initialize (Encoder *encoder)
 {
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
@@ -454,7 +454,7 @@ channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
         /* set encoder appsink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {
-                GST_ERROR ("Channel %s, Intialize %s - Get encoder sink error", channel->name, encoder->pipeline_string);
+                GST_ERROR ("%s - Get encoder sink error", encoder->name);
                 g_free (encoder);
                 return -1;
         }
@@ -465,7 +465,7 @@ channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
         /* set video appsrc callback */
         appsrc = gst_bin_get_by_name (GST_BIN (p), "videosrc");
         if (appsrc == NULL) {
-                GST_ERROR ("Get video src error");
+                GST_ERROR ("%s - Get video src error", encoder->name);
                 g_free (encoder);
                 return -1;
         }
@@ -475,7 +475,7 @@ channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
         /* set audio appsrc callback */
         appsrc = gst_bin_get_by_name (GST_BIN (p), "audiosrc");
         if (appsrc == NULL) {
-                GST_ERROR ("Get audio src error");
+                GST_ERROR ("%s - Get audio src error", encoder->name);
                 g_free (encoder);
                 return -1;
         }
@@ -495,7 +495,7 @@ channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
 }
 
 gint
-channel_encoder_pipeline_release (Channel *channel, Encoder *encoder)
+channel_encoder_pipeline_release (Encoder *encoder)
 {
         gst_object_unref (encoder->pipeline);
 }
@@ -538,22 +538,20 @@ channel_get_decoder_appsink_caps (Channel *channel)
 }
 
 void
-channel_set_encoder_appsrc_caps (Channel *channel)
+channel_set_encoder_appsrc_caps (Encoder *encoder)
 {
         gint i;
         GstElement *appsrc;
+        Channel *channel = encoder->channel;
 
-        for (i=0; i<channel->encoder_array->len; i++) {
-                Encoder *encoder = g_array_index (channel->encoder_array, gpointer, i);
-                if (encoder->pipeline != NULL) {
-                        if (channel->source->video_caps != NULL) {
-                                appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "videosrc");
-                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->video_caps);
-                        }
-                        if (channel->source->audio_caps != NULL) {
-                                appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "audiosrc");
-                                gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
-                        }
+        if (encoder->pipeline != NULL) {
+                if (channel->source->video_caps != NULL) {
+                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "videosrc");
+                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->video_caps);
+                }
+                if (channel->source->audio_caps != NULL) {
+                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "audiosrc");
+                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
                 }
         }
 }
