@@ -292,12 +292,6 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         encoder->output_ring[i] = buffer;
 }
 
-typedef struct _EncoderAppsrcUserData {
-        gint index;
-        gchar type;
-        Channel *channel;
-} EncoderAppsrcUserData;
-
 static void
 encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data)
 {
@@ -409,14 +403,24 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         }
         encoder->pipeline_string = pipeline_string;
         encoder->id = channel->encoder_array->len;
+        encoder->name = g_strdup_printf ("channel-%d:encoder-%d", channel->id, encoder->id);
         g_array_append_val (channel->encoder_array, encoder);
-        channel_encoder_initialize_pipeline (channel, encoder);
+
+        encoder->video_cb_user_data.index = encoder->id;
+        encoder->video_cb_user_data.type = 'v';
+        encoder->video_cb_user_data.channel = channel;
+
+        encoder->audio_cb_user_data.index = encoder->id;
+        encoder->audio_cb_user_data.type = 'a';
+        encoder->audio_cb_user_data.channel = channel;
+
+        channel_encoder_pipeline_initialize (channel, encoder);
 
         return 0;
 }
 
 gint
-channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
+channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder)
 {
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
@@ -432,9 +436,7 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
                 encoder_appsink_callback,
                 NULL
         };
-        EncoderAppsrcUserData *user_data;
         gint i;
-        gchar *name;
 
         GST_LOG ("channel add encoder pipeline : %s", encoder->pipeline_string);
 
@@ -445,10 +447,11 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
                 return -1;
         }
 
+        /* set bus watch callback */
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        name = g_strdup_printf ("%s-%d:%s-%d", "source", channel->id, "encoder", encoder->id);
-        gst_bus_add_watch (bus, bus_callback, name);
+        gst_bus_add_watch (bus, bus_callback, encoder->name);
 
+        /* set encoder appsink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {
                 GST_ERROR ("Channel %s, Intialize %s - Get encoder sink error", channel->name, encoder->pipeline_string);
@@ -459,30 +462,24 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
         gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &encoder_appsink_callbacks, encoder, NULL);
         gst_object_unref (appsink);
 
+        /* set video appsrc callback */
         appsrc = gst_bin_get_by_name (GST_BIN (p), "videosrc");
         if (appsrc == NULL) {
                 GST_ERROR ("Get video src error");
                 g_free (encoder);
                 return -1;
         }
-        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
-        user_data->index = encoder->id;
-        user_data->type = 'v';
-        user_data->channel = channel;
-        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
+        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, &encoder->video_cb_user_data, NULL);
         gst_object_unref (appsrc);
 
+        /* set audio appsrc callback */
         appsrc = gst_bin_get_by_name (GST_BIN (p), "audiosrc");
         if (appsrc == NULL) {
                 GST_ERROR ("Get audio src error");
                 g_free (encoder);
                 return -1;
         }
-        user_data  = (EncoderAppsrcUserData *)g_malloc (sizeof (EncoderAppsrcUserData)); //FIXME: release
-        user_data->index = encoder->id;
-        user_data->type = 'a';
-        user_data->channel = channel;
-        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, user_data, NULL);
+        gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, &encoder->audio_cb_user_data, NULL);
         gst_object_unref (appsrc);
 
         encoder->pipeline = p;
@@ -495,6 +492,12 @@ channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder)
                 encoder->output_ring[i] = NULL;
 
         return 0;
+}
+
+gint
+channel_encoder_pipeline_release (Channel *channel, Encoder *encoder)
+{
+        gst_object_unref (encoder->pipeline);
 }
 
 gint

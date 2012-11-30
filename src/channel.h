@@ -17,6 +17,12 @@ typedef struct _Encoder Encoder;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
+typedef struct _EncoderAppsrcUserData {
+        gint index;
+        gchar type;
+        Channel *channel;
+} EncoderAppsrcUserData;
+
 struct _Source {
         gchar *pipeline_string;
         GstElement *pipeline;
@@ -39,12 +45,16 @@ struct _Encoder {
         gchar *pipeline_string;
         GstElement *pipeline;
         gint id;
+        gchar *name;
         GstState state; /* state of the pipeline */
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
         
+        EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
         gint current_video_position; // encoder read position
         gboolean video_enough; /* appsrc enaugh_data signal */
+
+        EncoderAppsrcUserData audio_cb_user_data; /* audio appsrc callback user_data */
         gint current_audio_position; // encoder read position
         gboolean audio_enough;
 
@@ -78,7 +88,8 @@ struct _ChannelClass {
 GType channel_get_type (void);
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
-gint channel_encoder_initialize_pipeline (Channel *channel, Encoder *encoder);
+gint channel_encoder_pipeline_initialize (Channel *channel, Encoder *encoder);
+gint channel_encoder_pipeline_release (Channel *channel, Encoder *encoder);
 gint channel_get_decoder_appsink_caps (Channel *channel);
 void channel_set_encoder_appsrc_caps (Channel *channel);
 gint channel_set_source_state (Channel *channel, GstState state);
