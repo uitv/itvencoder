@@ -32,6 +32,13 @@
                  "Connection: Close\r\n\r\n" \
                  "<h1>Bad Request</h1>"
 
+#define http_200 "HTTP/1.1 200 Ok\r\n" \
+                 "Server: %s-%s\r\n" \
+                 "Content-Type: text/plain\r\n" \
+                 "Content-Size: 2\r\n" \
+                 "Connection: Close\r\n\r\n" \
+                 "Ok"
+
 #define http_chunked "HTTP/1.1 200 OK\r\n" \
                      "Content-Type: video/mpeg\r\n" \
                      "Server: %s-%s\r\n" \

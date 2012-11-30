@@ -19,6 +19,7 @@ static gint source_start (Source *source);
 static gint encoder_stop (Encoder *encoder);
 static gint encoder_start (Encoder *encoder);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
+static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
 
 static void
@@ -267,6 +268,32 @@ encoder_start (Encoder *encoder)
         return 0;
 }
 
+static Channel *
+get_channel (gchar *uri, ITVEncoder *itvencoder)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c;
+        Channel *channel;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < itvencoder->channel_array->len) {
+                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
+                } 
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return channel;
+}
+
 static Encoder *
 get_encoder (gchar *uri, ITVEncoder *itvencoder)
 {
@@ -324,6 +351,7 @@ request_dispatcher (gpointer data, gpointer user_data)
         gchar *buf;
         int i = 0, j, ret;
         Encoder *encoder;
+        Channel *channel;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
         gchar *size = "ff90\r\n", *end = "\r\n";
@@ -338,10 +366,28 @@ request_dispatcher (gpointer data, gpointer user_data)
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         encoder = get_encoder (request_data->uri, itvencoder);
                         if (encoder == NULL) {
-                                buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
+                                channel = get_channel (request_data->uri, itvencoder);
+                                if (channel == NULL) {
+                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else if (request_data->parameters[0] == 's') {
+                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else if (request_data->parameters[0] == 'p') {
+                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else {
+                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
                         }
                         if (request_data->parameters[0] == '\0') { /* default operator is play */
                                 GST_INFO ("Play command");
@@ -380,10 +426,30 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         } else if (request_data->parameters[0] == 's') {
                                 GST_WARNING ("Stop endcoder");
-                                encoder_stop (encoder);
+                                if (encoder_stop (encoder) == 0) {
+                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else {
+                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
-                                encoder_start (encoder);
+                                if (encoder_start (encoder) ==0) {
+                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else {
+                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
                         }
                 case 'i': /* uri is /itvencoder/..... */
                         buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
