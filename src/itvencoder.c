@@ -184,6 +184,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                   GST_TIME_ARGS (encoder->last_audio_heartbeat));
                 }
         }
+        httpserver_report_request_data (itvencoder->httpserver);
 
         t = gst_clock_get_time (itvencoder->system_clock)  + 2000 * GST_MSECOND;
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released

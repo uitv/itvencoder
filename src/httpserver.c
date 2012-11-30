@@ -707,3 +707,15 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
 
         return 0;
 }
+
+gint
+httpserver_report_request_data (HTTPServer *http_server)
+{
+        gint i;
+        RequestData *request_data;
+
+        for (i = 0; i < kMaxRequests; i++) {
+                request_data = http_server->request_data_pointers[i];
+                GST_INFO ("%d : status %d uri %s", i, request_data->status, request_data->uri);
+        }
+}
