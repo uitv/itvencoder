@@ -161,25 +161,25 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO ("%s decoder pipeline video last timestamp %" GST_TIME_FORMAT,
+                GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->source->current_video_timestamp));
-                GST_INFO ("%s decoder pipeline audio last timestamp %" GST_TIME_FORMAT,
+                GST_INFO ("%s source audio timestamp %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->source->current_audio_timestamp));
-                GST_INFO ("%s decoder pipeline video last heart beat %" GST_TIME_FORMAT,
+                GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->source->last_video_heartbeat));
-                GST_INFO ("%s decoder pipeline audio last heart beat %" GST_TIME_FORMAT,
+                GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->source->last_audio_heartbeat));
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        GST_INFO ("%s encoder pipeline video last heart beat %" GST_TIME_FORMAT,
-                                  channel->name,
+                        GST_INFO ("%s video heart beat %" GST_TIME_FORMAT,
+                                  encoder->name,
                                   GST_TIME_ARGS (encoder->last_video_heartbeat));
-                        GST_INFO ("%s encoder pipeline audio last heart beat %" GST_TIME_FORMAT,
-                                  channel->name,
+                        GST_INFO ("%s audio heart beat %" GST_TIME_FORMAT,
+                                  encoder->name,
                                   GST_TIME_ARGS (encoder->last_audio_heartbeat));
                 }
         }
