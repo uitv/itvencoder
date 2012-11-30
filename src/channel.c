@@ -538,7 +538,7 @@ channel_source_appsink_get_caps (Channel *channel)
 }
 
 void
-channel_set_encoder_appsrc_caps (Encoder *encoder)
+channel_encoder_appsrc_set_caps (Encoder *encoder)
 {
         gint i;
         GstElement *appsrc;
@@ -554,15 +554,5 @@ channel_set_encoder_appsrc_caps (Encoder *encoder)
                         gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
                 }
         }
-}
-
-gint
-channel_set_source_state (Channel *channel, GstState state)
-{
-        GST_LOG ("set decoder pipeline state");
-
-        gst_element_set_state (channel->source->pipeline, state);
-
-        return 0;
 }
 

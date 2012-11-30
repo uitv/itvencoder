@@ -215,7 +215,7 @@ itvencoder_start (ITVEncoder *itvencoder)
                         channel->name,
                         channel->encoder_array->len,
                         channel->source->pipeline_string);
-                channel_set_source_state (channel, GST_STATE_PLAYING);
+                source_start (channel->source);
                 channel_source_appsink_get_caps (channel);
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
@@ -260,7 +260,7 @@ encoder_start (Encoder *encoder)
         gint i;
 
         channel_encoder_pipeline_initialize (encoder);
-        channel_set_encoder_appsrc_caps (encoder);
+        channel_encoder_appsrc_set_caps (encoder);
         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
         encoder->state = GST_STATE_PLAYING;
 
