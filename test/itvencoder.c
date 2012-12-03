@@ -22,7 +22,6 @@ static gint create_pid_file ()
         FILE *fd;
 
         pid = getpid ();
-        printf ("%d\n\n\n", pid);
         fd = fopen ("/var/run/itvencoder.pid", "w");
         if (fd == NULL) {
                 perror ("open /var/run/itvencoder.pid file error\n");
