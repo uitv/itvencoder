@@ -17,6 +17,11 @@ typedef struct _Encoder Encoder;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
+typedef struct _SourceAppsinkUserData {
+        gchar type;
+        Channel *channel;
+} SourceAppsinkUserData;
+
 typedef struct _EncoderAppsrcUserData {
         gint index;
         gchar type;
@@ -24,17 +29,20 @@ typedef struct _EncoderAppsrcUserData {
 } EncoderAppsrcUserData;
 
 struct _Source {
+        Channel *channel;
         gchar *pipeline_string;
         GstElement *pipeline;
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
 
         /* source produce, encoder consume */
+        SourceAppsinkUserData audio_cb_user_data;
         GstCaps *audio_caps;
         GstBuffer *audio_ring[AUDIO_RING_SIZE];
         gint current_audio_position; // source write position
         GstClockTime current_audio_timestamp;
 
+        SourceAppsinkUserData video_cb_user_data;
         GstCaps *video_caps;
         GstBuffer *video_ring[VIDEO_RING_SIZE];
         gint current_video_position; // source write position
@@ -88,6 +96,8 @@ struct _ChannelClass {
 
 GType channel_get_type (void);
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
+gint channel_source_pipeline_initialize (Source *source);
+gint channel_source_pipeline_release (Source *source);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_encoder_pipeline_initialize (Encoder *encoder);
 gint channel_encoder_pipeline_release (Encoder *encoder);

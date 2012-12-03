@@ -63,11 +63,11 @@ itvencoder_init (ITVEncoder *itvencoder)
                 channel->id = i;
                 pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
                 if (pipeline_string == NULL) {
-                        GST_ERROR ("no decoder pipeline error");
+                        GST_ERROR ("no source pipeline string error");
                         exit (-1); //TODO : exit or return?
                 }
                 if (channel_set_source (channel, pipeline_string) != 0) {
-                        GST_ERROR ("Set decoder pipeline error.");
+                        GST_ERROR ("Set source pipeline error.");
                         exit (-1);
                 }
                 for (;;) {
@@ -234,6 +234,7 @@ static gint
 source_stop (Source *source)
 {
         gst_element_set_state (source->pipeline, GST_STATE_NULL);
+        channel_source_pipeline_release (source);
 
         return 0;
 }
@@ -241,6 +242,8 @@ source_stop (Source *source)
 static gint
 source_start (Source *source)
 {
+        channel_source_pipeline_initialize (source);
+        channel_source_appsink_get_caps (source->channel);
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
 
         return 0;

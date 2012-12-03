@@ -164,16 +164,11 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         return TRUE;
 }
 
-typedef struct _UserData {
-        gchar type;
-        Channel *channel;
-} UserData;
-
 static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
-        gchar type = ((UserData *)user_data)->type;
-        Channel *channel = ((UserData *)user_data)->channel;
+        gchar type = ((SourceAppsinkUserData *)user_data)->type;
+        Channel *channel = ((SourceAppsinkUserData *)user_data)->channel;
         guint i;
 
         GST_LOG ("decoder appsink callback func %c", type);
@@ -210,6 +205,23 @@ static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_d
 guint
 channel_set_source (Channel *channel, gchar *pipeline_string)
 {
+        SourceAppsinkUserData *user_data;
+
+        GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
+
+        channel->source->pipeline_string = pipeline_string;
+        channel->source->video_cb_user_data.type = 'v';
+        channel->source->video_cb_user_data.channel = channel;
+        channel->source->audio_cb_user_data.type = 'a';
+        channel->source->audio_cb_user_data.channel = channel;
+        channel->source->channel = channel;
+
+        return 0;
+}
+
+gint
+channel_source_pipeline_initialize (Source *source)
+{
         GError *e = NULL;
         GstElement *appsink, *p;
         GstBus *bus;
@@ -219,32 +231,28 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
                 decoder_appsink_callback,
                 NULL
         };
-        UserData *user_data;
         gint i;
         gchar *name;
 
-        GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
-
-        channel->source->current_audio_position = -1;
+        source->current_audio_position = -1;
         for (i=0; i<AUDIO_RING_SIZE; i++)
-                channel->source->audio_ring[i] = NULL;
-        channel->source->current_video_position = -1;
+                source->audio_ring[i] = NULL;
+        source->current_video_position = -1;
         for (i=0; i<VIDEO_RING_SIZE; i++)
-                channel->source->video_ring[i] = NULL;
+                source->video_ring[i] = NULL;
 
-        p = gst_parse_launch (pipeline_string, &e);
+        p = gst_parse_launch (source->pipeline_string, &e);
         if (e != NULL) {
-                GST_ERROR ("Error parsing pipeline %s: %s", pipeline_string, e->message);
+                GST_ERROR ("Error parsing pipeline %s: %s", source->pipeline_string, e->message);
                 g_error_free (e);
                 return -1;
         }
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        name = g_strdup_printf ("%s-%d", "source", channel->id);
+        name = g_strdup_printf ("%s-%d", "source", source->channel->id); //FIXME
         gst_bus_add_watch (bus, bus_callback, name);
 
-        channel->source->pipeline = p;
-        channel->source->pipeline_string = pipeline_string;
+        source->pipeline = p;
 
         /* set video sink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "videosink"); //TODO release
@@ -252,10 +260,7 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("Get video sink error");
                 return -1;
         }
-        user_data  = (UserData *)g_malloc (sizeof (UserData));
-        user_data->type = 'v';
-        user_data->channel = channel;
-        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, user_data, NULL);
+        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, &source->video_cb_user_data, NULL);
         gst_object_unref (appsink);
 
         /* set audio sink callback */
@@ -264,13 +269,17 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
                 GST_ERROR ("Get audio sink error");
                 return -1;
         }
-        user_data  = (UserData *)g_malloc (sizeof (UserData));
-        user_data->type = 'a';
-        user_data->channel = channel;
-        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, user_data, NULL);
+        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, &source->audio_cb_user_data, NULL);
         gst_object_unref (appsink);
 
         return 0;
+}
+
+gint
+channel_source_pipeline_release (Source *source)
+{
+        gst_object_unref (source->pipeline);
+        source->pipeline = NULL;
 }
 
 static
@@ -498,6 +507,7 @@ gint
 channel_encoder_pipeline_release (Encoder *encoder)
 {
         gst_object_unref (encoder->pipeline);
+        encoder->pipeline = NULL;
 }
 
 gint
