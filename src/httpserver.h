@@ -71,6 +71,7 @@ struct http_headers {
 };
 
 enum session_status {
+        HTTP_NONE,
         HTTP_CONNECTED,
         HTTP_REQUEST,
         HTTP_CONTINUE,

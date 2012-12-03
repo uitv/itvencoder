@@ -606,6 +606,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 g_cond_signal (http_server->idle_queue_cond);
                                 g_mutex_unlock (http_server->idle_queue_mutex);
                         } else { //FIXME
+                                request_data->status = HTTP_NONE;
                                 close (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         }
@@ -618,6 +619,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
+                        request_data->status = HTTP_NONE;
                         close (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
@@ -652,6 +654,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
+                        request_data->status = HTTP_NONE;
                         close (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
@@ -662,6 +665,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
+                        request_data->status = HTTP_NONE;
                         close (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
@@ -711,11 +715,17 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
 gint
 httpserver_report_request_data (HTTPServer *http_server)
 {
-        gint i;
+        gint i, count;
         RequestData *request_data;
 
+        count = 0;
         for (i = 0; i < kMaxRequests; i++) {
                 request_data = http_server->request_data_pointers[i];
-                GST_INFO ("%d : status %d uri %s", i, request_data->status, request_data->uri);
+                if (request_data->status != HTTP_NONE) {
+                        GST_INFO ("%d : status %d uri %s", i, request_data->status, request_data->uri);
+                } else {
+                        count += 1;
+                }
         }
+        GST_INFO ("There are %d request_data with status None", count);
 }
