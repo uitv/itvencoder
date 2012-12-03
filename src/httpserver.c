@@ -90,6 +90,8 @@ httpserver_init (HTTPServer *http_server)
         http_server->block_queue_cond = g_cond_new ();
         http_server->block_queue = g_queue_new ();
 
+        http_server->total_click = 0;
+        http_server->encoder_click = 0;
         http_server->system_clock = gst_system_clock_obtain ();
         g_object_set (http_server->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
 }
@@ -303,6 +305,7 @@ accept_socket (HTTPServer *http_server)
                         close (accepted_sock);
                 } else {
                         GST_INFO ("new request arrived, accepted_sock %d", accepted_sock);
+                        http_server->total_click += 1;
                         int on = 1;
                         setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                         setNonblocking (accepted_sock);
@@ -595,6 +598,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret > 0) {
                                 GST_DEBUG ("insert idle queue end");
+                                http_server->encoder_click += 1;
                                 request_data->wakeup_time = cb_ret;
                                 g_mutex_lock (http_server->idle_queue_mutex);
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
@@ -727,5 +731,8 @@ httpserver_report_request_data (HTTPServer *http_server)
                         count += 1;
                 }
         }
-        GST_INFO ("There are %d request_data with status None", count);
+        GST_INFO ("status None %d, total click %llu, encoder click %llu",
+                  count,
+                  http_server->total_click,
+                  http_server->encoder_click);
 }

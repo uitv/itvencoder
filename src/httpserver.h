@@ -107,6 +107,8 @@ struct _HTTPServer {
         GObject parent;
 
         GstClock *system_clock;
+        guint64 total_click; /* total access number, include manage api */
+        guint64 encoder_click; /* access number of playing encoder */
 
         gint listen_port;
         gint listen_sock;
