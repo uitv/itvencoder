@@ -16,9 +16,10 @@ static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 static gint source_stop (Source *source);
 static gint source_start (Source *source);
+static gint channel_restart (Channel *channel);
 static gint encoder_stop (Encoder *encoder);
 static gint encoder_start (Encoder *encoder);
-static gint channel_restart (Channel *channel);
+static gint encoder_restart (Encoder *encoder);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
@@ -153,7 +154,7 @@ static gboolean
 itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
 {
         GstClockID nextid;
-        GstClockTime t;
+        GstClockTime now;
         GstClockTimeDiff time_diff;
         GstClockReturn ret;
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
@@ -164,37 +165,78 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                if (channel->source->state != GST_STATE_PLAYING) {
+                        continue;
+                }
                 time_diff = GST_CLOCK_DIFF (channel->source->current_video_timestamp, channel->source->current_audio_timestamp);
                 if ((time_diff > SYNC_THRESHHOLD) || (time_diff < - SYNC_THRESHHOLD)) {
-                        GST_ERROR ("audio and video sync error %lld, restart source", time_diff);
+                        GST_ERROR ("audio and video sync error %lld, restart channel", time_diff);
                         channel_restart (channel);
+                } else {
+                        GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
+                                  channel->name,
+                                  GST_TIME_ARGS (channel->source->current_video_timestamp));
+                        GST_INFO ("%s source audio timestamp %" GST_TIME_FORMAT,
+                                  channel->name,
+                                  GST_TIME_ARGS (channel->source->current_audio_timestamp));
                 }
-                GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
-                          channel->name,
-                          GST_TIME_ARGS (channel->source->current_video_timestamp));
-                GST_INFO ("%s source audio timestamp %" GST_TIME_FORMAT,
-                          channel->name,
-                          GST_TIME_ARGS (channel->source->current_audio_timestamp));
-                GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
-                          channel->name,
-                          GST_TIME_ARGS (channel->source->last_video_heartbeat));
-                GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
-                          channel->name,
-                          GST_TIME_ARGS (channel->source->last_audio_heartbeat));
+
+                now = gst_clock_get_time (itvencoder->system_clock);
+                time_diff = GST_CLOCK_DIFF (now, channel->source->last_video_heartbeat);
+                if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
+                        GST_ERROR ("video source heart beat error %lld, restart channel", time_diff);
+                        channel_restart (channel); 
+                } else {
+                        GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
+                                  channel->name,
+                                  GST_TIME_ARGS (channel->source->last_video_heartbeat));
+                }
+
+                now = gst_clock_get_time (itvencoder->system_clock);
+                time_diff = GST_CLOCK_DIFF (now, channel->source->last_audio_heartbeat);
+                if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
+                        GST_ERROR ("audio source heart beat error %lld, restart channel", time_diff);
+                        channel_restart (channel);
+                } else {
+                        GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
+                                  channel->name,
+                                  GST_TIME_ARGS (channel->source->last_audio_heartbeat));
+                }
+
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        GST_INFO ("%s video heart beat %" GST_TIME_FORMAT,
-                                  encoder->name,
-                                  GST_TIME_ARGS (encoder->last_video_heartbeat));
-                        GST_INFO ("%s audio heart beat %" GST_TIME_FORMAT,
-                                  encoder->name,
-                                  GST_TIME_ARGS (encoder->last_audio_heartbeat));
+                        if (encoder->state != GST_STATE_PLAYING) {
+                                continue;
+                        }
+                        now = gst_clock_get_time (itvencoder->system_clock);
+                        time_diff = GST_CLOCK_DIFF (now, encoder->last_video_heartbeat);
+                        if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
+                                GST_ERROR ("endcoder video heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
+                                encoder_restart (encoder);
+                                continue;
+                        } else {
+                                GST_INFO ("%s video heart beat %" GST_TIME_FORMAT,
+                                          encoder->name,
+                                          GST_TIME_ARGS (encoder->last_video_heartbeat));
+                        }
+
+                        now = gst_clock_get_time (itvencoder->system_clock);
+                        time_diff = GST_CLOCK_DIFF (now, encoder->last_audio_heartbeat);
+                        if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
+                                GST_ERROR ("endcoder audio heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
+                                encoder_restart (encoder);
+                        } else {
+                                GST_INFO ("%s audio heart beat %" GST_TIME_FORMAT,
+                                          encoder->name,
+                                          GST_TIME_ARGS (encoder->last_audio_heartbeat));
+                        }
                 }
         }
+
         httpserver_report_request_data (itvencoder->httpserver);
 
-        t = gst_clock_get_time (itvencoder->system_clock)  + 2000 * GST_MSECOND;
-        nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
+        now = gst_clock_get_time (itvencoder->system_clock);
+        nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
         ret = gst_clock_id_wait_async (nextid, itvencoder_channel_monitor, itvencoder);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Register itvencoder monitor failure");
@@ -257,29 +299,6 @@ source_start (Source *source)
 }
 
 static gint
-encoder_stop (Encoder *encoder)
-{
-        encoder->state = GST_STATE_NULL;
-        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
-        channel_encoder_pipeline_release (encoder);
-
-        return 0;
-}
-
-static gint
-encoder_start (Encoder *encoder)
-{
-        gint i;
-
-        channel_encoder_pipeline_initialize (encoder);
-        channel_encoder_appsrc_set_caps (encoder);
-        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
-        encoder->state = GST_STATE_PLAYING;
-
-        return 0;
-}
-
-static gint
 channel_restart (Channel *channel)
 {
         gint j;
@@ -292,6 +311,34 @@ channel_restart (Channel *channel)
         for (j=0; j<channel->encoder_array->len; j++) {
                 encoder_start (g_array_index (channel->encoder_array, gpointer, j));
         }
+
+        return 0;
+}
+
+static gint
+encoder_stop (Encoder *encoder)
+{
+        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+        channel_encoder_pipeline_release (encoder);
+
+        return 0;
+}
+
+static gint
+encoder_start (Encoder *encoder)
+{
+        channel_encoder_pipeline_initialize (encoder);
+        channel_encoder_appsrc_set_caps (encoder);
+        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+
+        return 0;
+}
+
+static gint
+encoder_restart (Encoder *encoder)
+{
+        encoder_stop (encoder);
+        encoder_start (encoder);
 
         return 0;
 }

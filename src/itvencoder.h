@@ -14,6 +14,7 @@
 #include "httpserver.h"
 
 #define SYNC_THRESHHOLD 500000000 /* 500ms */
+#define HEARTBEAT_THRESHHOLD 1000000000 /* 1000ms */
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
