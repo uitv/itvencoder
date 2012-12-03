@@ -18,6 +18,7 @@ static gint source_stop (Source *source);
 static gint source_start (Source *source);
 static gint encoder_stop (Encoder *encoder);
 static gint encoder_start (Encoder *encoder);
+static gint channel_restart (Channel *channel);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
@@ -153,6 +154,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 {
         GstClockID nextid;
         GstClockTime t;
+        GstClockTimeDiff time_diff;
         GstClockReturn ret;
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
         Channel *channel;
@@ -162,6 +164,11 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                time_diff = GST_CLOCK_DIFF (channel->source->current_video_timestamp, channel->source->current_audio_timestamp);
+                if ((time_diff > SYNC_THRESHHOLD) || (time_diff < - SYNC_THRESHHOLD)) {
+                        GST_ERROR ("audio and video sync error %lld, restart source", time_diff);
+                        channel_restart (channel);
+                }
                 GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
                           channel->name,
                           GST_TIME_ARGS (channel->source->current_video_timestamp));
@@ -268,6 +275,23 @@ encoder_start (Encoder *encoder)
         channel_encoder_appsrc_set_caps (encoder);
         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
         encoder->state = GST_STATE_PLAYING;
+
+        return 0;
+}
+
+static gint
+channel_restart (Channel *channel)
+{
+        gint j;
+
+        for (j=0; j<channel->encoder_array->len; j++) {
+                encoder_stop (g_array_index (channel->encoder_array, gpointer, j));
+        }
+        source_stop (channel->source);
+        source_start (channel->source);
+        for (j=0; j<channel->encoder_array->len; j++) {
+                encoder_start (g_array_index (channel->encoder_array, gpointer, j));
+        }
 
         return 0;
 }
@@ -394,7 +418,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         }
                                 } else if (request_data->parameters[0] == 'p') {
                                         GST_WARNING ("Start source");
-                                                if (source_start (channel->source) == 0) {
+                                        if (source_start (channel->source) == 0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
@@ -405,6 +429,9 @@ request_dispatcher (gpointer data, gpointer user_data)
                                                 g_free (buf);
                                                 return 0;
                                         }
+                                } else if (request_data->parameters[0] == 'r') {
+                                        GST_WARNING ("Restart source");
+                                        channel_restart (channel);
                                 } else {
                                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
