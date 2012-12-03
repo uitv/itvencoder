@@ -145,4 +145,5 @@ struct _HTTPServerClass {
 GType httpserver_get_type (void);
 gint httpserver_start (HTTPServer *httpserver, http_callback_t user_callback, gpointer user_data);
 gint httpserver_report_request_data (HTTPServer *http_server);
+
 #endif /* __HTTPSERVER_H__ */

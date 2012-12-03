@@ -374,15 +374,34 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 } else if (request_data->parameters[0] == 's') {
-                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
+                                        GST_WARNING ("Stop source");
+                                        for (i=0; i<channel->encoder_array->len; i++) {
+                                                encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
+                                        }
+                                        if (source_stop (channel->source) == 0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                                return 0;
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                                return 0;
+                                        }
                                 } else if (request_data->parameters[0] == 'p') {
-                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
+                                        GST_WARNING ("Start source");
+                                                if (source_start (channel->source) == 0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                                return 0;
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                                return 0;
+                                        }
                                 } else {
                                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
