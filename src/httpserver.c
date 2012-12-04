@@ -310,19 +310,24 @@ accept_socket (HTTPServer *http_server)
                         setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                         setNonblocking (accepted_sock);
                         request_data_pointer = g_queue_pop_tail (http_server->request_data_queue);
-                        request_data = *request_data_pointer;
-                        request_data->client_addr = in_addr;
-                        request_data->sock = accepted_sock;
-                        request_data->birth_time = gst_clock_get_time (http_server->system_clock);
-                        request_data->status = HTTP_CONNECTED;
-                        request_data->request_length = 0;
-                        ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
-                        ee.data.ptr = request_data_pointer;
-                        ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
-                        if (ret == -1) {
-                                GST_ERROR ("epoll_ctl %d", errno);
-                                g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                                return;
+                        if (request_data_pointer == NULL) {
+                                GST_ERROR ("No NONE request, refuse this request.");
+                                close (accepted_sock);
+                        } else {
+                                request_data = *request_data_pointer;
+                                request_data->client_addr = in_addr;
+                                request_data->sock = accepted_sock;
+                                request_data->birth_time = gst_clock_get_time (http_server->system_clock);
+                                request_data->status = HTTP_CONNECTED;
+                                request_data->request_length = 0;
+                                ee.events = EPOLLIN | EPOLLOUT | EPOLLET;
+                                ee.data.ptr = request_data_pointer;
+                                ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
+                                if (ret == -1) {
+                                        GST_ERROR ("epoll_ctl %d", errno);
+                                        g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                                        return;
+                                }
                         }
                 }
         }
