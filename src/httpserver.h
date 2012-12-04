@@ -91,7 +91,7 @@ typedef struct _RequestData {
         guint64 bytes_send;
         guint32 events; /* epoll events */
         enum session_status status; /* live over http need keeping tcp link */
-        GstClockTime wakeup_time;
+        GstClockTime wakeup_time; /* used in idle queue */
         gchar raw_request[kRequestBufferSize];
         gint request_length;
         enum request_method method;
@@ -113,7 +113,7 @@ struct _HTTPServer {
         gint listen_port;
         gint listen_sock;
         gint epollfd;
-        GThread *server_thread;
+        GThread *listen_thread;
 
         GMutex *idle_queue_mutex;
         GCond *idle_queue_cond;

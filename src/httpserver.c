@@ -74,7 +74,7 @@ httpserver_init (HTTPServer *http_server)
 {
         gint i;
 
-        http_server->server_thread = NULL;
+        http_server->listen_thread = NULL;
         http_server->thread_pool = NULL;
         http_server->request_data_queue = g_queue_new ();
         for (i=0; i<kMaxRequests; i++) {
@@ -542,13 +542,13 @@ block_queue_foreach_func (gpointer data, gpointer user_data)
         GError *e = NULL;
 
         if (request_data->events & (EPOLLOUT | EPOLLHUP | EPOLLERR)) {
-                /* EPOLLHUP indicate request must be removed from block queue */
+                /* EPOLL event, popup request from block queue and push to thread pool */
                 g_queue_remove (http_server->block_queue, request_data_pointer);
                 g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
-        }
-        if (e != NULL) { // FIXME
-                GST_ERROR ("Thread pool push error %s", e->message);
-                g_error_free (e);
+                if (e != NULL) { // FIXME
+                        GST_ERROR ("Thread pool push error %s", e->message);
+                        g_error_free (e);
+                }
         }
 }
 
@@ -692,7 +692,7 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
         http_server->user_callback = user_callback;
         http_server->user_data = user_data;
 
-        http_server->server_thread = g_thread_create (listen_thread, http_server, TRUE, &e);
+        http_server->listen_thread = g_thread_create (listen_thread, http_server, TRUE, &e);
         if (e != NULL) {
                 GST_ERROR ("Create httpserver thread error %s", e->message);
                 g_error_free (e);
