@@ -556,10 +556,13 @@ static gpointer
 block_thread (gpointer data)
 {
         HTTPServer *http_server = (HTTPServer *)data;
+        GTimeVal timeout_time;
 
         for (;;) {
+                g_get_current_time (&timeout_time);
+                timeout_time.tv_sec += 5;
                 g_mutex_lock (http_server->block_queue_mutex);
-                g_cond_wait (http_server->block_queue_cond, http_server->block_queue_mutex);
+                g_cond_timed_wait (http_server->block_queue_cond, http_server->block_queue_mutex, &timeout_time);
                 g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
                 g_mutex_unlock (http_server->block_queue_mutex);
         }
