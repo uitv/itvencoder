@@ -325,6 +325,8 @@ accept_socket (HTTPServer *http_server)
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
                                 if (ret == -1) {
                                         GST_ERROR ("epoll_ctl add error  %s", g_strerror (errno));
+                                        close (accepted_sock);
+                                        request_data->status = HTTP_NONE;
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                                         return;
                                 }
