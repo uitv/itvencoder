@@ -174,7 +174,7 @@ read_request (RequestData *request_data)
         gint count, read_pos = request_data->request_length;
         gchar *buf = &(request_data->raw_request[0]);
 
-        while (1) {
+        for (;;) {
                 count = read (request_data->sock, buf + read_pos, kRequestBufferSize - read_pos);
                 if (count == -1) {
                         if (errno != EAGAIN) {
@@ -395,7 +395,7 @@ listen_thread (gpointer data)
                 return NULL;
         }
 
-        while (1) {
+        for (;;) {
                 int n, i;
 
                 n = epoll_wait (http_server->epollfd, event_list, kMaxRequests, -1);
