@@ -296,7 +296,7 @@ accept_socket (HTTPServer *http_server)
                         if (( errno == EAGAIN) || (errno == EWOULDBLOCK)) { /* We have processed all incoming connections. */
                                 break;
                         } else {
-                                GST_ERROR ("accept errorno %d", errno);
+                                GST_ERROR ("accept error  %s", g_strerror (errno));
                                 break;
                         }
                 }
@@ -324,7 +324,7 @@ accept_socket (HTTPServer *http_server)
                                 ee.data.ptr = request_data_pointer;
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
                                 if (ret == -1) {
-                                        GST_ERROR ("epoll_ctl %d", errno);
+                                        GST_ERROR ("epoll_ctl add error  %s", g_strerror (errno));
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                                         return;
                                 }
@@ -388,7 +388,7 @@ listen_thread (gpointer data)
         http_server->listen_sock = listen_sock;
         http_server->epollfd = epoll_create1(0);
         if (http_server->epollfd == -1) {
-                GST_ERROR ("epoll_create error %d", errno);
+                GST_ERROR ("epoll_create error %s", g_strerror (errno));
                 return NULL;
         }
 
@@ -396,7 +396,7 @@ listen_thread (gpointer data)
         event.events = EPOLLIN | EPOLLOUT | EPOLLET;
         ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, listen_sock, &event);
         if (ret == -1) {
-                GST_ERROR ("epoll_ctl %d", errno);
+                GST_ERROR ("epoll_ctl add epollfd error %s", g_strerror (errno));
                 return NULL;
         }
 
