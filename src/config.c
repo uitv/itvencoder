@@ -146,16 +146,6 @@ config_load_config_file_func (Config *config)
                         GST_ERROR ("%d: %s\n", error.line, error.text);
                         return -1;
                 }
-                j = json_object_get (channel_config->config, "name");
-                if (j == NULL) {
-                        GST_ERROR ("parse channel config file error : name");
-                        return -1;
-                }
-                channel_config->name = (gchar *)json_string_value(j);
-                if (!channel_config->name) {
-                        GST_ERROR ("channel name error");
-                        return -1;
-                }
                 g_array_append_val (config->channel_config_array, channel_config);
         }
         globfree (&channel_config_paths);
@@ -228,12 +218,12 @@ config_get_selected_pipeline_key (ChannelConfig *channel_config, gchar *pipeline
 
         j1 = json_object_get (channel_config->config, pipeline);
         if (j1 == NULL) {
-                GST_ERROR ("parse channel config file error: %s", channel_config->name);
+                GST_ERROR ("parse channel config file error: %s", channel_config->config_path);
                 return NULL;
         }
         j2 = json_object_get (j1, "selectable-keys");
         if (j2 == NULL) {
-                GST_ERROR ("parse channel config file error: %s", channel_config->name);
+                GST_ERROR ("parse channel config file error: %s", channel_config->config_path);
                 return NULL;
         }
         key = (gchar *)json_string_value (json_array_get (j2, 0));
@@ -279,12 +269,12 @@ config_get_pipeline_string (ChannelConfig *channel_config, gchar *pipeline)
         /* Got the selected pipeline, e.g mpeg2-mp3 */
         selected_pipeline = json_object_get (j, selected_pipeline_key);
         if (selected_pipeline == NULL) {
-                GST_ERROR ("parse selected pipeline object error: %s", channel_config->name);
+                GST_ERROR ("parse selected pipeline object error: %s", channel_config->config_path);
                 return NULL;
         }
         j = json_object_get (selected_pipeline, "pipeline-template");
         if (j == NULL) {
-                GST_ERROR ("parse selected pipeline template error: %s", channel_config->name);
+                GST_ERROR ("parse selected pipeline template error: %s", channel_config->config_path);
                 return NULL;
         }
         t1 = (gchar *)json_string_value (j);

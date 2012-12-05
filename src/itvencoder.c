@@ -39,6 +39,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         GstClockTime t;
         GstClockReturn ret;
         guint i;
+        gchar *name;
 
         GST_LOG ("itvencoder_init");
 
@@ -61,8 +62,10 @@ itvencoder_init (ITVEncoder *itvencoder)
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                channel = channel_new ("name", channel_config->name, NULL);
+                name = g_strdup_printf ("channel-%d", i);
+                channel = channel_new ("name", name, NULL);
                 channel->id = i;
+                g_free (name);
                 pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
                 if (pipeline_string == NULL) {
                         GST_ERROR ("no source pipeline string error");
@@ -116,9 +119,8 @@ itvencoder_init (ITVEncoder *itvencoder)
                         GST_INFO ("Four encoder pipelines found.");
                         break;
                 }
-                GST_INFO ("parse channel %s, name is %s, encoder channel number %d.",
+                GST_INFO ("parse channel %s, encoder channel number %d.",
                            channel_config->config_path,
-                           channel_config->name,
                            channel->encoder_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }

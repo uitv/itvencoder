@@ -84,8 +84,6 @@ main(int argc, char *argv[])
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 GST_INFO ("config file %d - %s", i, channel_config->config_path);
-                GST_INFO ("channel name - %s", channel_config->name);
-                GST_INFO ("name - %s", json_string_value (json_object_get(channel_config->config, "name")));
         }
 
         itvencoder_start (itvencoder);

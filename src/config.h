@@ -15,7 +15,6 @@ typedef struct _ConfigClass     ConfigClass;
 
 struct _ChannelConfig {
         gchar *config_path;
-        gchar *name;
         json_t *config;
         gboolean dirty;
 };

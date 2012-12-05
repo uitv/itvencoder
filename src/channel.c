@@ -438,7 +438,7 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->channel = channel;
         encoder->pipeline_string = pipeline_string;
         encoder->id = channel->encoder_array->len;
-        encoder->name = g_strdup_printf ("channel-%d:encoder-%d", channel->id, encoder->id);
+        encoder->name = g_strdup_printf ("%s:encoder-%d", channel->name, encoder->id);
         g_array_append_val (channel->encoder_array, encoder);
 
         encoder->video_cb_user_data.index = encoder->id;
