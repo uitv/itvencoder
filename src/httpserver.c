@@ -508,7 +508,6 @@ gslist_foreach_func (gpointer data, gpointer user_data)
         GError *e = NULL;
 
         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
-        request_data->status = HTTP_CONTINUE;
         g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
         if (e != NULL) { // FIXME
                 GST_ERROR ("Thread pool push error %s", e->message);
@@ -596,9 +595,12 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else if ((request_data->events & EPOLLOUT) && (request_data->status == HTTP_BLOCK)) {
                 request_data->status = HTTP_CONTINUE;
                 request_data->events = 0;
+        } else if (request_data->status == HTTP_IDLE) {
+                /* popup from idle queue, continue working */
+                request_data->status = HTTP_CONTINUE;
         }
         g_mutex_unlock (request_data->events_mutex);
-
+        
         if (request_data->status == HTTP_CONNECTED) {
                 ret = read_request (request_data);
                 if (ret <= 0) {
