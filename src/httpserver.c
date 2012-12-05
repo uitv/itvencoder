@@ -589,12 +589,12 @@ thread_pool_func (gpointer data, gpointer user_data)
         GstClockTime cb_ret;
         
         g_mutex_lock (request_data->events_mutex);
-        if (request_data->events & EPOLLHUP) {
+        if (request_data->events & (EPOLLHUP | EPOLLERR)) {
                 request_data->status = HTTP_FINISH;
                 request_data->events = 0;
         } else if ((request_data->events & EPOLLOUT) && (request_data->status == HTTP_BLOCK)) {
                 request_data->status = HTTP_CONTINUE;
-                request_data->events = 0;
+                request_data->events ^= EPOLLOUT;
         } else if (request_data->status == HTTP_IDLE) {
                 /* popup from idle queue, continue working */
                 request_data->status = HTTP_CONTINUE;
