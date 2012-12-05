@@ -71,7 +71,10 @@ main(int argc, char *argv[])
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 
         _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
-        log_set_log_handler (_log);
+        if (log_set_log_handler (_log) != 0) {
+                exit (1);
+        }
+
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
         GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));

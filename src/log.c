@@ -149,8 +149,14 @@ static void log_func (GstDebugCategory *category,
 gint
 log_set_log_handler (Log *log)
 {
+        if (g_mkdir_with_parents ("/var/log/itvencoder", 0755) != 0) {
+                GST_ERROR ("Can't open or create log directory: /var/log/itvencoder.");
+                return 1;
+        }
         log->log_hd = g_fopen (log->log_path, "w");
         gst_debug_add_log_function (log_func, &(log->log_hd));
+
+        return 0;
 }
 
 gint
