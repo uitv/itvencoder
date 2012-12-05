@@ -89,6 +89,7 @@ typedef struct _RequestData {
         struct sockaddr client_addr;
         GstClockTime birth_time;
         guint64 bytes_send;
+        GMutex *events_mutex;
         guint32 events; /* epoll events */
         enum session_status status; /* live over http need keeping tcp link */
         GstClockTime wakeup_time; /* used in idle queue */

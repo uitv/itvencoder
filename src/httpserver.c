@@ -73,12 +73,15 @@ static void
 httpserver_init (HTTPServer *http_server)
 {
         gint i;
+        RequestData *request_data;
 
         http_server->listen_thread = NULL;
         http_server->thread_pool = NULL;
         http_server->request_data_queue = g_queue_new ();
         for (i=0; i<kMaxRequests; i++) {
-                http_server->request_data_pointers[i] = (RequestData *)g_malloc (sizeof (RequestData));
+                request_data = (RequestData *)g_malloc (sizeof (RequestData));
+                request_data->events_mutex = g_mutex_new ();
+                http_server->request_data_pointers[i] = request_data;
                 g_queue_push_head (http_server->request_data_queue, &http_server->request_data_pointers[i]);
         }
 
@@ -414,7 +417,9 @@ listen_thread (gpointer data)
                                 accept_socket (http_server);
                         } else {
                                 RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
-                                request_data->events = event_list[i].events;
+                                g_mutex_lock (request_data->events_mutex);
+                                request_data->events |= event_list[i].events;
+                                g_mutex_unlock (request_data->events_mutex);
                                 if (event_list[i].events & EPOLLIN) {
                                         GST_DEBUG ("event on sock %d events EPOLLIN", request_data->sock);
                                         if (request_data->status == HTTP_CONNECTED) {
@@ -584,6 +589,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint ret;
         GstClockTime cb_ret;
         
+        g_mutex_lock (request_data->events_mutex);
         if (request_data->events & EPOLLHUP) {
                 request_data->status = HTTP_FINISH;
                 request_data->events = 0;
@@ -591,6 +597,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 request_data->status = HTTP_CONTINUE;
                 request_data->events = 0;
         }
+        g_mutex_unlock (request_data->events_mutex);
 
         if (request_data->status == HTTP_CONNECTED) {
                 ret = read_request (request_data);
