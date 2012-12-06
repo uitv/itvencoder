@@ -488,7 +488,8 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 }
                         }
-                        if (request_data->parameters[0] == '\0') { /* default operator is play */
+                        if ((request_data->parameters[0] == '\0') || /* default operator is play */
+                            (request_data->parameters[0] == 'b')) { /* ?bitrate= */
                                 GST_INFO ("Play command");
                                 if (encoder->state != GST_STATE_PLAYING) {
                                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
