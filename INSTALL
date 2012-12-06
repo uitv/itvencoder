@@ -1,2 +1,3 @@
-add follow line in /etc/crontab
+copy conf/itvencoder.logrotate to /etc/logrotate.d/itvencoder
+for logrotate, add following line in /etc/crontab
 */2 * * * * root /etc/cron.daily/logrotate
