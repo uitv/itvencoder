@@ -630,6 +630,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 ret = read_request (request_data);
                 if (ret <= 0) {
                         GST_ERROR ("no data");
+                        request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         return;
