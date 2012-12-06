@@ -1,0 +1,2 @@
+add follow line in /etc/crontab
+*/2 * * * * root /etc/cron.daily/logrotate
