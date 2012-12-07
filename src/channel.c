@@ -318,7 +318,6 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         i = encoder->current_output_position + 1;
         i = i % OUTPUT_RING_SIZE;
-        GST_DEBUG ("output current position %d, buffer size: %d", i, GST_BUFFER_SIZE(buffer));
         encoder->current_output_position = i;
         if (encoder->output_ring[i] != NULL)
                 gst_buffer_unref (encoder->output_ring[i]);
@@ -348,15 +347,15 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->source->current_audio_position ||
                                 channel->source->current_audio_position == -1) { /*FIXME: condition variable*/
-                                GST_DEBUG ("waiting audio decoder ready");
+                                GST_LOG ("waiting audio decoder ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
                         }
                         if (encoder->audio_enough) {
-                                GST_DEBUG ("audio enough.");
+                                GST_LOG ("audio enough.");
                                 break;
                         }
-                        GST_DEBUG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
+                        GST_LOG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
                                    channel->source->current_audio_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->audio_ring[i])) != GST_FLOW_OK) {
@@ -377,15 +376,15 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                         /* insure next buffer isn't current decoder buffer */
                         if (i == channel->source->current_video_position ||
                                 channel->source->current_video_position == -1) {
-                                GST_DEBUG ("waiting video decoder ready");
+                                GST_LOG ("waiting video decoder ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
                         }
                         if (encoder->video_enough) {
-                                GST_DEBUG ("video enough, break for need data signal.");
+                                GST_LOG ("video enough, break for need data signal.");
                                 break;
                         }
-                        GST_DEBUG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
+                        GST_LOG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
                                    channel->source->current_video_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
