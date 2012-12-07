@@ -77,6 +77,7 @@ httpserver_init (HTTPServer *http_server)
 
         http_server->listen_thread = NULL;
         http_server->thread_pool = NULL;
+        http_server->request_data_queue_mutex = g_mutex_new ();
         http_server->request_data_queue = g_queue_new ();
         for (i=0; i<kMaxRequests; i++) {
                 request_data = (RequestData *)g_malloc (sizeof (RequestData));
@@ -318,6 +319,7 @@ accept_socket (HTTPServer *http_server)
         socklen_t in_len;
         RequestData **request_data_pointer;
         RequestData *request_data;
+        gint request_data_queue_len;
 
         for (;;) { /* repeat accept until -1 returned */
                 accepted_sock = accept (http_server->listen_sock, &in_addr, &in_len);
@@ -329,7 +331,10 @@ accept_socket (HTTPServer *http_server)
                                 break;
                         }
                 }
-                if (g_queue_get_length (http_server->request_data_queue) == 0) {
+                g_mutex_lock (http_server->request_data_queue_mutex);
+                request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
+                g_mutex_unlock (http_server->request_data_queue_mutex);
+                if (request_data_queue_len == 0) {
                         GST_ERROR ("event queue empty");
                         close_socket_gracefully (accepted_sock);
                 } else {
@@ -338,11 +343,14 @@ accept_socket (HTTPServer *http_server)
                         int on = 1;
                         setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                         setNonblocking (accepted_sock);
+                        g_mutex_lock (http_server->request_data_queue_mutex);
                         request_data_pointer = g_queue_pop_tail (http_server->request_data_queue);
+                        g_mutex_unlock (http_server->request_data_queue_mutex);
                         if (request_data_pointer == NULL) {
                                 GST_ERROR ("No NONE request, refuse this request.");
                                 close_socket_gracefully (accepted_sock);
                         } else {
+                                GST_ERROR ("pop up request data, sock %d", accepted_sock);
                                 request_data = *request_data_pointer;
                                 request_data->client_addr = in_addr;
                                 request_data->sock = accepted_sock;
@@ -353,11 +361,15 @@ accept_socket (HTTPServer *http_server)
                                 ee.data.ptr = request_data_pointer;
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
                                 if (ret == -1) {
-                                        GST_ERROR ("epoll_ctl add error  %s", g_strerror (errno));
+                                        GST_ERROR ("epoll_ctl add error  %s sock %d", g_strerror (errno), accepted_sock);
                                         close_socket_gracefully (accepted_sock);
                                         request_data->status = HTTP_NONE;
+                                        g_mutex_lock (http_server->request_data_queue_mutex);
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                                        g_mutex_unlock (http_server->request_data_queue_mutex);
                                         return;
+                                } else {
+                                        GST_ERROR ("pop request data, sock %d", request_data->sock);
                                 }
                         }
                 }
@@ -448,7 +460,7 @@ listen_thread (gpointer data)
                                 g_mutex_unlock (request_data->events_mutex);
                                 if ((event_list[i].events & EPOLLIN) &&
                                     (request_data->status == HTTP_CONNECTED)) {
-                                        GST_DEBUG ("event on sock %d events EPOLLIN", request_data->sock);
+                                        GST_WARNING ("event on sock %d events EPOLLIN", request_data->sock);
                                         g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
                                         if (e != NULL) { // FIXME
                                                 GST_ERROR ("Thread pool push error %s", e->message);
@@ -629,10 +641,12 @@ thread_pool_func (gpointer data, gpointer user_data)
         if (request_data->status == HTTP_REQUEST) {
                 ret = read_request (request_data);
                 if (ret <= 0) {
-                        GST_ERROR ("no data");
+                        GST_ERROR ("no data, sock is %d", request_data->sock);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
+                        g_mutex_lock (http_server->request_data_queue_mutex);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                        g_mutex_unlock (http_server->request_data_queue_mutex);
                         return;
                 } 
 
@@ -656,7 +670,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                         } else { //FIXME
                                 request_data->status = HTTP_NONE;
                                 close_socket_gracefully (request_data->sock);
+                                GST_ERROR ("callback return, push to request_data_queue sock %d", request_data->sock);
+                                g_mutex_lock (http_server->request_data_queue_mutex);
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                                g_mutex_unlock (http_server->request_data_queue_mutex);
                         }
                 } else if (ret == 1) {
                         /* need read more data */
@@ -666,13 +683,15 @@ thread_pool_func (gpointer data, gpointer user_data)
                         return;
                 } else {
                         /* Bad Request */
-                        GST_ERROR ("Bad request, return is %d", ret);
+                        GST_ERROR ("Bad request, return is %d, sock is %d", ret, request_data->sock);
                         gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
+                        g_mutex_lock (http_server->request_data_queue_mutex);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                        g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
@@ -689,9 +708,13 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 GST_ERROR ("insert a un continue request to idle queue sock %d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", request_data->sock);
                         }
                         if (g_tree_nnodes (http_server->idle_queue) > 0) {
-                                while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
+                                RequestData **rr;
+                                RequestData *r;
+                                while ((rr = (RequestData **)g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time))) != NULL) {
                                         /* avoid time conflict */
-                                        GST_DEBUG ("look up, tree node number %d find sock %d wakeuptime %lld", g_tree_nnodes (http_server->idle_queue), request_data->sock, request_data->wakeup_time);
+                                        r = *rr;
+                                        GST_WARNING ("tree node number %d find sock %d wakeuptime %lld", g_tree_nnodes (http_server->idle_queue), request_data->sock, request_data->wakeup_time);
+                                        GST_WARNING ("look up, find sock %d wakeuptime %lld", r->sock, r->wakeup_time);
                                         request_data->wakeup_time++;
                                         if (iiii++==10) exit(0);
                                 }
@@ -702,16 +725,18 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_cond_signal (http_server->idle_queue_cond);
                         g_mutex_unlock (http_server->idle_queue_mutex);
                 } else {//FIXME
-                        GST_ERROR ("return value is 0");
+                        GST_ERROR ("return value is 0, sock is %d", request_data->sock);
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
+                        g_mutex_lock (http_server->request_data_queue_mutex);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                        g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
-                GST_INFO ("request finish %d", request_data->sock);
+                GST_WARNING ("request finish %d", request_data->sock);
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);
@@ -719,7 +744,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_unlock (http_server->idle_queue_mutex);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
+                        GST_ERROR ("finsih , usercallback return value is 0, sock is %d", request_data->sock);
+                        g_mutex_lock (http_server->request_data_queue_mutex);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
+                        g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         }
 }
@@ -769,18 +797,24 @@ httpserver_report_request_data (HTTPServer *http_server)
 {
         gint i, count;
         RequestData *request_data;
+        gint request_data_queue_len=2;
 
         count = 0;
         for (i = 0; i < kMaxRequests; i++) {
                 request_data = http_server->request_data_pointers[i];
                 if (request_data->status != HTTP_NONE) {
-                        GST_INFO ("%d : status %d sock %d uri %s wakeuptime %llu", i, request_data->status, request_data->sock, request_data->uri, request_data->wakeup_time);
+                        GST_ERROR ("%d : status %d sock %d uri %s wakeuptime %llu", i, request_data->status, request_data->sock, request_data->uri, request_data->wakeup_time);
                 } else {
                         count += 1;
                 }
         }
-        GST_INFO ("status None %d, total click %llu, encoder click %llu",
+
+        g_mutex_lock (http_server->request_data_queue_mutex);
+        request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
+        g_mutex_unlock (http_server->request_data_queue_mutex);
+        GST_ERROR ("status None %d, request queue length %d, total click %llu, encoder click %llu",
                   count,
+                  request_data_queue_len,
                   http_server->total_click,
                   http_server->encoder_click);
 }
