@@ -433,9 +433,11 @@ request_dispatcher (gpointer data, gpointer user_data)
         RequestDataUserData *request_user_data;
         gchar *size = "ff90\r\n", *end = "\r\n";
         struct iovec iov[350];
+        GRand *grand;
 
         GST_LOG ("hello");
 
+        grand = g_rand_new ();
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("socket is %d uri is %s", request_data->sock, request_data->uri);
@@ -627,7 +629,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data->current_send_position = i;
                         }
                 }
-                return gst_clock_get_time (itvencoder->system_clock)  + 10 * GST_MSECOND; // 50ms;
+                return gst_clock_get_time (itvencoder->system_clock)  + 10 * GST_MSECOND + g_rand_int_range (grand, 1, 1000000); // 50ms;
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;
