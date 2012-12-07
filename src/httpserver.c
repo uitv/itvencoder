@@ -283,6 +283,32 @@ setNonblocking(int fd)
         return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 
+static void
+close_socket_gracefully (gint sock)
+{
+        struct linger linger;
+        gint count;
+        gchar buf[1024];
+
+        /**
+         * Set linger option to avoid socket hanging out after close. This prevent
+         * ephemeral port exhaust problem under high QPS.
+         */
+        linger.l_onoff = 1;
+        linger.l_linger = 1;
+        setsockopt (sock, SOL_SOCKET, SO_LINGER, (char *) &linger, sizeof(linger));
+
+        (void) shutdown (sock, SHUT_WR);
+
+        /* Read and discard pending incoming data. */
+        do {
+                count = read (sock, &buf[0], 1024);
+        } while (count > 0);
+        
+        /* Now we know that our FIN is ACK-ed, safe to close */
+        (void) close (sock);
+}
+
 static gint
 accept_socket (HTTPServer *http_server)
 {
@@ -305,7 +331,7 @@ accept_socket (HTTPServer *http_server)
                 }
                 if (g_queue_get_length (http_server->request_data_queue) == 0) {
                         GST_ERROR ("event queue empty");
-                        close (accepted_sock);
+                        close_socket_gracefully (accepted_sock);
                 } else {
                         GST_INFO ("new request arrived, accepted_sock %d", accepted_sock);
                         http_server->total_click += 1;
@@ -315,7 +341,7 @@ accept_socket (HTTPServer *http_server)
                         request_data_pointer = g_queue_pop_tail (http_server->request_data_queue);
                         if (request_data_pointer == NULL) {
                                 GST_ERROR ("No NONE request, refuse this request.");
-                                close (accepted_sock);
+                                close_socket_gracefully (accepted_sock);
                         } else {
                                 request_data = *request_data_pointer;
                                 request_data->client_addr = in_addr;
@@ -328,7 +354,7 @@ accept_socket (HTTPServer *http_server)
                                 ret = epoll_ctl (http_server->epollfd, EPOLL_CTL_ADD, accepted_sock, &ee);
                                 if (ret == -1) {
                                         GST_ERROR ("epoll_ctl add error  %s", g_strerror (errno));
-                                        close (accepted_sock);
+                                        close_socket_gracefully (accepted_sock);
                                         request_data->status = HTTP_NONE;
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                                         return;
@@ -372,7 +398,7 @@ listen_thread (gpointer data)
                         GST_INFO ("listen socket %d", listen_sock);
                         break;
                 }
-                close (listen_sock);
+                close_socket_gracefully (listen_sock);
         }
 
         if (rp == NULL) {
@@ -604,7 +630,8 @@ thread_pool_func (gpointer data, gpointer user_data)
                 ret = read_request (request_data);
                 if (ret <= 0) {
                         GST_ERROR ("no data");
-                        close (request_data->sock);
+                        request_data->status = HTTP_NONE;
+                        close_socket_gracefully (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         return;
                 } 
@@ -628,7 +655,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 g_mutex_unlock (http_server->idle_queue_mutex);
                         } else { //FIXME
                                 request_data->status = HTTP_NONE;
-                                close (request_data->sock);
+                                close_socket_gracefully (request_data->sock);
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         }
                 } else if (ret == 1) {
@@ -644,7 +671,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         request_data->status = HTTP_NONE;
-                        close (request_data->sock);
+                        close_socket_gracefully (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
@@ -680,7 +707,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
                         request_data->status = HTTP_NONE;
-                        close (request_data->sock);
+                        close_socket_gracefully (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
@@ -691,7 +718,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
                         request_data->status = HTTP_NONE;
-                        close (request_data->sock);
+                        close_socket_gracefully (request_data->sock);
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                 }
         }
