@@ -614,7 +614,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         /* parse complete, call back user function */
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret > 0) {
-                                GST_DEBUG ("insert idle queue end");
+                                GST_DEBUG ("insert idle queue end, sock %d wakeuptime %llu", request_data->sock, cb_ret);
                                 http_server->encoder_click += 1;
                                 request_data->wakeup_time = cb_ret;
                                 g_mutex_lock (http_server->idle_queue_mutex);
@@ -659,17 +659,18 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->wakeup_time = cb_ret;
                         g_mutex_lock (http_server->idle_queue_mutex);
                         if (request_data->status != HTTP_CONTINUE) {
-                                GST_ERROR ("insert a un continue request to idle queue !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                                GST_ERROR ("insert a un continue request to idle queue sock %d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", request_data->sock);
                         }
                         if (g_tree_nnodes (http_server->idle_queue) > 0) {
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
                                         /* avoid time conflict */
-                                        GST_DEBUG ("look up, tree node number %d find %lld", g_tree_nnodes (http_server->idle_queue), request_data->wakeup_time);
+                                        GST_DEBUG ("look up, tree node number %d find sock %d wakeuptime %lld", g_tree_nnodes (http_server->idle_queue), request_data->sock, request_data->wakeup_time);
                                         request_data->wakeup_time++;
                                         if (iiii++==10) exit(0);
                                 }
                         }
                         request_data->status = HTTP_IDLE;
+                        GST_DEBUG ("insert idle queue end, sock %d wakeuptime %llu", request_data->sock, cb_ret);
                         g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
                         g_cond_signal (http_server->idle_queue_cond);
                         g_mutex_unlock (http_server->idle_queue_mutex);
@@ -746,7 +747,7 @@ httpserver_report_request_data (HTTPServer *http_server)
         for (i = 0; i < kMaxRequests; i++) {
                 request_data = http_server->request_data_pointers[i];
                 if (request_data->status != HTTP_NONE) {
-                        GST_INFO ("%d : status %d uri %s", i, request_data->status, request_data->uri);
+                        GST_INFO ("%d : status %d sock %d uri %s wakeuptime %llu", i, request_data->status, request_data->sock, request_data->uri, request_data->wakeup_time);
                 } else {
                         count += 1;
                 }
