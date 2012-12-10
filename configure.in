@@ -1,0 +1,51 @@
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.63])
+AC_INIT([FULL-PACKAGE-NAME], [VERSION], [BUG-REPORT-ADDRESS])
+AC_CONFIG_SRCDIR([src/main.c])
+AC_CONFIG_HEADER([config.h])
+AM_INIT_AUTOMAKE(itvencoder, 0.1.2)
+
+kernel=`uname -s`
+
+if test ${kernel} = Linux; then
+    CXXFLAGS="$CXXFLAGS -Wall -fPIC -D_REENTRANT -O3 -D__linux__ -DDSS_USE_API_CALLBACKS"
+    AC_DEFINE([KERNEL], ["Linux"], [Kernel type of the OS])
+fi
+
+# check whether to build with debugging enabled
+AC_MSG_CHECKING([whether to do a debug build])
+AC_ARG_ENABLE(debug,
+              AC_HELP_STRING([--enable-debug],
+                             [turn on debugging [default=no]]),
+              [],[enable_debug="no"])
+AC_MSG_RESULT([$enable_debug])
+
+# Add '-g' flag to gcc if it's debug build
+if test "$enable_debug" = "yes"; then
+   CXXFLAGS="$CXXFLAGS -g"
+   CFLAGS="$CFLAGS -g"
+   AC_DEFINE([DEBUG],[1],[enable debug message])
+else
+   AC_DEFINE([DEBUG],[0],[disable debug message])
+fi
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_LIBTOOL
+
+# Checks for libraries.
+# AC_CHECK_LIB([pthread], [pthread_create], HAVE_PTHREAD=yes, HAVE_PTHREAD=no)
+
+# Checks for header files.
+
+
+# Checks for library functions.
+
+AC_CONFIG_FILES([
+Makefile
+src/Makefile
+])
+
+AC_OUTPUT
