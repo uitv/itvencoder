@@ -8,7 +8,6 @@
 #include <gst/gst.h>
 #include <string.h>
 #include "log.h"
-#include "httpserver.h"
 #include "itvencoder.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
