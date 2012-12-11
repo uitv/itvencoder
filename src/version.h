@@ -10,7 +10,7 @@
 
 #define VERSION_MAJOR "0" /* major progress */
 #define VERSION_MINOR "1" /* minor progress */
-#define VERSION_MICRO "1" /* bug fix */
+#define VERSION_MICRO "2" /* bug fix */
 #define ENCODER_VERSION  (VERSION_MAJOR "." VERSION_MINOR "." VERSION_MICRO)
 
 #endif /* __VERSION_H__ */
