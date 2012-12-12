@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <gst/gst.h>
 #include <string.h>
+
 #include "log.h"
 #include "itvencoder.h"
 
@@ -37,32 +38,17 @@ static gint create_pid_file ()
         return 0;
 }
 
-static gint remove_pid_file ()
+static gint
+remove_pid_file ()
 {
         unlink ("/var/run/itvencoder.pid");
 }
 
-int
-main(int argc, char *argv[])
+static void
+print_version_info ()
 {
         guint major, minor, micro, nano;
         const gchar *nano_str;
-        ITVEncoder *itvencoder;
-        ChannelConfig *channel_config;
-        Channel *channel;
-        gchar *name;
-        HTTPServer *httpserver;
-        GMainLoop *loop;
-        gint i, j;
-
-        signal (SIGPIPE, SIG_IGN);
-        signal (SIGUSR1, sighandler);
-        if (create_pid_file () != 0) { //FIXME remove when process exit
-                exit (1);
-        }
-
-        gst_init(&argc, &argv);
-        GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
         gst_version (&major, &minor, &micro, &nano);
         if (nano == 1)
@@ -73,25 +59,117 @@ main(int argc, char *argv[])
                 nano_str = "";
         GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
+}
+
+static void
+print_itvencoder_info (ITVEncoder *itvencoder)
+{
+        ChannelConfig *channel_config;
+        gint i;
+
+        GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
+        GST_INFO ("listening ports : %d", json_integer_value (json_object_get (itvencoder->config->config, "listening_ports")));
+        GST_INFO ("channel configs : %s", json_string_value (json_object_get (itvencoder->config->config, "channel_configs")));
+        GST_INFO ("log directory : %s", json_string_value (json_object_get (itvencoder->config->config, "log_directory")));
+        for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
+                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
+                GST_INFO ("config file %d - %s", i, channel_config->config_path);
+        }
+}
+
+int
+main(int argc, char *argv[])
+{
+        ITVEncoder *itvencoder;
+        GMainLoop *loop;
+        gboolean foreground;
+        gchar *config = NULL;
+        pid_t process_id = 0;
+        gint status;
+        gint8 exit_status;
+
+        GOptionEntry options[] = {
+                {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
+                {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c itvencoder.conf: Specify a config file"), NULL},
+                {NULL}
+        };
+        GOptionContext *ctx;
+        GError *err = NULL;
+        if (!g_thread_supported ()) {
+                g_thread_init (NULL);
+        }
+        ctx = g_option_context_new ("[ADDITIONAL ARGUMENTS]");
+        g_option_context_add_main_entries (ctx, options, NULL);
+        g_option_context_add_group (ctx, gst_init_get_option_group ());
+        if (!g_option_context_parse (ctx, &argc, &argv, &err)) {
+                g_print ("Error initializing: %s\n", GST_STR_NULL (err->message));
+                exit (1);
+        }
+        g_option_context_free (ctx);
+        GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+
+        signal (SIGPIPE, SIG_IGN);
+        signal (SIGUSR1, sighandler);
+        if (create_pid_file () != 0) { //FIXME remove when process exit
+                exit (1);
+        }
 
         _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
         if (log_set_log_handler (_log) != 0) {
                 exit (1);
         }
 
-        loop = g_main_loop_new (NULL, FALSE);
-        itvencoder = itvencoder_new (0, NULL);
-        GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
-        GST_INFO ("listening ports : %d", json_integer_value(json_object_get(itvencoder->config->config, "listening_ports")));
-        GST_INFO ("channel configs : %s", json_string_value(json_object_get(itvencoder->config->config, "channel_configs")));
-        GST_INFO ("log directory : %s", json_string_value(json_object_get(itvencoder->config->config, "log_directory")));
-        for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
-                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                GST_INFO ("config file %d - %s", i, channel_config->config_path);
+        if (!foreground) { /* run in background */
+                /* daemon */
+                if (daemon (0,0) != 0) {
+                        GST_ERROR ("Failed to daemonize");
+                        exit (-1);
+                }
+                /* remove gstInfo default handler. */
+                gst_debug_remove_log_function (gst_debug_log_default);
+                for (;;) {
+                        /* fork */
+                        process_id = fork ();
+                        if (process_id > 0) {
+                                /* parent process. */
+                                status = 0;
+                                for (;;) {
+                                        wait (&status);
+                                        exit_status = (gint8) WEXITSTATUS (status);
+                                        if (WIFEXITED (status) && (exit_status != 0)) {
+                                                /* abnormal exit, restart */
+                                                GST_ERROR ("restart itvencoder. ");
+                                                break;
+                                        }
+                                        if (WIFSIGNALED (status)) {
+                                                /* chile exit on an unhandled signal, restart */
+                                                GST_ERROR ("restart itvencoder. ");
+                                                break;
+                                        }
+                                        if (WIFEXITED (status) && (exit_status == 0)) {
+                                                /* exit code is 0, must exit. */
+                                                GST_ERROR ("Start itvencoder failure, exit\n");
+                                                exit (0);
+                                        }
+                                }
+                        } else if (process_id == 0) {
+                                /* child process, that is itvencoder server. */
+                                break;
+                        }
+                }
+                if (process_id != 0) {
+                        /* parent process exit. */
+                        exit (0);
+                }
         }
 
+        print_version_info ();
+        loop = g_main_loop_new (NULL, FALSE);
+        itvencoder = itvencoder_new (0, NULL);
+        print_itvencoder_info (itvencoder);
         itvencoder_start (itvencoder);
         g_main_loop_run (loop);
+
         return 0;
 }
 
