@@ -57,7 +57,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         itvencoder->grand = g_rand_new ();
 
         // load config
-        itvencoder->config = config_new ("config_file_path", "itvencoder.conf", NULL);
+        itvencoder->config = config_new ("config_file_path", "/etc/itvencoder/itvencoder.conf", NULL);
         if (config_load_config_file(itvencoder->config) != 0) {
                 GST_ERROR ("Channel config files load error");
                 exit (0);
