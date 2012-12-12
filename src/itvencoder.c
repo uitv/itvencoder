@@ -58,7 +58,10 @@ itvencoder_init (ITVEncoder *itvencoder)
 
         // load config
         itvencoder->config = config_new ("config_file_path", "itvencoder.conf", NULL);
-        config_load_config_file(itvencoder->config);
+        if (config_load_config_file(itvencoder->config) != 0) {
+                GST_ERROR ("Channel config files load error");
+                exit (-1);
+        }
 
         // initialize channels
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
