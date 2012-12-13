@@ -108,59 +108,28 @@ main(int argc, char *argv[])
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
-        signal (SIGPIPE, SIG_IGN);
-        signal (SIGUSR1, sighandler);
-        if (create_pid_file () != 0) { //FIXME remove when process exit
-                exit (1);
-        }
-
         _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
         if (log_set_log_handler (_log) != 0) {
                 exit (1);
         }
 
+        signal (SIGPIPE, SIG_IGN);
+
         if (!foreground) { /* run in background */
+                signal (SIGUSR1, sighandler);
+
                 /* daemon */
                 if (daemon (0,0) != 0) {
                         GST_ERROR ("Failed to daemonize");
                         exit (-1);
                 }
+        
+                if (create_pid_file () != 0) { //FIXME remove when process exit
+                        exit (1);
+                }
+
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
-                for (;;) {
-                        /* fork */
-                        process_id = fork ();
-                        if (process_id > 0) {
-                                /* parent process. */
-                                status = 0;
-                                for (;;) {
-                                        wait (&status);
-                                        exit_status = (gint8) WEXITSTATUS (status);
-                                        if (WIFEXITED (status) && (exit_status != 0)) {
-                                                /* abnormal exit, restart */
-                                                GST_ERROR ("restart itvencoder. ");
-                                                break;
-                                        }
-                                        if (WIFSIGNALED (status)) {
-                                                /* chile exit on an unhandled signal, restart */
-                                                GST_ERROR ("restart itvencoder. ");
-                                                break;
-                                        }
-                                        if (WIFEXITED (status) && (exit_status == 0)) {
-                                                /* exit code is 0, must exit. */
-                                                GST_ERROR ("Start itvencoder failure, exit\n");
-                                                exit (0);
-                                        }
-                                }
-                        } else if (process_id == 0) {
-                                /* child process, that is itvencoder server. */
-                                break;
-                        }
-                }
-                if (process_id != 0) {
-                        /* parent process exit. */
-                        exit (0);
-                }
         }
 
         print_version_info ();
