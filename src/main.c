@@ -113,10 +113,7 @@ main(int argc, char *argv[])
                 exit (1);
         }
 
-        signal (SIGPIPE, SIG_IGN);
-
         if (!foreground) { /* run in background */
-                signal (SIGUSR1, sighandler);
 
                 /* daemon */
                 if (daemon (0,0) != 0) {
@@ -131,6 +128,9 @@ main(int argc, char *argv[])
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
         }
+
+        signal (SIGPIPE, SIG_IGN);
+        signal (SIGUSR1, sighandler);
 
         print_version_info ();
         loop = g_main_loop_new (NULL, FALSE);
