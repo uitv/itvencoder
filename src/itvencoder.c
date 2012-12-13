@@ -485,7 +485,16 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         }
                                 } else if (request_data->parameters[0] == 'r') {
                                         GST_WARNING ("Restart source");
-                                        channel_restart (channel);
+                                        if (channel_restart (channel) == 0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        }
+                                        return 0;
                                 } else {
                                         buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));

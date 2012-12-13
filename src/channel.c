@@ -275,6 +275,7 @@ channel_source_pipeline_initialize (Source *source)
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
         gst_bus_add_watch (bus, bus_callback, &source->bus_cb_user_data);
+        g_object_unref (bus);
 
         source->pipeline = p;
 
@@ -485,12 +486,12 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         /* set bus watch callback */
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
         gst_bus_add_watch (bus, bus_callback, &encoder->bus_cb_user_data);
+        g_object_unref (bus);
 
         /* set encoder appsink callback */
         appsink = gst_bin_get_by_name (GST_BIN (p), "encodersink");
         if (appsink == NULL) {
                 GST_ERROR ("%s - Get encoder sink error", encoder->name);
-                g_free (encoder);
                 return -1;
         }
         encoder->state = GST_STATE_NULL;
@@ -501,7 +502,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         appsrc = gst_bin_get_by_name (GST_BIN (p), "videosrc");
         if (appsrc == NULL) {
                 GST_ERROR ("%s - Get video src error", encoder->name);
-                g_free (encoder);
                 return -1;
         }
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, &encoder->video_cb_user_data, NULL);
@@ -511,7 +511,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         appsrc = gst_bin_get_by_name (GST_BIN (p), "audiosrc");
         if (appsrc == NULL) {
                 GST_ERROR ("%s - Get audio src error", encoder->name);
-                g_free (encoder);
                 return -1;
         }
         gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, &encoder->audio_cb_user_data, NULL);
@@ -540,6 +539,7 @@ gint
 channel_source_appsink_get_caps (Channel *channel)
 {
         gint i;
+        gchar *caps;
 
         i = 0;
         while ((channel->source->audio_caps == NULL) || (channel->source->video_caps == NULL)) {
@@ -561,10 +561,14 @@ channel_source_appsink_get_caps (Channel *channel)
         }
 
         if (channel->source->audio_caps != NULL) {
-                GST_WARNING (gst_caps_to_string (channel->source->audio_caps));
+                caps = gst_caps_to_string (channel->source->audio_caps);
+                GST_WARNING (caps);
+                g_free (caps);
         }
         if (channel->source->audio_caps != NULL) {
-                GST_WARNING (gst_caps_to_string (channel->source->video_caps));
+                caps = gst_caps_to_string (channel->source->video_caps);
+                GST_WARNING (caps);
+                g_free (caps);
         }
 
         if (i < 50 )
