@@ -303,6 +303,8 @@ channel_source_pipeline_initialize (Source *source)
 gint
 channel_source_pipeline_release (Source *source)
 {
+        g_object_unref (source->audio_caps);
+        g_object_unref (source->video_caps);
         gst_object_unref (source->pipeline);
         source->pipeline = NULL;
 }
