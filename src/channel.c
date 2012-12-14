@@ -23,7 +23,7 @@ static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_data);
+static GstFlowReturn sourcer_appsink_callback (GstAppSink * elt, gpointer user_data);
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 static void encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data);
@@ -188,14 +188,14 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         return TRUE;
 }
 
-static GstFlowReturn decoder_appsink_callback (GstAppSink * elt, gpointer user_data)
+static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         gchar type = ((SourceAppsinkUserData *)user_data)->type;
         Channel *channel = ((SourceAppsinkUserData *)user_data)->channel;
         guint i;
 
-        GST_LOG ("decoder appsink callback func %c", type);
+        GST_LOG ("source appsink callback func %c", type);
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         switch (type) {
@@ -231,7 +231,7 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
 {
         SourceAppsinkUserData *user_data;
 
-        GST_LOG ("channel set decoder pipeline : %s", pipeline_string);
+        GST_LOG ("channel set source pipeline : %s", pipeline_string);
 
         channel->source->pipeline_string = pipeline_string;
         channel->source->video_cb_user_data.type = 'v';
@@ -254,7 +254,7 @@ channel_source_pipeline_initialize (Source *source)
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
-                decoder_appsink_callback,
+                source_appsink_callback,
                 NULL
         };
         gint i;
@@ -347,10 +347,10 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 i = i % AUDIO_RING_SIZE;
                 for (;;) {
                         encoder->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
-                        /* insure next buffer isn't current decoder buffer */
+                        /* insure next buffer isn't current buffer */
                         if (i == channel->source->current_audio_position ||
                                 channel->source->current_audio_position == -1) { /*FIXME: condition variable*/
-                                GST_LOG ("waiting audio decoder ready");
+                                GST_LOG ("waiting audio source ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
                         }
@@ -358,7 +358,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("audio enough.");
                                 break;
                         }
-                        GST_LOG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
+                        GST_LOG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
                                    channel->source->current_audio_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->audio_ring[i])) != GST_FLOW_OK) {
@@ -376,10 +376,10 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 i = i % VIDEO_RING_SIZE;
                 for (;;) {
                         encoder->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
-                        /* insure next buffer isn't current decoder buffer */
+                        /* insure next buffer isn't current buffer */
                         if (i == channel->source->current_video_position ||
                                 channel->source->current_video_position == -1) {
-                                GST_LOG ("waiting video decoder ready");
+                                GST_LOG ("waiting video source ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
                         }
@@ -387,7 +387,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("video enough, break for need data signal.");
                                 break;
                         }
-                        GST_LOG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " decoder position %d",
+                        GST_LOG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
                                    channel->source->current_video_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
