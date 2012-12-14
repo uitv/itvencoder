@@ -14,28 +14,28 @@
 #define http_500 "HTTP/1.1 500 Internal Server Error\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: text/html\r\n" \
-                 "Content-Size: 30\r\n" \
+                 "Content-Length: 30\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "<h1>Internal Server Error</h1>"
 
 #define http_404 "HTTP/1.1 404 Not Found\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: text/html\r\n" \
-                 "Content-Size: 18\r\n" \
+                 "Content-Length: 18\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "<h1>Not found</h1>"
 
 #define http_400 "HTTP/1.1 400 Bad Request\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: text/html\r\n" \
-                 "Content-Size: 20\r\n" \
+                 "Content-Length: 20\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "<h1>Bad Request</h1>"
 
 #define http_200 "HTTP/1.1 200 Ok\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: text/plain\r\n" \
-                 "Content-Size: 2\r\n" \
+                 "Content-Length: 2\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "Ok"
 
@@ -47,7 +47,7 @@
 #define itvencoder_ver "HTTP/1.1 200 OK\r\n" \
                        "Server: %s-%s\r\n" \
                        "Content-Type: text/plain\r\n" \
-                       "Content-Size: %d\r\n" \
+                       "Content-Length: %d\r\n" \
                        "Connection: Close\r\n\r\n" \
                        "%s-%s"
 
