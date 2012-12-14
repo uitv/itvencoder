@@ -542,26 +542,36 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
-                                        return 0;
                                 } else {
                                         buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
-                                        return 0;
                                 }
+                                return 0;
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
                                 if (encoder_start (encoder) ==0) {
                                         buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
-                                        return 0;
                                 } else {
                                         buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
-                                        return 0;
                                 }
+                                return 0;
+                        } else if (request_data->parameters[0] == 'r') {
+                                GST_WARNING ("Restart endcoder");
+                                if (encoder_restart (encoder) ==0) {
+                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                } else {
+                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                }
+                                return 0;
                         }
                 case 'i': /* uri is /itvencoder/..... */
                         buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
