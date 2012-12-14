@@ -251,20 +251,13 @@ channel_source_pipeline_initialize (Source *source)
         GError *e = NULL;
         GstElement *appsink, *p;
         GstBus *bus;
+        gint i;
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
                 source_appsink_callback,
                 NULL
         };
-        gint i;
-
-        source->current_audio_position = -1;
-        for (i=0; i<AUDIO_RING_SIZE; i++)
-                source->audio_ring[i] = NULL;
-        source->current_video_position = -1;
-        for (i=0; i<VIDEO_RING_SIZE; i++)
-                source->video_ring[i] = NULL;
 
         p = gst_parse_launch (source->pipeline_string, &e);
         if (e != NULL) {
@@ -297,14 +290,50 @@ channel_source_pipeline_initialize (Source *source)
         gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, &source->audio_cb_user_data, NULL);
         gst_object_unref (appsink);
 
+        source->current_audio_position = -1;
+        for (i=0; i<AUDIO_RING_SIZE; i++) {
+                source->audio_ring[i] = NULL;
+        }
+
+        source->current_video_position = -1;
+        for (i=0; i<VIDEO_RING_SIZE; i++) {
+                source->video_ring[i] = NULL;
+        }
+
+        source->audio_caps = NULL;
+        source->video_caps = NULL;
+
         return 0;
 }
 
 gint
 channel_source_pipeline_release (Source *source)
 {
-        g_object_unref (source->audio_caps);
-        g_object_unref (source->video_caps);
+        gint i;
+
+        for (i=0; i<AUDIO_RING_SIZE; i++) {
+                if (source->audio_ring[i] != NULL) {
+                        gst_buffer_unref (source->audio_ring[i]);
+                        source->audio_ring[i] = NULL;
+                }
+        }
+        for (i=0; i<VIDEO_RING_SIZE; i++) {
+                if (source->video_ring[i] != NULL) {
+                        gst_buffer_unref (source->video_ring[i]);
+                        source->video_ring[i] = NULL;
+                }
+        }
+        
+        if (source->audio_caps != NULL) {
+                g_object_unref (source->audio_caps);
+                source->audio_caps = NULL;
+        }
+
+        if (source->video_caps != NULL) {
+                g_object_unref (source->video_caps);
+                source->video_caps = NULL;
+        }
+
         gst_object_unref (source->pipeline);
         source->pipeline = NULL;
 }
@@ -322,8 +351,9 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         i = encoder->current_output_position + 1;
         i = i % OUTPUT_RING_SIZE;
         encoder->current_output_position = i;
-        if (encoder->output_ring[i] != NULL)
+        if (encoder->output_ring[i] != NULL) {
                 gst_buffer_unref (encoder->output_ring[i]);
+        }
         encoder->output_ring[i] = buffer;
 }
 
@@ -463,6 +493,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
         GstBus *bus;
+        gint i;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback,
                 encoder_appsrc_enough_data_callback,
@@ -474,7 +505,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
                 encoder_appsink_callback,
                 NULL
         };
-        gint i;
 
         GST_LOG ("channel add encoder pipeline : %s", encoder->pipeline_string);
 
@@ -524,8 +554,9 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         encoder->audio_enough = FALSE;
         encoder->video_enough = FALSE;
         encoder->current_output_position = -1;
-        for (i=0; i<OUTPUT_RING_SIZE; i++)
+        for (i=0; i<OUTPUT_RING_SIZE; i++) {
                 encoder->output_ring[i] = NULL;
+        }
 
         return 0;
 }
@@ -533,8 +564,18 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
 gint
 channel_encoder_pipeline_release (Encoder *encoder)
 {
+        gint i;
+
+        for (i=0; i<OUTPUT_RING_SIZE; i++) {
+                if (encoder->output_ring[i] != NULL) {
+                        gst_buffer_unref (encoder->output_ring[i]);
+                        encoder->output_ring[i] = NULL;
+                }
+        }
         gst_object_unref (encoder->pipeline);
         encoder->pipeline = NULL;
+
+        return 0;
 }
 
 gint
