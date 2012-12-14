@@ -324,7 +324,7 @@ channel_restart (Channel *channel)
 
 static gint
 encoder_stop (Encoder *encoder)
-{
+{//FIXME more check is must
         gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
         channel_encoder_pipeline_release (encoder);
 
@@ -333,7 +333,7 @@ encoder_stop (Encoder *encoder)
 
 static gint
 encoder_start (Encoder *encoder)
-{
+{//FIXME more check is must
         channel_encoder_pipeline_initialize (encoder);
         channel_encoder_appsrc_set_caps (encoder);
         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
