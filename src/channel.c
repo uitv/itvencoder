@@ -59,6 +59,7 @@ channel_init (Channel *channel)
 
         channel->system_clock = gst_system_clock_obtain ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
+        channel->restart_mutex = g_mutex_new ();
         channel->source = g_malloc (sizeof (Source)); //TODO free!
         channel->source->audio_caps = NULL;
         channel->source->video_caps = NULL;
@@ -662,8 +663,13 @@ channel_source_start (Source *source)
 gint
 channel_restart (Channel *channel)
 {
+        if (!g_mutex_trylock (channel->restart_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                return 1;
+        }
         channel_source_stop (channel->source);
         channel_source_start (channel->source);
+        g_mutex_unlock (channel->restart_mutex);
 
         return 0;
 }
@@ -690,8 +696,15 @@ channel_encoder_start (Encoder *encoder)
 gint
 channel_encoder_restart (Encoder *encoder)
 {
+        Channel *channel = encoder->channel;
+
+        if (!g_mutex_trylock (channel->restart_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                return 1;
+        }
         channel_encoder_stop (encoder);
         channel_encoder_start (encoder);
+        g_mutex_unlock (channel->restart_mutex);
 
         return 0;
 }

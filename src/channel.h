@@ -84,6 +84,7 @@ struct _Channel {
 
         gint id;
         gchar *name; // same as the name in channel config file
+        GMutex *restart_mutex;
         Source *source; 
         GArray *encoder_array;
 
