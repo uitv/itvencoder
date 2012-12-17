@@ -625,6 +625,13 @@ channel_source_appsink_get_caps (Channel *channel)
 gint
 channel_source_stop (Source *source)
 {
+        Channel *channel = source->channel;
+        gint i;
+
+        for (i=0; i<channel->encoder_array->len; i++) {
+                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
+        }
+
         gst_element_set_state (source->pipeline, GST_STATE_NULL);
         channel_source_pipeline_release (source);
 
@@ -634,6 +641,9 @@ channel_source_stop (Source *source)
 gint
 channel_source_start (Source *source)
 {
+        Channel *channel = source->channel;
+        gint i;
+
         channel_source_pipeline_initialize (source);
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
         if (channel_source_appsink_get_caps (source->channel) != 0) {
@@ -642,22 +652,18 @@ channel_source_start (Source *source)
                 return 1;
         }
 
+        for (i=0; i<channel->encoder_array->len; i++) {
+                channel_encoder_start (g_array_index (channel->encoder_array, gpointer, i));
+        }
+
         return 0;
 }
 
 gint
 channel_restart (Channel *channel)
 {
-        gint j;
-
-        for (j=0; j<channel->encoder_array->len; j++) {
-                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, j));
-        }
         channel_source_stop (channel->source);
         channel_source_start (channel->source);
-        for (j=0; j<channel->encoder_array->len; j++) {
-                channel_encoder_start (g_array_index (channel->encoder_array, gpointer, j));
-        }
 
         return 0;
 }
