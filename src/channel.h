@@ -109,7 +109,11 @@ gint channel_source_pipeline_release (Source *source);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_encoder_pipeline_initialize (Encoder *encoder);
 gint channel_encoder_pipeline_release (Encoder *encoder);
-gint channel_source_appsink_get_caps (Channel *channel);
-void channel_encoder_appsrc_set_caps (Encoder *encoder);
+gint channel_source_stop (Source *source);
+gint channel_source_start (Source *source);
+gint channel_restart (Channel *channel);
+gint channel_encoder_stop (Encoder *encoder);
+gint channel_encoder_start (Encoder *encoder);
+gint channel_encoder_restart (Encoder *encoder);
 
 #endif /* __CHANNEL_H__ */

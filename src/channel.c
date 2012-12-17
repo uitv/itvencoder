@@ -27,6 +27,8 @@ static GstFlowReturn sourcer_appsink_callback (GstAppSink * elt, gpointer user_d
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 static void encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data);
+static gint channel_source_appsink_get_caps (Channel *channel);
+static void channel_encoder_appsrc_set_caps (Encoder *encoder);
 
 static void
 channel_class_init (ChannelClass *channelclass)
@@ -578,7 +580,7 @@ channel_encoder_pipeline_release (Encoder *encoder)
         return 0;
 }
 
-gint
+static gint
 channel_source_appsink_get_caps (Channel *channel)
 {
         gint i;
@@ -617,10 +619,78 @@ channel_source_appsink_get_caps (Channel *channel)
         if (i < 50 )
                 return 0;
         else
-                return -1;
+                return 1;
 }
 
-void
+gint
+channel_source_stop (Source *source)
+{
+        gst_element_set_state (source->pipeline, GST_STATE_NULL);
+        channel_source_pipeline_release (source);
+
+        return 0;
+}
+
+gint
+channel_source_start (Source *source)
+{
+        channel_source_pipeline_initialize (source);
+        gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
+        if (channel_source_appsink_get_caps (source->channel) != 0) {
+                GST_ERROR ("Get source caps failure!");
+                channel_source_pipeline_release (source);
+                return 1;
+        }
+
+        return 0;
+}
+
+gint
+channel_restart (Channel *channel)
+{
+        gint j;
+
+        for (j=0; j<channel->encoder_array->len; j++) {
+                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, j));
+        }
+        channel_source_stop (channel->source);
+        channel_source_start (channel->source);
+        for (j=0; j<channel->encoder_array->len; j++) {
+                channel_encoder_start (g_array_index (channel->encoder_array, gpointer, j));
+        }
+
+        return 0;
+}
+
+gint
+channel_encoder_stop (Encoder *encoder)
+{//FIXME more check is must
+        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+        channel_encoder_pipeline_release (encoder);
+
+        return 0;
+}
+
+gint
+channel_encoder_start (Encoder *encoder)
+{//FIXME more check is must
+        channel_encoder_pipeline_initialize (encoder);
+        channel_encoder_appsrc_set_caps (encoder);
+        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+
+        return 0;
+}
+
+gint
+channel_encoder_restart (Encoder *encoder)
+{
+        channel_encoder_stop (encoder);
+        channel_encoder_start (encoder);
+
+        return 0;
+}
+
+static void
 channel_encoder_appsrc_set_caps (Encoder *encoder)
 {
         gint i;

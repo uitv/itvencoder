@@ -14,12 +14,6 @@ static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static gint source_stop (Source *source);
-static gint source_start (Source *source);
-static gint channel_restart (Channel *channel);
-static gint encoder_stop (Encoder *encoder);
-static gint encoder_start (Encoder *encoder);
-static gint encoder_restart (Encoder *encoder);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime request_dispatcher (gpointer data, gpointer user_data);
@@ -219,7 +213,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         time_diff = GST_CLOCK_DIFF (now, encoder->last_video_heartbeat);
                         if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
                                 GST_ERROR ("endcoder video heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
-                                encoder_restart (encoder);
+                                channel_encoder_restart (encoder);
                                 continue;
                         } else {
                                 GST_INFO ("%s video heart beat %" GST_TIME_FORMAT,
@@ -231,7 +225,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         time_diff = GST_CLOCK_DIFF (now, encoder->last_audio_heartbeat);
                         if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
                                 GST_ERROR ("endcoder audio heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
-                                encoder_restart (encoder);
+                                channel_encoder_restart (encoder);
                         } else {
                                 GST_INFO ("%s audio heart beat %" GST_TIME_FORMAT,
                                           encoder->name,
@@ -273,79 +267,14 @@ itvencoder_start (ITVEncoder *itvencoder)
                         channel->name,
                         channel->encoder_array->len,
                         channel->source->pipeline_string);
-                source_start (channel->source);
-                channel_source_appsink_get_caps (channel);
+                channel_source_start (channel->source);
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);
-                        encoder_start (encoder);
+                        channel_encoder_start (encoder);
                 }
         }
         httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder);
-
-        return 0;
-}
-
-static gint
-source_stop (Source *source)
-{
-        gst_element_set_state (source->pipeline, GST_STATE_NULL);
-        channel_source_pipeline_release (source);
-
-        return 0;
-}
-
-static gint
-source_start (Source *source)
-{
-        channel_source_pipeline_initialize (source);
-        channel_source_appsink_get_caps (source->channel);
-        gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
-
-        return 0;
-}
-
-static gint
-channel_restart (Channel *channel)
-{
-        gint j;
-
-        for (j=0; j<channel->encoder_array->len; j++) {
-                encoder_stop (g_array_index (channel->encoder_array, gpointer, j));
-        }
-        source_stop (channel->source);
-        source_start (channel->source);
-        for (j=0; j<channel->encoder_array->len; j++) {
-                encoder_start (g_array_index (channel->encoder_array, gpointer, j));
-        }
-
-        return 0;
-}
-
-static gint
-encoder_stop (Encoder *encoder)
-{//FIXME more check is must
-        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
-        channel_encoder_pipeline_release (encoder);
-
-        return 0;
-}
-
-static gint
-encoder_start (Encoder *encoder)
-{//FIXME more check is must
-        channel_encoder_pipeline_initialize (encoder);
-        channel_encoder_appsrc_set_caps (encoder);
-        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
-
-        return 0;
-}
-
-static gint
-encoder_restart (Encoder *encoder)
-{
-        encoder_stop (encoder);
-        encoder_start (encoder);
 
         return 0;
 }
@@ -457,9 +386,9 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 } else if (request_data->parameters[0] == 's') {
                                         GST_WARNING ("Stop source");
                                         for (i=0; i<channel->encoder_array->len; i++) {
-                                                encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
+                                                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
                                         }
-                                        if (source_stop (channel->source) == 0) {
+                                        if (channel_source_stop (channel->source) == 0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
@@ -471,7 +400,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 } else if (request_data->parameters[0] == 'p') {
                                         GST_WARNING ("Start source");
-                                        if (source_start (channel->source) == 0) {
+                                        if (channel_source_start (channel->source) == 0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
@@ -538,7 +467,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         } else if (request_data->parameters[0] == 's') {
                                 GST_WARNING ("Stop endcoder");
-                                if (encoder_stop (encoder) == 0) {
+                                if (channel_encoder_stop (encoder) == 0) {
                                         buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
@@ -550,7 +479,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
-                                if (encoder_start (encoder) ==0) {
+                                if (channel_encoder_start (encoder) ==0) {
                                         buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
@@ -562,7 +491,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         } else if (request_data->parameters[0] == 'r') {
                                 GST_WARNING ("Restart endcoder");
-                                if (encoder_restart (encoder) ==0) {
+                                if (channel_encoder_restart (encoder) ==0) {
                                         buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
