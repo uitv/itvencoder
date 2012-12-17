@@ -802,7 +802,7 @@ httpserver_report_request_data (HTTPServer *http_server)
         for (i = 0; i < kMaxRequests; i++) {
                 request_data = http_server->request_data_pointers[i];
                 if (request_data->status != HTTP_NONE) {
-                        GST_ERROR ("%d : status %d sock %d uri %s wakeuptime %llu", i, request_data->status, request_data->sock, request_data->uri, request_data->wakeup_time);
+                        GST_INFO ("%d : status %d sock %d uri %s wakeuptime %llu", i, request_data->status, request_data->sock, request_data->uri, request_data->wakeup_time);
                 } else {
                         count += 1;
                 }
@@ -811,7 +811,7 @@ httpserver_report_request_data (HTTPServer *http_server)
         g_mutex_lock (http_server->request_data_queue_mutex);
         request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
         g_mutex_unlock (http_server->request_data_queue_mutex);
-        GST_ERROR ("status None %d, request queue length %d, total click %llu, encoder click %llu",
+        GST_INFO ("status None %d, request queue length %d, total click %llu, encoder click %llu",
                   count,
                   request_data_queue_len,
                   http_server->total_click,
