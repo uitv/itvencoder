@@ -438,16 +438,6 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
-                                j = 0;
-                                while (encoder->current_output_position <= 348) {
-                                        g_usleep (50); 
-                                        if (j++ < 20) continue;
-                                        GST_ERROR ("Internal Server Error, maybe encoder output nothing.");
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
                                 request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                                 if (request_user_data == NULL) {
                                         GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
