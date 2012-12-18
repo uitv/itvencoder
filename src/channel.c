@@ -626,6 +626,25 @@ channel_source_appsink_get_caps (Channel *channel)
                 return 1;
 }
 
+static void
+channel_encoder_appsrc_set_caps (Encoder *encoder)
+{
+        gint i;
+        GstElement *appsrc;
+        Channel *channel = encoder->channel;
+
+        if (encoder->pipeline != NULL) {
+                if (channel->source->video_caps != NULL) {
+                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "videosrc");
+                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->video_caps);
+                }
+                if (channel->source->audio_caps != NULL) {
+                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "audiosrc");
+                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
+                }
+        }
+}
+
 gint
 channel_source_stop (Source *source)
 {
@@ -737,24 +756,5 @@ channel_encoder_restart (Encoder *encoder)
         g_mutex_unlock (encoder->restart_mutex);
 
         return 0;
-}
-
-static void
-channel_encoder_appsrc_set_caps (Encoder *encoder)
-{
-        gint i;
-        GstElement *appsrc;
-        Channel *channel = encoder->channel;
-
-        if (encoder->pipeline != NULL) {
-                if (channel->source->video_caps != NULL) {
-                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "videosrc");
-                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->video_caps);
-                }
-                if (channel->source->audio_caps != NULL) {
-                        appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), "audiosrc");
-                        gst_app_src_set_caps ((GstAppSrc *)appsrc, channel->source->audio_caps);
-                }
-        }
 }
 
