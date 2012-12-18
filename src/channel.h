@@ -43,6 +43,12 @@ struct _Source {
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
 
+        /*  sync error cause sync_error_times inc, 
+         *  sync normal cause sync_error_times reset to zero,
+         *  sync_error_times == 5 cause the channel restart.
+         * */
+        gint sync_error_times;
+
         /* source produce, encoder consume */
         SourceAppsinkUserData audio_cb_user_data;
         GstCaps *audio_caps;

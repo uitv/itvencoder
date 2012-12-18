@@ -63,6 +63,7 @@ channel_init (Channel *channel)
         channel->source->restart_mutex = g_mutex_new ();
         channel->source->audio_caps = NULL;
         channel->source->video_caps = NULL;
+        channel->source->sync_error_times = 0;
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 

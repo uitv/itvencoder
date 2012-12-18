@@ -13,8 +13,8 @@
 #include "channel.h"
 #include "httpserver.h"
 
-#define SYNC_THRESHHOLD 1000000000 /* 1000ms */
-#define HEARTBEAT_THRESHHOLD 2000000000 /* 2000ms */
+#define SYNC_THRESHHOLD 2000000000 /* 1000ms */
+#define HEARTBEAT_THRESHHOLD 5000000000 /* 2000ms */
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;

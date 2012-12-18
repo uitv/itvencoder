@@ -171,9 +171,15 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
                 time_diff = GST_CLOCK_DIFF (channel->source->current_video_timestamp, channel->source->current_audio_timestamp);
                 if ((time_diff > SYNC_THRESHHOLD) || (time_diff < - SYNC_THRESHHOLD)) {
-                        GST_ERROR ("audio and video sync error %lld, restart channel %s", time_diff, channel->name);
-                        channel_restart (channel);
+                        GST_ERROR ("channel %s audio and video sync error %lld", channel->name, time_diff);
+                        channel->source->sync_error_times += 1;
+                        if (channel->source->sync_error_times == 3) {
+                                GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
+                                channel_restart (channel);
+                                channel->source->sync_error_times = 0;
+                        }
                 } else {
+                        channel->source->sync_error_times = 0;
                         GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
                                   channel->name,
                                   GST_TIME_ARGS (channel->source->current_video_timestamp));
