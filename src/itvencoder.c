@@ -171,7 +171,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
                 time_diff = GST_CLOCK_DIFF (channel->source->current_video_timestamp, channel->source->current_audio_timestamp);
                 if ((time_diff > SYNC_THRESHHOLD) || (time_diff < - SYNC_THRESHHOLD)) {
-                        GST_ERROR ("audio and video sync error %lld, restart channel", time_diff);
+                        GST_ERROR ("audio and video sync error %lld, restart channel %s", time_diff, channel->name);
                         channel_restart (channel);
                 } else {
                         GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
@@ -185,7 +185,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 now = gst_clock_get_time (itvencoder->system_clock);
                 time_diff = GST_CLOCK_DIFF (now, channel->source->last_video_heartbeat);
                 if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                        GST_ERROR ("video source heart beat error %lld, restart channel", time_diff);
+                        GST_ERROR ("video source heart beat error %lld, restart channel %s", time_diff, channel->name);
                         channel_restart (channel); 
                 } else {
                         GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
@@ -196,7 +196,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 now = gst_clock_get_time (itvencoder->system_clock);
                 time_diff = GST_CLOCK_DIFF (now, channel->source->last_audio_heartbeat);
                 if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                        GST_ERROR ("audio source heart beat error %lld, restart channel", time_diff);
+                        GST_ERROR ("audio source heart beat error %lld, restart channel %s", time_diff, channel->name);
                         channel_restart (channel);
                 } else {
                         GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
