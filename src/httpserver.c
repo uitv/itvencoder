@@ -386,6 +386,7 @@ listen_thread (gpointer data)
         gchar *port = g_strdup_printf ("%d", http_server->listen_port);
         struct epoll_event event, event_list[kMaxRequests];
         GError *e = NULL;
+        gint n, i;
 
         memset (&hints, 0, sizeof (struct addrinfo));
         hints.ai_family = AF_UNSPEC; /* Return IPv4 and IPv6 choices */
@@ -444,11 +445,10 @@ listen_thread (gpointer data)
         }
 
         for (;;) {
-                int n, i;
-
                 n = epoll_wait (http_server->epollfd, event_list, kMaxRequests, -1);
                 if (n == -1) {
                         GST_ERROR ("epoll_wait error %s", g_strerror (errno));
+                        continue;
                 }
                 for (i = 0; i < n; i++) { /* push to thread pool queue */
                         if (event_list[i].data.ptr == NULL) {
