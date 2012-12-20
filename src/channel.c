@@ -238,6 +238,7 @@ guint
 channel_set_source (Channel *channel, gchar *pipeline_string)
 {
         SourceAppsinkUserData *user_data;
+        gint i;
 
         GST_LOG ("channel set source pipeline : %s", pipeline_string);
 
@@ -250,6 +251,14 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
         channel->source->bus_cb_user_data.user_data = channel->source;
         channel->source->channel = channel;
 
+        for (i=0; i<AUDIO_RING_SIZE; i++) {
+                channel->source->audio_ring[i] = NULL;
+        }
+
+        for (i=0; i<VIDEO_RING_SIZE; i++) {
+                channel->source->video_ring[i] = NULL;
+        }
+
         return 0;
 }
 
@@ -259,7 +268,6 @@ channel_source_pipeline_initialize (Source *source)
         GError *e = NULL;
         GstElement *appsink, *p;
         GstBus *bus;
-        gint i;
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
@@ -299,14 +307,7 @@ channel_source_pipeline_initialize (Source *source)
         gst_object_unref (appsink);
 
         source->current_audio_position = -1;
-        for (i=0; i<AUDIO_RING_SIZE; i++) {
-                source->audio_ring[i] = NULL;
-        }
-
         source->current_video_position = -1;
-        for (i=0; i<VIDEO_RING_SIZE; i++) {
-                source->video_ring[i] = NULL;
-        }
 
         source->audio_caps = NULL;
         source->video_caps = NULL;
@@ -396,10 +397,10 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("audio enough.");
                                 break;
                         }
-                        GST_LOG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
+                        GST_ERROR ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
                                    channel->source->current_audio_position);
-                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->audio_ring[i])) != GST_FLOW_OK) {
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref (channel->source->audio_ring[i])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer audio failure.");
                                 break;
                         }
@@ -425,7 +426,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("video enough, break for need data signal.");
                                 break;
                         }
-                        GST_LOG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
+                        GST_ERROR ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
                                    channel->source->current_video_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
@@ -468,6 +469,7 @@ guint
 channel_add_encoder (Channel *channel, gchar *pipeline_string)
 {
         Encoder *encoder;
+        gint i;
 
         encoder = g_malloc (sizeof (Encoder)); //TODO free!
         if (encoder == NULL) {
@@ -492,6 +494,10 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->bus_cb_user_data.type = 'e';
         encoder->bus_cb_user_data.user_data = encoder;
 
+        for (i=0; i<OUTPUT_RING_SIZE; i++) {
+                encoder->output_ring[i] = NULL;
+        }
+
         return 0;
 }
 
@@ -501,7 +507,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         GstElement *p, *appsrc, *appsink;
         GError *e = NULL;
         GstBus *bus;
-        gint i;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback,
                 encoder_appsrc_enough_data_callback,
@@ -562,9 +567,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         encoder->audio_enough = FALSE;
         encoder->video_enough = FALSE;
         encoder->current_output_position = -1;
-        for (i=0; i<OUTPUT_RING_SIZE; i++) {
-                encoder->output_ring[i] = NULL;
-        }
 
         return 0;
 }
