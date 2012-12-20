@@ -1,5 +1,12 @@
 releases are sorted from youngest to oldest.
 
+v-0.1.3 2012-12-20 zhangping
+- bugfix.
+- rpmbuild.
+- autoconf and automake.
+- gracefully close socket.
+- daemonize.
+
 v-0.1.2 2012-12-5 zhangping
 - log to file, /var/log/itvencoder.log, and use logrotate.
 - writev more data every time, avoid vlc exit.
