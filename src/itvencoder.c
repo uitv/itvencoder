@@ -487,7 +487,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         } else if (request_data->parameters[0] == 's') {
                                 GST_WARNING ("Stop endcoder");
-                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_stop (encoder) == 0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
@@ -497,12 +497,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
-                                        g_mutex_unlock (channel->operate_mutex);
+                                        g_mutex_unlock (encoder->channel->operate_mutex);
                                 }
                                 return 0;
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
-                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_start (encoder) ==0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
@@ -512,12 +512,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
-                                        g_mutex_unlock (channel->operate_mutex);
+                                        g_mutex_unlock (encoder->channel->operate_mutex);
                                 }
                                 return 0;
                         } else if (request_data->parameters[0] == 'r') {
                                 GST_WARNING ("Restart endcoder");
-                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_restart (encoder) ==0) {
                                                 buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
@@ -527,7 +527,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
-                                        g_mutex_unlock (channel->operate_mutex);
+                                        g_mutex_unlock (encoder->channel->operate_mutex);
                                 }
                                 return 0;
                         }
