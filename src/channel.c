@@ -145,6 +145,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         gchar *debug;
         GError *error;
         GstState old, new, pending;
+        GstStreamStatusType type;
         BusCallbackUserData *bus_cb_user_data = data;
         Source *source;
         Encoder *encoder;
@@ -180,13 +181,16 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                         encoder->state = new;
                 }
                 break;
+        case GST_MESSAGE_STREAM_STATUS:
+                gst_message_parse_stream_status (msg, &type, NULL);
+                GST_INFO ("stream status %d", type);
+                break;
         default:
                 if (bus_cb_user_data->type == 's') {
                         GST_INFO ("%s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
                 } else  if (bus_cb_user_data->type == 'e') {
                         GST_INFO ("%s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
                 }
-                break;
         }
 
         return TRUE;
