@@ -397,7 +397,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("audio enough.");
                                 break;
                         }
-                        GST_ERROR ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
+                        GST_DEBUG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
                                    channel->source->current_audio_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref (channel->source->audio_ring[i])) != GST_FLOW_OK) {
@@ -426,7 +426,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                                 GST_LOG ("video enough, break for need data signal.");
                                 break;
                         }
-                        GST_ERROR ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
+                        GST_DEBUG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                                    i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
                                    channel->source->current_video_position);
                         if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
