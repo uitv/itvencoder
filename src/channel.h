@@ -38,7 +38,6 @@ struct _Source {
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
-        GMutex *restart_mutex;
         GstState state; /* state of the pipeline */
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
@@ -70,7 +69,6 @@ struct _Encoder {
         GstElement *pipeline;
         gint id;
         gchar *name;
-        GMutex *restart_mutex;
         GstState state; /* state of the pipeline */
         GstClockTime last_video_heartbeat;
         GstClockTime last_audio_heartbeat;
@@ -96,6 +94,8 @@ struct _Channel {
         GArray *encoder_array;
 
         GstClock *system_clock;
+        /* lock befor start, stop or restart encoder, source or channel. */
+        GMutex *operate_mutex; 
 };
 
 struct _ChannelClass {

@@ -175,8 +175,13 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         channel->source->sync_error_times += 1;
                         if (channel->source->sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
-                                channel_restart (channel);
-                                channel->source->sync_error_times = 0;
+                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                        channel_restart (channel);
+                                        channel->source->sync_error_times = 0;
+                                        g_mutex_unlock (channel->operate_mutex);
+                                } else {
+                                        GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                                }
                         }
                 } else {
                         channel->source->sync_error_times = 0;
@@ -192,7 +197,12 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 time_diff = GST_CLOCK_DIFF (now, channel->source->last_video_heartbeat);
                 if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
                         GST_ERROR ("video source heart beat error %lld, restart channel %s", time_diff, channel->name);
-                        channel_restart (channel); 
+                        if (g_mutex_trylock (channel->operate_mutex)) {
+                                channel_restart (channel);
+                                g_mutex_unlock (channel->operate_mutex);
+                        } else {
+                                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                        }
                 } else {
                         GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
                                   channel->name,
@@ -203,7 +213,12 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 time_diff = GST_CLOCK_DIFF (now, channel->source->last_audio_heartbeat);
                 if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
                         GST_ERROR ("audio source heart beat error %lld, restart channel %s", time_diff, channel->name);
-                        channel_restart (channel);
+                        if (g_mutex_trylock (channel->operate_mutex)) {
+                                channel_restart (channel);
+                                g_mutex_unlock (channel->operate_mutex);
+                        } else {
+                                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                        }
                 } else {
                         GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
                                   channel->name,
@@ -391,41 +406,50 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 } else if (request_data->parameters[0] == 's') {
                                         GST_WARNING ("Stop source");
-                                        for (i=0; i<channel->encoder_array->len; i++) {
-                                                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
-                                        }
-                                        if (channel_source_stop (channel->source) == 0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
+                                        if (g_mutex_trylock (channel->operate_mutex)) {
+                                                for (i=0; i<channel->encoder_array->len; i++) {
+                                                        channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
+                                                }
+                                                if (channel_source_stop (channel->source) == 0) {
+                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                } else {
+                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                }
+                                                g_mutex_unlock (channel->operate_mutex);
                                         }
                                         return 0;
                                 } else if (request_data->parameters[0] == 'p') {
                                         GST_WARNING ("Start source");
-                                        if (channel_source_start (channel->source) == 0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
+                                        if (g_mutex_trylock (channel->operate_mutex)) {
+                                                if (channel_source_start (channel->source) == 0) {
+                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                } else {
+                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                }
+                                                g_mutex_unlock (channel->operate_mutex);
                                         }
                                         return 0;
                                 } else if (request_data->parameters[0] == 'r') {
-                                        GST_WARNING ("Restart source");
-                                        if (channel_restart (channel) == 0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
+                                        GST_WARNING ("Restart channel");
+                                        if (g_mutex_trylock (channel->operate_mutex)) {
+                                                if (channel_restart (channel) == 0) {
+                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                } else {
+                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        write (request_data->sock, buf, strlen (buf));
+                                                        g_free (buf);
+                                                }
+                                                g_mutex_unlock (channel->operate_mutex);
                                         }
                                         return 0;
                                 } else {
@@ -463,38 +487,47 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         } else if (request_data->parameters[0] == 's') {
                                 GST_WARNING ("Stop endcoder");
-                                if (channel_encoder_stop (encoder) == 0) {
-                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
+                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                        if (channel_encoder_stop (encoder) == 0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        }
+                                        g_mutex_unlock (channel->operate_mutex);
                                 }
                                 return 0;
                         } else if (request_data->parameters[0] == 'p') {
                                 GST_WARNING ("Start endcoder");
-                                if (channel_encoder_start (encoder) ==0) {
-                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
+                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                        if (channel_encoder_start (encoder) ==0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        }
+                                        g_mutex_unlock (channel->operate_mutex);
                                 }
                                 return 0;
                         } else if (request_data->parameters[0] == 'r') {
                                 GST_WARNING ("Restart endcoder");
-                                if (channel_encoder_restart (encoder) ==0) {
-                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
+                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                        if (channel_encoder_restart (encoder) ==0) {
+                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        }
+                                        g_mutex_unlock (channel->operate_mutex);
                                 }
                                 return 0;
                         }

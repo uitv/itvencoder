@@ -58,9 +58,9 @@ channel_init (Channel *channel)
         GST_LOG ("channel object init");
 
         channel->system_clock = gst_system_clock_obtain ();
+        channel->operate_mutex = g_mutex_new ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = g_malloc (sizeof (Source)); //TODO free!
-        channel->source->restart_mutex = g_mutex_new ();
         channel->source->audio_caps = NULL;
         channel->source->video_caps = NULL;
         channel->source->sync_error_times = 0;
@@ -327,7 +327,7 @@ channel_source_pipeline_release (Source *source)
                         source->video_ring[i] = NULL;
                 }
         }
-        
+#if 0
         if (source->audio_caps != NULL) {
                 g_object_unref (source->audio_caps);
                 source->audio_caps = NULL;
@@ -337,7 +337,7 @@ channel_source_pipeline_release (Source *source)
                 g_object_unref (source->video_caps);
                 source->video_caps = NULL;
         }
-
+#endif
         gst_object_unref (source->pipeline);
         source->pipeline = NULL;
 }
@@ -487,8 +487,6 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
 
         encoder->bus_cb_user_data.type = 'e';
         encoder->bus_cb_user_data.user_data = encoder;
-
-        encoder->restart_mutex = g_mutex_new ();
 
         return 0;
 }
@@ -685,40 +683,10 @@ channel_source_start (Source *source)
 gint
 channel_restart (Channel *channel)
 {
-        gint i;
         Encoder *encoder;
-
-        for (i=0; i<channel->encoder_array->len; i++) {
-                /* lock all encoder of the channel. */
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                if (!g_mutex_trylock (encoder->restart_mutex)) {
-                        break;
-                }
-        }
-
-        if (i<channel->encoder_array->len) {
-                /* lock all encoder failure */
-                for (; i>=0; i--) {
-                        encoder = g_array_index (channel->encoder_array, gpointer, i);
-                        g_mutex_unlock (encoder->restart_mutex);
-                }
-                return 1;
-        }
-
-        if (!g_mutex_trylock (channel->source->restart_mutex)) {
-                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
-                return 1;
-        }
 
         channel_source_stop (channel->source);
         channel_source_start (channel->source);
-
-        for (i=0; i<channel->encoder_array->len; i++) {
-                /* unlock all encoder of the channel. */
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                g_mutex_unlock (encoder->restart_mutex);
-        }
-        g_mutex_unlock (channel->source->restart_mutex);
 
         return 0;
 }
@@ -745,15 +713,8 @@ channel_encoder_start (Encoder *encoder)
 gint
 channel_encoder_restart (Encoder *encoder)
 {
-        if (!g_mutex_trylock (encoder->restart_mutex)) {
-                GST_WARNING ("Try lock encoder %s restart lock failure!", encoder->name);
-                return 1;
-        }
-
         channel_encoder_stop (encoder);
         channel_encoder_start (encoder);
-
-        g_mutex_unlock (encoder->restart_mutex);
 
         return 0;
 }
