@@ -122,7 +122,7 @@ config_load_config_file_func (Config *config)
         json_decref(config->config); //TODO: should check
         config->config = json_load_file(config->config_file_path, 0, &error);
         if(!config->config) {
-                GST_ERROR("%d: %s\n", error.line, error.text);
+                GST_ERROR("%d: %s", error.line, error.text);
                 return -1;
         }
 
@@ -135,7 +135,7 @@ config_load_config_file_func (Config *config)
         if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
                 GST_ERROR ("Open channel config files failure.");
                 g_free (channel_configs_pattern);
-                return -2;
+                return -1;
         }
         for (i=0; i<channel_config_paths.gl_pathc; i++) { // TODO: name unique identifier check.
                 GST_DEBUG ("Find channel config file: %s.", channel_config_paths.gl_pathv[i]);
@@ -143,7 +143,7 @@ config_load_config_file_func (Config *config)
                 channel_config->config_path = g_strdup (channel_config_paths.gl_pathv[i]);
                 channel_config->config = json_load_file(channel_config->config_path, 0, &error);
                 if (!channel_config->config) { //TODO: error check, free allocated.
-                        GST_ERROR ("%d: %s\n", error.line, error.text);
+                        GST_ERROR ("%d: %s", error.line, error.text);
                         return -1;
                 }
                 g_array_append_val (config->channel_config_array, channel_config);
@@ -192,7 +192,7 @@ config_load_config_file (Config *config)
         GST_LOG ("config load config file");
 
         if (CONFIG_GET_CLASS(config)->config_load_config_file_func(config) == -1) {
-                GST_ERROR ("load config file error\n");
+                GST_ERROR ("load config file error");
                 return -1;
         }
 
