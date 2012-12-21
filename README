@@ -1,0 +1,9 @@
+requires:
+
+install gnome-common
+install autoconf
+install automake
+install libtool
+
+install gstreamer-devel
+install gstreamer-plugins-base-devel
