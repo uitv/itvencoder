@@ -288,14 +288,24 @@ itvencoder_start (ITVEncoder *itvencoder)
                         channel->name,
                         channel->encoder_array->len,
                         channel->source->pipeline_string);
-                channel_source_start (channel->source);
+                if (channel_source_start (channel->source) !=0 ) {
+                        GST_ERROR ("Fatal error! exit");
+                        exit (-1);
+                }
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);
-                        channel_encoder_start (encoder);
+                        if (channel_encoder_start (encoder) != 0) {
+                                GST_ERROR ("Fatal error! exit");
+                                exit (-1);
+                        }
                 }
         }
-        httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder);
+
+        if (httpserver_start (itvencoder->httpserver, request_dispatcher, itvencoder) != 0) {
+                GST_ERROR ("Start httpserver error!");
+                exit (-1);
+        }
 
         return 0;
 }

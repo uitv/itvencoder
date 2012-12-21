@@ -671,12 +671,15 @@ channel_source_start (Source *source)
         Channel *channel = source->channel;
         gint i;
 
-        channel_source_pipeline_initialize (source);
+        if (channel_source_pipeline_initialize (source) != 0) {
+                return -1;
+        }
+
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
         if (channel_source_appsink_get_caps (source->channel) != 0) {
                 GST_ERROR ("Get source caps failure!");
                 channel_source_pipeline_release (source);
-                return 1;
+                return -1;
         }
 
         for (i=0; i<channel->encoder_array->len; i++) {
