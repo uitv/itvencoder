@@ -213,8 +213,9 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->source->current_audio_position = i;
-                if (channel->source->audio_ring[i] != NULL)
+                if (channel->source->audio_ring[i] != NULL) {
                         gst_buffer_unref (channel->source->audio_ring[i]);
+                }
                 channel->source->audio_ring[i] = buffer;
                 channel->source->current_audio_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
@@ -224,8 +225,9 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
                 channel->source->current_video_position = i;
-                if (channel->source->video_ring[i] != NULL)
+                if (channel->source->video_ring[i] != NULL) {
                         gst_buffer_unref (channel->source->video_ring[i]);
+                }
                 channel->source->video_ring[i] = buffer;
                 channel->source->current_video_timestamp = GST_BUFFER_TIMESTAMP (buffer);
                 break;
