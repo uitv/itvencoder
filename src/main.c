@@ -87,6 +87,7 @@ main(int argc, char *argv[])
         pid_t process_id = 0;
         gint status;
         gint8 exit_status;
+        gint ret;
 
         GOptionEntry options[] = {
                 {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
@@ -109,8 +110,9 @@ main(int argc, char *argv[])
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
         _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
-        if (log_set_log_handler (_log) != 0) {
-                exit (1);
+        ret = log_set_log_handler (_log);
+        if (ret != 0) {
+                exit (ret);
         }
 
         if (!foreground) { /* run in background */

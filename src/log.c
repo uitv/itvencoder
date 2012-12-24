@@ -154,9 +154,13 @@ log_set_log_handler (Log *log)
                 return 1;
         }
         log->log_hd = g_fopen (log->log_path, "a");
-        gst_debug_add_log_function (log_func, &(log->log_hd));
-
-        return 0;
+        if (log->log_hd == NULL) {
+                GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
+                return -1;
+        } else {
+                gst_debug_add_log_function (log_func, &(log->log_hd));
+                return -1;
+        }
 }
 
 gint
