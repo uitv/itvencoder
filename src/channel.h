@@ -8,8 +8,8 @@
 
 #include <gst/gst.h>
 
-#define AUDIO_RING_SIZE 256 //TODO: configuration or computer from codec type.
-#define VIDEO_RING_SIZE 128
+#define AUDIO_RING_SIZE 512 //TODO: configuration or computer from codec type.
+#define VIDEO_RING_SIZE 250
 #define OUTPUT_RING_SIZE (16*348) // 348*188 = 65424 ~= 64k
 
 typedef struct _Source Source;
