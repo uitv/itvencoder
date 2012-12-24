@@ -159,7 +159,7 @@ log_set_log_handler (Log *log)
                 return -1;
         } else {
                 gst_debug_add_log_function (log_func, &(log->log_hd));
-                return -1;
+                return 0;
         }
 }
 
