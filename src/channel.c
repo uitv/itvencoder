@@ -684,10 +684,6 @@ channel_source_start (Source *source)
                 return -1;
         }
 
-        for (i=0; i<channel->encoder_array->len; i++) {
-                channel_encoder_start (g_array_index (channel->encoder_array, gpointer, i));
-        }
-
         return 0;
 }
 
