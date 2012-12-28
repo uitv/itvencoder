@@ -149,11 +149,13 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         BusCallbackUserData *bus_cb_user_data = data;
         Source *source;
         Encoder *encoder;
+        GstClock *clock;
 
         if (bus_cb_user_data->type == 's') {
                 source = bus_cb_user_data->user_data;
         } else  if (bus_cb_user_data->type == 'e') {
                 encoder = bus_cb_user_data->user_data;
+                source = encoder->channel->source;
         }
 
         switch (GST_MESSAGE_TYPE (msg)) {
@@ -185,10 +187,19 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                 gst_message_parse_stream_status (msg, &type, NULL);
                 GST_INFO ("stream status %d", type);
                 break;
+        case GST_MESSAGE_NEW_CLOCK:
+                if (bus_cb_user_data->type == 's') {
+                        gst_message_parse_new_clock (msg, &source->clock);
+                        GST_INFO ("New source clock %s", GST_OBJECT_NAME (source->clock));
+                } else if (bus_cb_user_data->type == 'e') {
+                        gst_message_parse_new_clock (msg, &clock);
+                        GST_INFO ("New encoder clock %s", GST_OBJECT_NAME (clock));
+                }
+                break;
         default:
                 if (bus_cb_user_data->type == 's') {
                         GST_INFO ("%s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
-                } else  if (bus_cb_user_data->type == 'e') {
+                } else if (bus_cb_user_data->type == 'e') {
                         GST_INFO ("%s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
                 }
         }
