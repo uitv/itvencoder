@@ -350,8 +350,8 @@ accept_socket (HTTPServer *http_server)
                                 GST_WARNING ("No NONE request, refuse this request.");
                                 close_socket_gracefully (accepted_sock);
                         } else {
-                                GST_DEBUG ("pop up request data, sock %d", accepted_sock);
                                 request_data = *request_data_pointer;
+                                GST_DEBUG ("pop up request data, sock %d, events %d", accepted_sock, request_data->events);
                                 request_data->client_addr = in_addr;
                                 request_data->sock = accepted_sock;
                                 request_data->birth_time = gst_clock_get_time (http_server->system_clock);
@@ -365,6 +365,7 @@ accept_socket (HTTPServer *http_server)
                                         close_socket_gracefully (accepted_sock);
                                         request_data->status = HTTP_NONE;
                                         g_mutex_lock (http_server->request_data_queue_mutex);
+                                        request_data->events = 0;
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                                         g_mutex_unlock (http_server->request_data_queue_mutex);
                                         return;
@@ -459,7 +460,7 @@ listen_thread (gpointer data)
                                 request_data->events |= event_list[i].events;
                                 g_mutex_unlock (request_data->events_mutex);
                                 if ((event_list[i].events & EPOLLIN) && (request_data->status == HTTP_CONNECTED)) {
-                                        GST_DEBUG ("event on sock %d events EPOLLIN", request_data->sock);
+                                        GST_DEBUG ("event on sock %d events %d", request_data->sock, request_data->events);
                                         request_data->status = HTTP_REQUEST;
                                         g_thread_pool_push (http_server->thread_pool, event_list[i].data.ptr, &e);
                                         if (e != NULL) { // FIXME
@@ -644,6 +645,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
                         g_mutex_lock (http_server->request_data_queue_mutex);
+                        request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                         return;
@@ -671,6 +673,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 request_data->status = HTTP_NONE;
                                 close_socket_gracefully (request_data->sock);
                                 g_mutex_lock (http_server->request_data_queue_mutex);
+                                request_data->events = 0;
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                                 g_mutex_unlock (http_server->request_data_queue_mutex);
                         }
@@ -689,6 +692,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
                         g_mutex_lock (http_server->request_data_queue_mutex);
+                        request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
@@ -731,20 +735,21 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
                         g_mutex_lock (http_server->request_data_queue_mutex);
+                        request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
-                GST_WARNING ("request finish %d", request_data->sock);
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                GST_WARNING ("request finish %d callback return %d", request_data->sock, cb_ret);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
-                        GST_ERROR ("finsih , usercallback return value is 0, sock is %d", request_data->sock);
                         g_mutex_lock (http_server->request_data_queue_mutex);
+                        request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
