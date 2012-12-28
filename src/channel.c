@@ -702,9 +702,18 @@ gint
 channel_restart (Channel *channel)
 {
         Encoder *encoder;
+        gint i;
 
+        for (i=0; i<channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                channel_encoder_stop (encoder);
+        }
         channel_source_stop (channel->source);
         channel_source_start (channel->source);
+        for (i=0; i<channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                channel_encoder_start (encoder);
+        }
 
         return 0;
 }
