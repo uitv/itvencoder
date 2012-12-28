@@ -189,8 +189,8 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                 break;
         case GST_MESSAGE_NEW_CLOCK:
                 if (bus_cb_user_data->type == 's') {
-                        gst_message_parse_new_clock (msg, &source->clock);
-                        GST_INFO ("New source clock %s", GST_OBJECT_NAME (source->clock));
+                        gst_message_parse_new_clock (msg, &clock);
+                        GST_INFO ("New source clock %s", GST_OBJECT_NAME (clock));
                 } else if (bus_cb_user_data->type == 'e') {
                         gst_message_parse_new_clock (msg, &clock);
                         GST_INFO ("New encoder clock %s", GST_OBJECT_NAME (clock));
