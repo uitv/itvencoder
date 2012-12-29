@@ -139,6 +139,37 @@ channel_get_type (void)
         return type;
 }
 
+static void
+print_one_tag (const GstTagList * list, const gchar * tag, gpointer user_data)
+{
+        int i, num;
+
+        num = gst_tag_list_get_tag_size (list, tag);
+
+        for (i = 0; i < num; ++i) {
+                const GValue *val;
+
+                /* Note: when looking for specific tags, use the g_tag_list_get_xyz() API,
+                * we only use the GValue approach here because it is more generic */
+                val = gst_tag_list_get_value_index (list, tag, i);
+                if (G_VALUE_HOLDS_STRING (val)) {
+                        GST_INFO ("%20s : %s", tag, g_value_get_string (val));
+                } else if (G_VALUE_HOLDS_UINT (val)) {
+                        GST_INFO ("%20s : %u", tag, g_value_get_uint (val));
+                } else if (G_VALUE_HOLDS_DOUBLE (val)) {
+                        GST_INFO ("%20s : %g", tag, g_value_get_double (val));
+                } else if (G_VALUE_HOLDS_BOOLEAN (val)) {
+                        GST_INFO ("%20s : %s", tag, (g_value_get_boolean (val)) ? "true" : "false");
+                } else if (GST_VALUE_HOLDS_BUFFER (val)) {
+                        GST_INFO ("%20s : buffer of size %u", tag, GST_BUFFER_SIZE (gst_value_get_buffer (val)));
+                } else if (GST_VALUE_HOLDS_DATE (val)) {
+                        GST_INFO ("%20s : date (year=%u,...)", tag, g_date_get_year (gst_value_get_date (val)));
+                } else {
+                        GST_INFO ("%20s : tag of type '%s'", tag, G_VALUE_TYPE_NAME (val));
+                }
+        }
+}
+
 static gboolean
 bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
 {
@@ -150,6 +181,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         Source *source;
         Encoder *encoder;
         GstClock *clock;
+        GstTagList *tags;
 
         if (bus_cb_user_data->type == 's') {
                 source = bus_cb_user_data->user_data;
@@ -161,6 +193,11 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS:
                 GST_INFO ("End of stream\n");
+                break;
+        case GST_MESSAGE_TAG:
+                GST_INFO ("TAG");
+                gst_message_parse_tag (msg, &tags);
+                gst_tag_list_foreach (tags, print_one_tag, NULL);
                 break;
         case GST_MESSAGE_ERROR: 
                 gst_message_parse_error (msg, &error, &debug);
