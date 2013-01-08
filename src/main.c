@@ -109,12 +109,6 @@ main(int argc, char *argv[])
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
-        _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
-        ret = log_set_log_handler (_log);
-        if (ret != 0) {
-                exit (ret);
-        }
-
         if (!foreground) { /* run in background */
 
                 /* daemon */
@@ -123,6 +117,12 @@ main(int argc, char *argv[])
                         exit (-1);
                 }
         
+                _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
+                ret = log_set_log_handler (_log);
+                if (ret != 0) {
+                        exit (ret);
+                }
+
                 if (create_pid_file () != 0) { //FIXME remove when process exit
                         exit (1);
                 }
