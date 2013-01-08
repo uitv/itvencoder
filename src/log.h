@@ -7,7 +7,6 @@
 #define __LOG_H__
 
 #include <gst/gst.h>
-#include "version.h"
 
 typedef struct _Log      Log;
 typedef struct _LogClass LogClass;
