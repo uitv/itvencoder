@@ -8,7 +8,8 @@
 
 #include <gst/gst.h>
 
-#include "version.h"
+#include "config.h"
+
 #include "configure.h"
 #include "channel.h"
 #include "httpserver.h"

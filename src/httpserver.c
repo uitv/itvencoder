@@ -686,7 +686,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 } else {
                         /* Bad Request */
                         GST_ERROR ("Bad request, return is %d, sock is %d", ret, request_data->sock);
-                        gchar *buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
+                        gchar *buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         request_data->status = HTTP_NONE;

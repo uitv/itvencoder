@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <gst/gst.h>
 
-#include "version.h"
+#include "config.h"
 
 #define http_500 "HTTP/1.1 500 Internal Server Error\r\n" \
                  "Server: %s-%s\r\n" \

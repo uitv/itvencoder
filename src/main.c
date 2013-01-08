@@ -57,7 +57,7 @@ print_version_info ()
                 nano_str = "(Prerelease)";
         else
                 nano_str = "";
-        GST_INFO ("%s version : %s", ENCODER_NAME, ENCODER_VERSION);
+        GST_INFO ("%s version : %s", PACKAGE_NAME, PACKAGE_VERSION);
         GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 }
 

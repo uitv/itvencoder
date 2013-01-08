@@ -410,7 +410,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                         if (encoder == NULL) {
                                 channel = get_channel (request_data->uri, itvencoder);
                                 if (channel == NULL) {
-                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
@@ -421,11 +421,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                                         channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
                                                 }
                                                 if (channel_source_stop (channel->source) == 0) {
-                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 } else {
-                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 }
@@ -436,11 +436,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         GST_WARNING ("Start source");
                                         if (g_mutex_trylock (channel->operate_mutex)) {
                                                 if (channel_source_start (channel->source) == 0) {
-                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 } else {
-                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 }
@@ -451,11 +451,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         GST_WARNING ("Restart channel");
                                         if (g_mutex_trylock (channel->operate_mutex)) {
                                                 if (channel_restart (channel) == 0) {
-                                                        buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 } else {
-                                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
                                                 }
@@ -463,7 +463,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         }
                                         return 0;
                                 } else {
-                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
@@ -473,13 +473,13 @@ request_dispatcher (gpointer data, gpointer user_data)
                             (request_data->parameters[0] == 'b')) { /* ?bitrate= */
                                 GST_INFO ("Play command");
                                 if (encoder->state != GST_STATE_PLAYING) {
-                                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
                                 }
                                 if (encoder->current_output_position == -1) {
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
@@ -487,7 +487,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                                 if (request_user_data == NULL) {
                                         GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
-                                        buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
@@ -501,7 +501,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
                                 }
                                 request_data->user_data = request_user_data;
-                                buf = g_strdup_printf (http_chunked, ENCODER_NAME, ENCODER_VERSION);
+                                buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                                 return gst_clock_get_time (itvencoder->system_clock)  + GST_MSECOND; // 50ms
@@ -509,11 +509,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 GST_WARNING ("Stop endcoder");
                                 if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_stop (encoder) == 0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
@@ -524,11 +524,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 GST_WARNING ("Start endcoder");
                                 if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_start (encoder) ==0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
@@ -539,11 +539,11 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 GST_WARNING ("Restart endcoder");
                                 if (g_mutex_trylock (encoder->channel->operate_mutex)) {
                                         if (channel_encoder_restart (encoder) ==0) {
-                                                buf = g_strdup_printf (http_200, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         } else {
-                                                buf = g_strdup_printf (http_500, ENCODER_NAME, ENCODER_VERSION);
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
@@ -552,12 +552,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         }
                 case 'i': /* uri is /itvencoder/..... */
-                        buf = g_strdup_printf (itvencoder_ver, ENCODER_NAME, ENCODER_VERSION, sizeof (ENCODER_NAME) + sizeof (ENCODER_VERSION) + 1, ENCODER_NAME, ENCODER_VERSION); 
+                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, sizeof (PACKAGE_NAME) + sizeof (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0; 
                 default:
-                        buf = g_strdup_printf (http_404, ENCODER_NAME, ENCODER_VERSION);
+                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0;
@@ -634,7 +634,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                 return 0;
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
-                buf = g_strdup_printf (http_400, ENCODER_NAME, ENCODER_VERSION);
+                buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                 write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
                 return 0;
