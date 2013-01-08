@@ -6,7 +6,7 @@
 #include <gst/gst.h>
 #include <glob.h>
 
-#include "config.h"
+#include "configure.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
