@@ -233,6 +233,15 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                         GST_INFO ("New encoder clock %s", GST_OBJECT_NAME (clock));
                 }
                 break;
+        case GST_MESSAGE_ASYNC_DONE:
+                /*Posted by elements when they complete an ASYNC GstStateChange.*/
+                if (bus_cb_user_data->type == 's') {
+                        GST_ERROR ("source %s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
+                } else if (bus_cb_user_data->type == 'e') {
+                        GST_ERROR ("encoder %s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
+                        gst_bin_recalculate_latency (GST_BIN (encoder->pipeline));
+                }
+                break;
         default:
                 if (bus_cb_user_data->type == 's') {
                         GST_INFO ("%s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
