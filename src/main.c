@@ -109,6 +109,7 @@ main(int argc, char *argv[])
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
+        gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         if (!foreground) { /* run in background */
 
                 /* daemon */
