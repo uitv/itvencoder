@@ -495,10 +495,10 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data->last_send_count = 0;
                                 request_user_data->encoder = encoder;
                                 if ( encoder->current_output_position < 348) {
-                                        request_user_data->current_send_position = 0;
+                                        request_user_data->current_send_position = 348;
                                 } else {
                                         request_user_data->current_send_position = encoder->current_output_position - 348; /*real time*/
-                                        request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
+                                        request_user_data->current_send_position = (request_user_data->current_send_position / 348 + 1) * 348;
                                 }
                                 request_data->user_data = request_user_data;
                                 buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
