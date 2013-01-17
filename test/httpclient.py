@@ -1,56 +1,36 @@
+import socket
 import httplib
 import time
 import string
 
-ReadSize = 1900*1024
-
-def decode_chunked(data):
-    offset = 0
-    offset = string.index(data, '\r\n') + 4
-    print offset
+ReadSize = 190*1024
 
 def fetch_data(server, port, location, size):
-    t1 = time.time()
-    try:
-        conn = httplib.HTTPConnection(server, port)
-    except:
-        print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "Connect %s:%d error" % (server, port)
-        return
-
-    try:
-        conn.request("GET", location)
-    except:
-        print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "GET %s:%d%s error" % (server, port, location)
-        conn.close
-        return
-
-    try:
-        resp = conn.getresponse()
-    except:
-        print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "get response %s:%d%s error" % (server, port, location)
-        conn.close()
-        return
-
-    if resp.status == 200:
+    attempts = 5
+    while True:
         try:
-            data = resp.read (size)
-            t2 = time.time()
-            if t2-t1>9:
-                name = time.strftime("%b%d%H%M%S", time.gmtime())
-                open(name, "w+").write(data)
-                data = resp.read(1024*1024*2)
-                open(name).wirte(data)
-        except:
-            print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read data %s:%d%s error" % (server, port, location)
-            conn.close
-            return
-        conn.close
-        t2 = time.time()
-        if not (len(data) == ReadSize) or t2-t1 > 2:
-            print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason, "size", len(data), "time", t2-t1
-            #open(time.strftime("%b%d%H%M%S", time.gmtime()), 'w+').write(data)
-    else:
-        print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason
+            t1 = time.time()
+            conn = httplib.HTTPConnection(server, port)
+            conn.request("GET", location)
+            resp = conn.getresponse()
+            if resp.status == 200:
+                data = resp.read (size)
+                t2 = time.time()
+                conn.close()
+                if not (len(data) == ReadSize) or t2-t1 > 1:
+                    print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason, "size", len(data), "time", t2-t1
+            break
+        except socket.error, msg:
+            print "socket error %s" % msg
+        except httplib.HTTPException, msg:
+            print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read data %s:%d%s, error %s" % (server, port, location, msg)
+            attempts -= 1
+            if attempts == 0:
+                raise
+            else:
+                print "try %d times" % (5-attempts)
+                time.sleep(1)
+                continue
 
 while True:
     fetch_data("192.168.2.11", 20129, "/channel/0/encoder/0", ReadSize)
