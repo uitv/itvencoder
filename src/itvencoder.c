@@ -484,6 +484,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
+                                if (encoder->output_count < OUTPUT_RING_SIZE) {
+                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
                                 request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                                 if (request_user_data == NULL) {
                                         GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
@@ -494,12 +500,8 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 }
                                 request_user_data->last_send_count = 0;
                                 request_user_data->encoder = encoder;
-                                if ( encoder->current_output_position < 348) {
-                                        request_user_data->current_send_position = 348;
-                                } else {
-                                        request_user_data->current_send_position = encoder->current_output_position - 348; /*real time*/
-                                        request_user_data->current_send_position = (request_user_data->current_send_position / 348 + 1) * 348;
-                                }
+                                request_user_data->current_send_position = (encoder->current_output_position + OUTPUT_RING_SIZE/2) % OUTPUT_RING_SIZE;
+                                request_user_data->current_send_position = (request_user_data->current_send_position / 348) * 348;
                                 request_data->user_data = request_user_data;
                                 buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
