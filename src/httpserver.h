@@ -42,7 +42,10 @@
 #define http_chunked "HTTP/1.1 200 OK\r\n" \
                      "Content-Type: video/mpeg\r\n" \
                      "Server: %s-%s\r\n" \
-                     "Transfer-Encoding: chunked\r\n\r\n"
+                     "Connection: Close\r\n" \
+                     "Transfer-Encoding: chunked\r\n" \
+                     "Pragma: no-cache\r\n" \
+                     "Cache-Control: no-cache, no-store, must-revalidate\r\n\r\n"
 
 #define itvencoder_ver "HTTP/1.1 200 OK\r\n" \
                        "Server: %s-%s\r\n" \
