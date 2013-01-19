@@ -601,10 +601,14 @@ block_thread (gpointer data)
         GTimeVal timeout_time;
 
         for (;;) {
-                g_get_current_time (&timeout_time);
-                timeout_time.tv_sec += 5;
                 g_mutex_lock (http_server->block_queue_mutex);
+                g_get_current_time (&timeout_time);
+                g_time_val_add (&timeout_time, 10000);
                 g_cond_timed_wait (http_server->block_queue_cond, http_server->block_queue_mutex, &timeout_time);
+                if (g_queue_get_length (http_server->block_queue) == 0) {
+                        g_mutex_unlock (http_server->block_queue_mutex);
+                        continue;
+                }
                 g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
                 g_mutex_unlock (http_server->block_queue_mutex);
         }
@@ -697,7 +701,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
-                cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                do {
+                        request_data->events ^= EPOLLOUT;
+                        cb_ret = http_server->user_callback (request_data, http_server->user_data);
+                } while ((cb_ret == GST_CLOCK_TIME_NONE) && (request_data->events & EPOLLOUT));
                 if (cb_ret == GST_CLOCK_TIME_NONE) {
                         g_mutex_lock (http_server->block_queue_mutex);
                         request_data->status = HTTP_BLOCK;
