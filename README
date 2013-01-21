@@ -42,3 +42,8 @@ easy_install supervisor
 启动supervisor
 supervisor
 
+直接运行iTVEncoder
+iTVEncoder的log需要对logrotate进行配置。
+需要配置logrotate。
+依照conf/crontab的内容修改/etc/crontab。
+把itvencoder.logrotate拷贝到/etc/logrotate.d/itvencoder
