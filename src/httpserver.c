@@ -701,10 +701,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_mutex_unlock (http_server->request_data_queue_mutex);
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
-                do {
-                        request_data->events ^= EPOLLOUT;
-                        cb_ret = http_server->user_callback (request_data, http_server->user_data);
-                } while ((cb_ret == GST_CLOCK_TIME_NONE) && (request_data->events & EPOLLOUT));
+                cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == GST_CLOCK_TIME_NONE) {
                         g_mutex_lock (http_server->block_queue_mutex);
                         request_data->status = HTTP_BLOCK;
