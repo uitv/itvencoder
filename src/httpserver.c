@@ -605,10 +605,6 @@ block_thread (gpointer data)
                 g_get_current_time (&timeout_time);
                 g_time_val_add (&timeout_time, 10000);
                 g_cond_timed_wait (http_server->block_queue_cond, http_server->block_queue_mutex, &timeout_time);
-                if (g_queue_get_length (http_server->block_queue) == 0) {
-                        g_mutex_unlock (http_server->block_queue_mutex);
-                        continue;
-                }
                 g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
                 g_mutex_unlock (http_server->block_queue_mutex);
         }
@@ -820,9 +816,10 @@ httpserver_report_request_data (HTTPServer *http_server)
         g_mutex_lock (http_server->request_data_queue_mutex);
         request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
         g_mutex_unlock (http_server->request_data_queue_mutex);
-        GST_INFO ("status None %d, request queue length %d, total click %llu, encoder click %llu",
+        GST_INFO ("status None %d, request queue length %d, blockq %d, total click %llu, encoder click %llu",
                   count,
                   request_data_queue_len,
+                  g_queue_get_length (http_server->block_queue),
                   http_server->total_click,
                   http_server->encoder_click);
 }
