@@ -10,7 +10,7 @@
 
 #define AUDIO_RING_SIZE 1024 //TODO: configuration or computer from codec type.
 #define VIDEO_RING_SIZE 500
-#define OUTPUT_RING_SIZE (2*250) // 348*188 = 65424 ~= 64k
+#define OUTPUT_RING_SIZE (4*250) // 348*188 = 65424 ~= 64k
 
 typedef struct _Source Source;
 typedef struct _Encoder Encoder;

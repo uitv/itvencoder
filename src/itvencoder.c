@@ -613,7 +613,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                         } else if (ret < (iov[0].iov_len + iov[1].iov_len + iov[2].iov_len)) {
                                 request_user_data->last_send_count += ret;
                                 g_free (chunksize);
-                                return GST_CLOCK_TIME_NONE;
+                                return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
                         }
                         g_free (chunksize);
                         request_user_data->last_send_count = 0;
