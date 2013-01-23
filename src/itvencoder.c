@@ -373,7 +373,6 @@ typedef struct _RequestDataUserData {
         gint current_send_position;
         gint last_send_count;
         gpointer encoder;
-        guint64 send_count;
 } RequestDataUserData;
 
 /**
@@ -392,64 +391,13 @@ request_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
-        gint i = 0, j, ret;
+        int i = 0, j, ret;
         Encoder *encoder;
         Channel *channel;
         GstBuffer *buffer;
         RequestDataUserData *request_user_data;
         gchar *chunksize;
-        gchar pat[] = {
-                        0x47, 0x40, 0x00, 0x3e, 0xa6, 0x00, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0x00, 0x00, 0xb0, 0x0d, 0x00,
-                        0x01, 0xc1, 0x00, 0x00, 0x00, 0x01, 0xe0, 0x10,
-                        0x76, 0xf1, 0x44, 0xd1
-                      };
-        gchar pmt[] = {
-                        0x47, 0x40, 0x10, 0x3e, 0x86, 0x00, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-                        0xff, 0xff, 0xff, 0x00, 0x02, 0xb0, 0x2d, 0x00,
-                        0x01, 0xc1, 0x00, 0x00, 0xe0, 0x40, 0xf0, 0x0c,
-                        0x05, 0x04, 0x48, 0x44, 0x4d, 0x56, 0x88, 0x04,
-                        0x0f, 0xff, 0xfc, 0xfc, 0x1b, 0xe0, 0x41, 0xf0,
-                        0x0a, 0x05, 0x08, 0x48, 0x44, 0x4d, 0x56, 0xff,
-                        0x1b, 0x44, 0x3f, 0x0f, 0xe0, 0x40, 0xf0, 0x00,
-                        0x4c, 0x37, 0x61, 0x8b
-                      };
+        struct iovec iov[3];
 
         GST_LOG ("hello");
 
@@ -536,7 +484,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
-                                if (encoder->output_count < 2) { // pre buffer at least two gop
+                                if (encoder->output_count < OUTPUT_RING_SIZE) {
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
@@ -551,9 +499,12 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 }
                                 request_user_data->last_send_count = 0;
-                                request_user_data->send_count = 0;
                                 request_user_data->encoder = encoder;
-                                request_user_data->current_send_position = (encoder->current_output_position + (OUTPUT_RING_SIZE - 1)) % OUTPUT_RING_SIZE;
+                                /* should send a IDR with pat and pmt first */
+                                request_user_data->current_send_position = (encoder->current_output_position + 25) % OUTPUT_RING_SIZE;
+                                while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
+                                        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % OUTPUT_RING_SIZE;
+                                }
                                 request_data->user_data = request_user_data;
                                 buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
@@ -631,42 +582,38 @@ request_dispatcher (gpointer data, gpointer user_data)
                         if (i == encoder->current_output_position) { // catch up encoder output.
                                 break;
                         }
-                        if (request_user_data->send_count == 0) {
-                                chunksize = g_strdup_printf ("%x\r\n", 188+188);
-                                write (request_data->sock, chunksize, strlen(chunksize));
-                                write (request_data->sock, &pat[0], 188);
-                                write (request_data->sock, &pmt[0], 188);
-                                write (request_data->sock, "\r\n", 2);
-                        }
                         chunksize = g_strdup_printf("%x\r\n", GST_BUFFER_SIZE (encoder->output_ring[i]));
                         if (request_user_data->last_send_count < strlen (chunksize)) {
-                                ret = write (request_data->sock, chunksize + request_user_data->last_send_count, strlen (chunksize) - request_user_data->last_send_count);
+                                iov[0].iov_base = chunksize + request_user_data->last_send_count;
+                                iov[0].iov_len = strlen (chunksize) - request_user_data->last_send_count;
+                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
+                                iov[1].iov_len = GST_BUFFER_SIZE (encoder->output_ring[i]);
+                                iov[2].iov_base = "\r\n";
+                                iov[2].iov_len = 2;
                         } else if (request_user_data->last_send_count < (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
-                                gint count;
-                                gchar *buf;
-                                buf = GST_BUFFER_DATA (encoder->output_ring[i]) + (request_user_data->last_send_count - strlen (chunksize));
-                                count = 64240;
-                                if (GST_BUFFER_SIZE (encoder->output_ring[i]) - (request_user_data->last_send_count - strlen (chunksize)) < 64240) {
-                                        count = GST_BUFFER_SIZE (encoder->output_ring[i]) - (request_user_data->last_send_count - strlen (chunksize));
-                                }
-                                ret = write (request_data->sock, buf, count);
+                                iov[0].iov_base = NULL;
+                                iov[0].iov_len = 0;
+                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]) + (request_user_data->last_send_count - strlen (chunksize));
+                                iov[1].iov_len = GST_BUFFER_SIZE (encoder->output_ring[i]) - (request_user_data->last_send_count - strlen (chunksize));
+                                iov[2].iov_base = "\r\n";
+                                iov[2].iov_len = 2;
                         } else if (request_user_data->last_send_count > (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
-                                ret = write (request_data->sock, "\n", 1);
+                                iov[0].iov_base = NULL;
+                                iov[0].iov_len = 0;
+                                iov[1].iov_base = NULL;
+                                iov[1].iov_len = 0;
+                                iov[2].iov_base = "\n";
+                                iov[2].iov_len = 1;
                         }
+                        ret = writev (request_data->sock, iov, 3);
                         if (ret == -1) {
                                 GST_WARNING ("write error %s", g_strerror (errno));
                                 g_free (chunksize);
                                 return GST_CLOCK_TIME_NONE;
-                        } else if (ret < (strlen(chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]) + 2 - request_user_data->last_send_count)) {
-                                GST_WARNING ("write len %d, %llu", ret, (10000000000llu*ret)/GST_BUFFER_SIZE (encoder->output_ring[i]));
+                        } else if (ret < (iov[0].iov_len + iov[1].iov_len + iov[2].iov_len)) {
                                 request_user_data->last_send_count += ret;
-                                request_user_data->send_count += ret;
                                 g_free (chunksize);
-                                if (request_user_data->send_count > 1000000) {
-                                        return gst_clock_get_time (itvencoder->system_clock) + (10000000000llu*ret)/GST_BUFFER_SIZE (encoder->output_ring[i]);
-                                } else {
-                                        return gst_clock_get_time (itvencoder->system_clock) + 100 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
-                                }
+                                return GST_CLOCK_TIME_NONE;
                         }
                         g_free (chunksize);
                         request_user_data->last_send_count = 0;
