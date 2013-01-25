@@ -33,9 +33,10 @@ def fetch_data(server, port, location, size):
                         break
                     readsize = len(data)
                     print "read size %d, should read %d" % (readsize, ReadSize)
+                    break;
                 t2 = time.time()
                 conn.close()
-                if not (len(data) == ReadSize) or t2-t1 > 0.01:
+                if not (len(data) == ReadSize) or t2-t1 > 1:
                     print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason, "size", len(data), "time", t2-t1
             break
         except socket.error, msg:
@@ -58,7 +59,6 @@ while True:
     fetch_data("192.168.2.11", 20129, "/channel/1/encoder/1", ReadSize)
     fetch_data("192.168.2.11", 20129, "/channel/2/encoder/0", ReadSize)
     fetch_data("192.168.2.11", 20129, "/channel/2/encoder/1", ReadSize)
-    """
     fetch_data("192.168.2.10", 20129, "/channel/0/encoder/0", ReadSize)
     fetch_data("192.168.2.10", 20129, "/channel/0/encoder/1", ReadSize)
     fetch_data("192.168.2.10", 20129, "/channel/0/encoder/2", ReadSize)
@@ -67,4 +67,5 @@ while True:
     fetch_data("192.168.2.10", 20129, "/channel/1/encoder/1", ReadSize)
     fetch_data("192.168.2.10", 20129, "/channel/1/encoder/2", ReadSize)
     fetch_data("192.168.2.10", 20129, "/channel/1/encoder/3", ReadSize)
+    """
     fetch_data("192.168.2.9", 20129, "/channel/0/encoder/0", ReadSize)
