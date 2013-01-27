@@ -403,7 +403,7 @@ request_dispatcher (gpointer data, gpointer user_data)
 
         switch (request_data->status) {
         case HTTP_REQUEST:
-                GST_INFO ("socket is %d uri is %s", request_data->sock, request_data->uri);
+                GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
                         encoder = get_encoder (request_data->uri, itvencoder);
@@ -506,6 +506,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                         request_user_data->current_send_position = (request_user_data->current_send_position + 1) % OUTPUT_RING_SIZE;
                                 }
                                 request_data->user_data = request_user_data;
+                                request_data->bytes_send = 0;
                                 buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
@@ -607,14 +608,16 @@ request_dispatcher (gpointer data, gpointer user_data)
                         }
                         ret = writev (request_data->sock, iov, 3);
                         if (ret == -1) {
-                                GST_WARNING ("write error %s", g_strerror (errno));
+                                GST_WARNING ("write error %s sock %d", g_strerror (errno), request_data->sock);
                                 g_free (chunksize);
                                 return GST_CLOCK_TIME_NONE;
                         } else if (ret < (iov[0].iov_len + iov[1].iov_len + iov[2].iov_len)) {
                                 request_user_data->last_send_count += ret;
+                                request_data->bytes_send += ret;
                                 g_free (chunksize);
                                 return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
                         }
+                        request_data->bytes_send += ret;
                         g_free (chunksize);
                         request_user_data->last_send_count = 0;
                         i = (i + 1) % OUTPUT_RING_SIZE;

@@ -82,6 +82,7 @@ httpserver_init (HTTPServer *http_server)
         for (i=0; i<kMaxRequests; i++) {
                 request_data = (RequestData *)g_malloc (sizeof (RequestData));
                 request_data->events_mutex = g_mutex_new ();
+                request_data->id = i;
                 http_server->request_data_pointers[i] = request_data;
                 g_queue_push_head (http_server->request_data_queue, &http_server->request_data_pointers[i]);
         }
@@ -185,7 +186,7 @@ read_request (RequestData *request_data)
                                 GST_ERROR ("read error %s", g_strerror (errno));
                                 return -1;
                         } else { /* errno == EAGAIN means read complete */
-                                GST_INFO ("read complete\n");
+                                GST_DEBUG ("read complete");
                                 break;
                         }
                 } else if (count == 0) { /* closed by client */
@@ -351,7 +352,9 @@ accept_socket (HTTPServer *http_server)
                                 close_socket_gracefully (accepted_sock);
                         } else {
                                 request_data = *request_data_pointer;
-                                GST_DEBUG ("pop up request data, sock %d, events %d", accepted_sock, request_data->events);
+                                GST_DEBUG ("pop up request data, id %d, sock %d, events %d", request_data->id, accepted_sock, request_data->events);
+                                /* clear events, there may be events from last request. */
+                                request_data->events = 0;
                                 request_data->client_addr = in_addr;
                                 request_data->sock = accepted_sock;
                                 request_data->birth_time = gst_clock_get_time (http_server->system_clock);
@@ -476,6 +479,9 @@ listen_thread (gpointer data)
                                         }
                                 }
 
+                                if (event_list[i].events & EPOLLIN) {
+                                        GST_DEBUG ("event on sock %d events EPOLLIN", request_data->sock);
+                                }
                                 if (event_list[i].events & EPOLLOUT) {
                                         GST_DEBUG ("event on sock %d events EPOLLOUT", request_data->sock);
                                 }
@@ -583,8 +589,9 @@ block_queue_foreach_func (gpointer data, gpointer user_data)
         HTTPServer *http_server = user_data;
         GError *e = NULL;
 
-        if (request_data->events & (EPOLLOUT | EPOLLIN | EPOLLHUP | EPOLLERR)) {
-                /* EPOLL event, popup request from block queue and push to thread pool */
+        if ((request_data->events & (EPOLLOUT | EPOLLIN | EPOLLHUP | EPOLLERR)) ||
+            (request_data->wakeup_time < gst_clock_get_time (http_server->system_clock))) {
+                /* EPOLL event or block time out, popup request from block queue and push to thread pool. */
                 g_queue_remove (http_server->block_queue, request_data_pointer);
                 g_thread_pool_push (http_server->thread_pool, request_data_pointer, &e);
                 if (e != NULL) { // FIXME
@@ -619,20 +626,26 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint ret;
         GstClockTime cb_ret;
         
+        GST_ERROR ("EVENT %d, status %d, sock %d", request_data->events, request_data->status, request_data->sock);
         g_mutex_lock (request_data->events_mutex);
         if (request_data->events & (EPOLLHUP | EPOLLERR)) {
                 request_data->status = HTTP_FINISH;
                 request_data->events = 0;
-        } else if ((request_data->events & EPOLLOUT) &&
-                   (request_data->status == HTTP_BLOCK)) {
-                request_data->status = HTTP_CONTINUE;
+        } else if (request_data->events & EPOLLOUT) {
+                if ((request_data->status == HTTP_IDLE) || (request_data->status == HTTP_BLOCK)) {
+                        request_data->status = HTTP_CONTINUE;
+                }
                 request_data->events ^= EPOLLOUT;
-        } else if (request_data->status == HTTP_IDLE) {
-                /* popup from idle queue, continue working */
-                request_data->status = HTTP_CONTINUE;
         } else if (request_data->events & EPOLLIN) {
-                request_data->status = HTTP_REQUEST;
+                if ((request_data->status == HTTP_IDLE) || (request_data->status == HTTP_BLOCK)) {
+                        /* in normal play status */
+                        request_data->status = HTTP_CONTINUE;
+                } 
+                /* HTTP_REQUEST status */
                 request_data->events ^= EPOLLIN;
+        } else if ((request_data->status == HTTP_IDLE) || (request_data->status == HTTP_BLOCK)) {
+                /* no event, popup from idle queue or block queue */
+                request_data->status = HTTP_CONTINUE;
         } else {
                 GST_ERROR ("warning!!! unprocessed event, sock %d status %d events %d", request_data->sock, request_data->status, request_data->events);
         }
@@ -701,6 +714,8 @@ thread_pool_func (gpointer data, gpointer user_data)
                 if (cb_ret == GST_CLOCK_TIME_NONE) {
                         g_mutex_lock (http_server->block_queue_mutex);
                         request_data->status = HTTP_BLOCK;
+                        // block time out is 300ms
+                        request_data->wakeup_time = gst_clock_get_time (http_server->system_clock) + 300 * GST_MSECOND;
                         g_queue_push_head (http_server->block_queue, request_data_pointer);
                         g_mutex_unlock (http_server->block_queue_mutex);
                 } else if (cb_ret > 0) {
@@ -741,7 +756,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
-                GST_WARNING ("request finish %d callback return %d", request_data->sock, cb_ret);
+                GST_WARNING ("request finish %d callback return %d, send %d", request_data->sock, cb_ret, request_data->bytes_send);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));

@@ -88,6 +88,7 @@ enum session_status {
 #define kMaxRequests 128
 
 typedef struct _RequestData {
+        gint id;
         gint sock;
         struct sockaddr client_addr;
         GstClockTime birth_time;
