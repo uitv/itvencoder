@@ -23,26 +23,31 @@ def fetch_data(server, port, location, size):
         try:
             t1 = time.time()
             conn = httplib.HTTPConnection(server, port)
+            #conn.set_debuglevel(1)
             conn.request("GET", location)
             resp = conn.getresponse()
             if resp.status == 200:
                 data = ""
+                trytimes = 0
                 while True:
                     data = "%s%s" % (data, resp.read (size - readsize))
                     if len(data) == ReadSize:
                         break
                     readsize = len(data)
-                    print "read size %d, should read %d" % (readsize, ReadSize)
-                    break;
+                    print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read size %d, should read %d" % (readsize, ReadSize)
+                    if trytimes > 10:
+                        break
+                    trytimes += 1
                 t2 = time.time()
                 conn.close()
-                if not (len(data) == ReadSize) or t2-t1 > 1:
+                if not (len(data) == ReadSize) or t2-t1 > .05:
                     print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason, "size", len(data), "time", t2-t1
             break
         except socket.error, msg:
             print "socket error %s" % msg
         except httplib.HTTPException, msg:
-            print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read data %s:%d%s, error %s" % (server, port, location, msg)
+            print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read data http://%s:%d%s, http error %s" % (server, port, location, msg)
+            exit(0)
             attempts -= 1
             if attempts == 0:
                 raise
