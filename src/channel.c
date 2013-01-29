@@ -23,7 +23,7 @@ static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstFlowReturn sourcer_appsink_callback (GstAppSink * elt, gpointer user_data);
+static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data);
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 static void encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data);
