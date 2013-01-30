@@ -27,24 +27,16 @@ def fetch_data(server, port, location, size):
             conn.request("GET", location)
             resp = conn.getresponse()
             if resp.status == 200:
-                data = ""
-                trytimes = 0
-                while True:
-                    data = "%s%s" % (data, resp.read (size - readsize))
-                    if len(data) == ReadSize:
-                        break
-                    readsize = len(data)
-                    print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read size %d, should read %d" % (readsize, ReadSize)
-                    if trytimes > 10:
-                        break
-                    trytimes += 1
+                data = resp.read (ReadSize)
                 t2 = time.time()
                 conn.close()
-                if not (len(data) == ReadSize) or t2-t1 > .05:
+                if not (len(data) == ReadSize):
                     print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "http://%s%s" % (server, location), resp.status, resp.reason, "size", len(data), "time", t2-t1
+                    exit (0)
             break
         except socket.error, msg:
             print "socket error %s" % msg
+            break
         except httplib.HTTPException, msg:
             print time.strftime("%b %d - %H:%M:%S", time.gmtime()), "read data http://%s:%d%s, http error %s" % (server, port, location, msg)
             exit(0)
