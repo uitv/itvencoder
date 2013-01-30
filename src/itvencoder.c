@@ -598,6 +598,13 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 iov[1].iov_len = GST_BUFFER_SIZE (encoder->output_ring[i]) - (request_user_data->last_send_count - strlen (chunksize));
                                 iov[2].iov_base = "\r\n";
                                 iov[2].iov_len = 2;
+                        } else if (request_user_data->last_send_count == (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
+                                iov[0].iov_base = NULL;
+                                iov[0].iov_len = 0;
+                                iov[1].iov_base = NULL;
+                                iov[1].iov_len = 0;
+                                iov[2].iov_base = "\r\n";
+                                iov[2].iov_len = 2;
                         } else if (request_user_data->last_send_count > (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
                                 iov[0].iov_base = NULL;
                                 iov[0].iov_len = 0;
