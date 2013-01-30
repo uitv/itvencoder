@@ -626,7 +626,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         gint ret;
         GstClockTime cb_ret;
         
-        GST_ERROR ("EVENT %d, status %d, sock %d", request_data->events, request_data->status, request_data->sock);
+        GST_DEBUG ("EVENT %d, status %d, sock %d", request_data->events, request_data->status, request_data->sock);
         g_mutex_lock (request_data->events_mutex);
         if (request_data->events & (EPOLLHUP | EPOLLERR)) {
                 request_data->status = HTTP_FINISH;
