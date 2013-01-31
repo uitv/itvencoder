@@ -258,7 +258,8 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
         GstBuffer *buffer;
         gchar type = ((SourceAppsinkUserData *)user_data)->type;
         Channel *channel = ((SourceAppsinkUserData *)user_data)->channel;
-        guint i;
+        Encoder *encoder;
+        guint i, j;
 
         GST_LOG ("source appsink callback func %c", type);
 
@@ -269,6 +270,12 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
                 i = channel->source->current_audio_position + 1;
                 i = i % AUDIO_RING_SIZE;
                 GST_LOG ("audio current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
+                for (j=0; j<channel->encoder_array->len; j++) {
+                        encoder = g_array_index (channel->encoder_array, gpointer, j);
+                        if (i == encoder->current_audio_position) {
+                                GST_WARNING ("encoder %s audio encoder cant catch source output speed", encoder->name);
+                        }
+                }
                 channel->source->current_audio_position = i;
                 if (channel->source->audio_ring[i] != NULL) {
                         gst_buffer_unref (channel->source->audio_ring[i]);
@@ -281,6 +288,12 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
                 i = channel->source->current_video_position + 1;
                 i = i % VIDEO_RING_SIZE;
                 GST_LOG ("video current position %d, buffer duration: %d", i, GST_BUFFER_DURATION(buffer));
+                for (j=0; j<channel->encoder_array->len; j++) {
+                        encoder = g_array_index (channel->encoder_array, gpointer, j);
+                        if (i == encoder->current_video_position) {
+                                GST_WARNING ("encoder %s video encoder cant catch source output speed", encoder->name);
+                        }
+                }
                 channel->source->current_video_position = i;
                 if (channel->source->video_ring[i] != NULL) {
                         gst_buffer_unref (channel->source->video_ring[i]);
