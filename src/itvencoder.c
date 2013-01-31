@@ -252,6 +252,18 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                           encoder->name,
                                           GST_TIME_ARGS (encoder->last_audio_heartbeat));
                         }
+
+                        time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[encoder->current_audio_position]),
+                                                    GST_BUFFER_TIMESTAMP (channel->source->audio_ring[channel->source->current_audio_position]));
+                        if (time_diff > 1000000000) { // 1s
+                                GST_WARNING ("encoder %s audio encoder delay %" GST_TIME_FORMAT, encoder->name, GST_TIME_ARGS (time_diff));
+                        }
+
+                        time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (channel->source->video_ring[encoder->current_video_position]),
+                                                    GST_BUFFER_TIMESTAMP (channel->source->video_ring[channel->source->current_video_position]));
+                        if (time_diff > 1000000000) { // 1s
+                                GST_WARNING ("encoder %s video encoder delay %" GST_TIME_FORMAT, encoder->name, GST_TIME_ARGS (time_diff));
+                        }
                 }
         }
 
