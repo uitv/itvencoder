@@ -77,27 +77,28 @@ print_itvencoder_info (ITVEncoder *itvencoder)
         }
 }
 
+static gboolean foreground = FALSE;
+static gboolean version = FALSE;
+static gchar *config = NULL;
+static GOptionEntry options[] = {
+        {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c itvencoder.conf: Specify a config file"), NULL},
+        {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
+        {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
+        {NULL}
+};
+
 int
 main(int argc, char *argv[])
 {
         ITVEncoder *itvencoder;
         GMainLoop *loop;
-        gboolean foreground;
-        gboolean version;
-        gchar *config = NULL;
         pid_t process_id = 0;
         gint status;
         gint8 exit_status;
         gint ret;
-
-        GOptionEntry options[] = {
-                {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
-                {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c itvencoder.conf: Specify a config file"), NULL},
-                {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
-                {NULL}
-        };
         GOptionContext *ctx;
         GError *err = NULL;
+
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);
         }
