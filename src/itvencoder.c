@@ -570,7 +570,7 @@ request_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         }
                 case 'i': /* uri is /itvencoder/..... */
-                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, sizeof (PACKAGE_NAME) + sizeof (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
+                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (PACKAGE_NAME) + strlen (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0; 
