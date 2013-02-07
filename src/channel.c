@@ -692,7 +692,7 @@ channel_source_appsink_get_caps (Channel *channel)
                 GST_WARNING (caps);
                 g_free (caps);
         }
-        if (channel->source->audio_caps != NULL) {
+        if (channel->source->video_caps != NULL) {
                 caps = gst_caps_to_string (channel->source->video_caps);
                 GST_WARNING (caps);
                 g_free (caps);
