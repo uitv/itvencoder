@@ -83,6 +83,7 @@ main(int argc, char *argv[])
         ITVEncoder *itvencoder;
         GMainLoop *loop;
         gboolean foreground;
+        gboolean version;
         gchar *config = NULL;
         pid_t process_id = 0;
         gint status;
@@ -92,6 +93,7 @@ main(int argc, char *argv[])
         GOptionEntry options[] = {
                 {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
                 {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c itvencoder.conf: Specify a config file"), NULL},
+                {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
                 {NULL}
         };
         GOptionContext *ctx;
@@ -108,6 +110,12 @@ main(int argc, char *argv[])
         }
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+
+        if (version) {
+                g_print ("iTVEncoder version: %s\n", VERSION);
+                g_print ("iTVEncoder build: %s %s\n", __DATE__, __TIME__);
+                exit (0);
+        }
 
         gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         if (!foreground) { /* run in background */
