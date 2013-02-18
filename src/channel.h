@@ -39,8 +39,6 @@ struct _Source {
         gchar *pipeline_string;
         GstElement *pipeline;
         GstState state; /* state of the pipeline */
-        GstClockTime last_video_heartbeat;
-        GstClockTime last_audio_heartbeat;
 
         /*  sync error cause sync_error_times inc, 
          *  sync normal cause sync_error_times reset to zero,
@@ -54,12 +52,14 @@ struct _Source {
         GstBuffer *audio_ring[AUDIO_RING_SIZE];
         gint current_audio_position; // source write position
         GstClockTime current_audio_timestamp;
+        GstClockTime last_audio_heartbeat;
 
         SourceAppsinkUserData video_cb_user_data;
         GstCaps *video_caps;
         GstBuffer *video_ring[VIDEO_RING_SIZE];
         gint current_video_position; // source write position
         GstClockTime current_video_timestamp;
+        GstClockTime last_video_heartbeat;
 };
 
 struct _Encoder {
@@ -70,16 +70,16 @@ struct _Encoder {
         gint id;
         gchar *name;
         GstState state; /* state of the pipeline */
-        GstClockTime last_video_heartbeat;
-        GstClockTime last_audio_heartbeat;
         
         EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
         gint current_video_position; // encoder read position
         gboolean video_enough; /* appsrc enaugh_data signal */
+        GstClockTime last_video_heartbeat;
 
         EncoderAppsrcUserData audio_cb_user_data; /* audio appsrc callback user_data */
         gint current_audio_position; // encoder read position
         gboolean audio_enough;
+        GstClockTime last_audio_heartbeat;
 
         GstBuffer *output_ring[OUTPUT_RING_SIZE];
         gint current_output_position; // encoder output position
