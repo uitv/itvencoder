@@ -113,11 +113,7 @@ struct _ChannelClass {
 
 GType channel_get_type (void);
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
-gint channel_source_pipeline_initialize (Source *source);
-gint channel_source_pipeline_release (Source *source);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
-gint channel_encoder_pipeline_initialize (Encoder *encoder);
-gint channel_encoder_pipeline_release (Encoder *encoder);
 gint channel_source_stop (Source *source);
 gint channel_source_start (Source *source);
 gint channel_restart (Channel *channel);
