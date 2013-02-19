@@ -118,7 +118,10 @@ main(int argc, char *argv[])
                 exit (0);
         }
 
-        gst_debug_set_default_threshold (GST_LEVEL_WARNING);
+        if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
+                gst_debug_set_default_threshold (GST_LEVEL_WARNING);
+        }
+
         if (!foreground) { /* run in background */
 
                 /* daemon */
