@@ -118,9 +118,7 @@ main(int argc, char *argv[])
                 exit (0);
         }
 
-
         if (!foreground) { /* run in background */
-
                 _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
                 ret = log_set_log_handler (_log);
                 if (ret != 0) {
