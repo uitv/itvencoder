@@ -57,8 +57,8 @@ print_version_info ()
                 nano_str = "(Prerelease)";
         else
                 nano_str = "";
-        GST_INFO ("%s version : %s", PACKAGE_NAME, PACKAGE_VERSION);
-        GST_INFO ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
+        GST_WARNING ("%s version : %s", PACKAGE_NAME, PACKAGE_VERSION);
+        GST_WARNING ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 }
 
 static void
@@ -67,13 +67,13 @@ print_itvencoder_info (ITVEncoder *itvencoder)
         ChannelConfig *channel_config;
         gint i;
 
-        GST_INFO ("start time : %lld", itvencoder_get_start_time(itvencoder));
-        GST_INFO ("listening ports : %d", json_integer_value (json_object_get (itvencoder->config->config, "listening_ports")));
-        GST_INFO ("channel configs : %s", json_string_value (json_object_get (itvencoder->config->config, "channel_configs")));
-        GST_INFO ("log directory : %s", json_string_value (json_object_get (itvencoder->config->config, "log_directory")));
+        GST_WARNING ("start time : %lld", itvencoder_get_start_time(itvencoder));
+        GST_WARNING ("listening ports : %d", json_integer_value (json_object_get (itvencoder->config->config, "listening_ports")));
+        GST_WARNING ("channel configs : %s", json_string_value (json_object_get (itvencoder->config->config, "channel_configs")));
+        GST_WARNING ("log directory : %s", json_string_value (json_object_get (itvencoder->config->config, "log_directory")));
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                GST_INFO ("config file %d - %s", i, channel_config->config_path);
+                GST_WARNING ("config file %d - %s", i, channel_config->config_path);
         }
 }
 
@@ -118,11 +118,6 @@ main(int argc, char *argv[])
                 exit (0);
         }
 
-        print_version_info ();
-
-        if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
-                gst_debug_set_default_threshold (GST_LEVEL_WARNING);
-        }
 
         if (!foreground) { /* run in background */
 
@@ -136,8 +131,6 @@ main(int argc, char *argv[])
                         exit (1);
                 }
 
-                GST_INFO ("Started ...");
-
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
 
@@ -149,8 +142,15 @@ main(int argc, char *argv[])
         
         }
 
+        if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
+                gst_debug_set_default_threshold (GST_LEVEL_WARNING);
+        }
+
         signal (SIGPIPE, SIG_IGN);
         signal (SIGUSR1, sighandler);
+
+        GST_WARNING ("Started ...");
+        print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
