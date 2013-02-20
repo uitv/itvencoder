@@ -127,10 +127,6 @@ main(int argc, char *argv[])
                         exit (ret);
                 }
 
-                if (create_pid_file () != 0) { //FIXME remove when process exit
-                        exit (1);
-                }
-
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
 
@@ -139,7 +135,10 @@ main(int argc, char *argv[])
                         GST_ERROR ("Failed to daemonize");
                         exit (-1);
                 }
-        
+
+                if (create_pid_file () != 0) { //FIXME remove when process exit
+                        exit (1);
+                }
         }
 
         if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
