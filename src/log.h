@@ -15,7 +15,7 @@ struct _Log {
         GObject parent;
 
         gchar *log_path;
-        gint log_hd;
+        FILE *log_hd;
 };
 
 struct _LogClass {

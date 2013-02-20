@@ -158,7 +158,7 @@ log_set_log_handler (Log *log)
                 GST_ERROR ("Can't open or create log directory: /var/log/itvencoder.");
                 return 1;
         }
-        log->log_hd = g_fopen (log->log_path, "a");
+        log->log_hd = fopen (log->log_path, "a");
         if (log->log_hd == NULL) { // FIXME compile warning
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
                 return -1;
@@ -171,7 +171,7 @@ log_set_log_handler (Log *log)
 gint
 log_reopen (Log *log)
 {
-        log->log_hd = g_freopen (log->log_path, "w", log->log_hd);
+        log->log_hd = freopen (log->log_path, "w", log->log_hd);
 
         return 0;
 }
