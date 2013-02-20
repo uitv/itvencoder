@@ -118,18 +118,14 @@ main(int argc, char *argv[])
                 exit (0);
         }
 
+        print_version_info ();
+
         if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
                 gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         }
 
         if (!foreground) { /* run in background */
 
-                /* daemon */
-                if (daemon (0,0) != 0) {
-                        GST_ERROR ("Failed to daemonize");
-                        exit (-1);
-                }
-        
                 _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
                 ret = log_set_log_handler (_log);
                 if (ret != 0) {
@@ -140,14 +136,22 @@ main(int argc, char *argv[])
                         exit (1);
                 }
 
+                GST_INFO ("Started ...");
+
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
+
+                /* daemon */
+                if (daemon (0,0) != 0) {
+                        GST_ERROR ("Failed to daemonize");
+                        exit (-1);
+                }
+        
         }
 
         signal (SIGPIPE, SIG_IGN);
         signal (SIGUSR1, sighandler);
 
-        print_version_info ();
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
         print_itvencoder_info (itvencoder);

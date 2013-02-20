@@ -6,6 +6,7 @@
 
 #include <time.h>
 #include <string.h>
+#include <libgen.h>
 #include "log.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -154,8 +155,11 @@ static void log_func (GstDebugCategory *category,
 gint
 log_set_log_handler (Log *log)
 {
-        if (g_mkdir_with_parents ("/var/log/itvencoder", 0755) != 0) {
-                GST_ERROR ("Can't open or create log directory: /var/log/itvencoder.");
+        gchar *dir;
+
+        dir = g_strdup_printf ("%s", log->log_path);
+        if (g_mkdir_with_parents (dirname (dir), 0755) != 0) {
+                GST_ERROR ("Can't open or create log directory: %s.", dirname (dir));
                 return 1;
         }
         log->log_hd = fopen (log->log_path, "a");
@@ -166,6 +170,8 @@ log_set_log_handler (Log *log)
                 gst_debug_add_log_function (log_func, &(log->log_hd));
                 return 0;
         }
+
+        g_free (dir);
 }
 
 gint
