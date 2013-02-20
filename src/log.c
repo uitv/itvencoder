@@ -4,6 +4,8 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <time.h>
+#include <string.h>
 #include "log.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -130,15 +132,18 @@ static void log_func (GstDebugCategory *category,
                       gpointer user_data)
 {
         FILE *log_hd = *(FILE **)user_data;
-        GTimeVal timeval;
-        gchar *date;
+        time_t t;
+        struct tm *tm;
+        gchar date[26];
 
         if (level > gst_debug_category_get_threshold (category)) {
                 return;
         }
 
-        g_get_current_time (&timeval);
-        date = g_time_val_to_iso8601 (&timeval);
+        time (&t);
+        tm = localtime (&t);
+        asctime_r (tm, date);
+        date[strlen(date)-1] = '\0';
         fprintf (log_hd, "%s: %s" CAT_FMT "%s\n",
                  date,
                  gst_debug_level_get_name (level),
@@ -154,7 +159,7 @@ log_set_log_handler (Log *log)
                 return 1;
         }
         log->log_hd = g_fopen (log->log_path, "a");
-        if (log->log_hd == NULL) {
+        if (log->log_hd == NULL) { // FIXME compile warning
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
                 return -1;
         } else {
