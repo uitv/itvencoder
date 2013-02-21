@@ -36,7 +36,8 @@ struct _ITVEncoder {
         guint total_channel_number;
         guint working_channel_number; 
         GArray *channel_array;
-        HTTPServer *httpserver;
+        HTTPServer *httpserver; /* streaming via http */
+        HTTPServer *mgmt; /* management via http */
 };
 
 struct _ITVEncoderClass {
