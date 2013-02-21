@@ -23,8 +23,6 @@ typedef struct _ITVEncoderClass ITVEncoderClass;
 struct _ITVEncoder {
         GObject parent;
     
-        guint serve_port;
-
         guint percent_cpu_usage;
         guint memory_usage;
         guint memory_total;
