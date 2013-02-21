@@ -127,17 +127,47 @@ main(int argc, char *argv[])
                         exit (-1);
                 }
 
-                _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
-                ret = log_set_log_handler (_log);
-                if (ret != 0) {
-                        exit (ret);
+                for (;;) {
+                        process_id = fork ();
+                        if (process_id > 0) {
+                                /* parent process */
+                                status = 0;
+                                for (;;) {
+                                        wait (&status);
+                                        exit_status = (gint8) WEXITSTATUS (status);
+                                        if (WIFEXITED (status) && (exit_status != 0)) {
+                                                /* abnormal exit, restart */
+                                                break;
+                                        }
+                                        if (WIFSIGNALED (status)) {
+                                                /* child exit on an unhandled signal, restart */
+                                                break;
+                                        }
+                                        if (WIFEXITED (status) && (exit_status == 0)) {
+                                                /* exit code is 0, must exit. */
+                                                exit (0);
+                                        }
+                                }
+                        } else if (process_id == 0) {
+                                /* children process, itvencoder server */
+                                _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
+                                ret = log_set_log_handler (_log);
+                                if (ret != 0) {
+                                        exit (ret);
+                                }
+
+                                /* remove gstInfo default handler. */
+                                gst_debug_remove_log_function (gst_debug_log_default);
+
+                                if (create_pid_file () != 0) { //FIXME remove when process exit
+                                        exit (1);
+                                }
+                                break;
+                        }
                 }
-
-                /* remove gstInfo default handler. */
-                gst_debug_remove_log_function (gst_debug_log_default);
-
-                if (create_pid_file () != 0) { //FIXME remove when process exit
-                        exit (1);
+                if (process_id != 0) {
+                        /* parent exit */
+                        exit (0);
                 }
         }
 
