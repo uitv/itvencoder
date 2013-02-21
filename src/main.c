@@ -118,7 +118,15 @@ main(int argc, char *argv[])
                 exit (0);
         }
 
+        signal (SIGPIPE, SIG_IGN);
+
         if (!foreground) { /* run in background */
+                /* daemon */
+                if (daemon (0,0) != 0) {
+                        GST_ERROR ("Failed to daemonize");
+                        exit (-1);
+                }
+
                 _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
                 ret = log_set_log_handler (_log);
                 if (ret != 0) {
@@ -127,12 +135,6 @@ main(int argc, char *argv[])
 
                 /* remove gstInfo default handler. */
                 gst_debug_remove_log_function (gst_debug_log_default);
-
-                /* daemon */
-                if (daemon (0,0) != 0) {
-                        GST_ERROR ("Failed to daemonize");
-                        exit (-1);
-                }
 
                 if (create_pid_file () != 0) { //FIXME remove when process exit
                         exit (1);
