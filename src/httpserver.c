@@ -21,6 +21,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         HTTPSERVER_PROP_0,
         HTTPSERVER_PROP_PORT,
+        HTTPSERVER_PROP_MAXTHREADS,
 };
 
 static void httpserver_class_init (HTTPServerClass *httpserverclass);
@@ -56,6 +57,17 @@ httpserver_class_init (HTTPServerClass *httpserverclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, HTTPSERVER_PROP_PORT, param);
+
+        param = g_param_spec_int (
+                "maxthreads",
+                "maxthreadsf",
+                "max threads",
+                1,
+                256,
+                10,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, HTTPSERVER_PROP_MAXTHREADS, param);
 }
 
 static gint
@@ -125,6 +137,9 @@ httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         case HTTPSERVER_PROP_PORT:
                 HTTPSERVER(obj)->listen_port = g_value_get_int (value);
                 break;
+        case HTTPSERVER_PROP_MAXTHREADS:
+                HTTPSERVER(obj)->max_threads = g_value_get_int (value);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
@@ -141,6 +156,9 @@ httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         switch(prop_id) {
         case HTTPSERVER_PROP_PORT:
                 g_value_set_int (value, httpserver->listen_port);
+                break;
+        case HTTPSERVER_PROP_MAXTHREADS:
+                g_value_set_int (value, httpserver->max_threads);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -777,7 +795,7 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
         GError *e = NULL;
         RequestData *request_data;
 
-        http_server->thread_pool = g_thread_pool_new (thread_pool_func, http_server, kMaxThreads, TRUE, &e);
+        http_server->thread_pool = g_thread_pool_new (thread_pool_func, http_server, http_server->max_threads, TRUE, &e);
         if (e != NULL) {
                 GST_ERROR ("Create thread pool error %s", e->message);
                 g_error_free (e);

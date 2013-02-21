@@ -84,7 +84,6 @@ enum session_status {
 };
 
 #define kRequestBufferSize 1024
-#define kMaxThreads 10 /* number of threads in thread pool */
 #define kMaxRequests 128
 
 typedef struct _RequestData {
@@ -116,6 +115,7 @@ struct _HTTPServer {
         guint64 encoder_click; /* access number of playing encoder */
 
         gint listen_port;
+        gint max_threads;
         gint listen_sock;
         gint epollfd;
         GThread *listen_thread;

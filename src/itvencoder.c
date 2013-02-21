@@ -123,7 +123,8 @@ itvencoder_init (ITVEncoder *itvencoder)
                            channel->encoder_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
-        itvencoder->httpserver = httpserver_new ("port", 20129, NULL);
+
+        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", 20129, NULL);
 }
 
 GType
