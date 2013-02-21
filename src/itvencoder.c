@@ -46,7 +46,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Register itvencoder monitor failure");
-                exit (-1);
+                exit (0);
         }
 
         itvencoder->grand = g_rand_new ();
@@ -69,21 +69,21 @@ itvencoder_init (ITVEncoder *itvencoder)
                 pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
                 if (pipeline_string == NULL) {
                         GST_ERROR ("no source pipeline string error");
-                        exit (-1); //TODO : exit or return?
+                        exit (0); //TODO : exit or return?
                 }
                 if (channel_set_source (channel, pipeline_string) != 0) {
                         GST_ERROR ("Set source pipeline error.");
-                        exit (-1);
+                        exit (0);
                 }
                 for (;;) {
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
                         if (pipeline_string == NULL) {
                                 GST_ERROR ("One encoder pipeline is must");
-                                exit (-1); //TODO : exit or return?
+                                exit (0); //TODO : exit or return?
                         }
                         if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 1 error");
-                                exit (-1);
+                                exit (0);
                         }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-2");
@@ -93,7 +93,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                         }
                         if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 2 error");
-                                exit (-1);
+                                exit (0);
                         }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-3");
@@ -103,7 +103,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                         }
                         if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 3 error");
-                                exit (-1);
+                                exit (0);
                         }
 
                         pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-4");
@@ -113,7 +113,7 @@ itvencoder_init (ITVEncoder *itvencoder)
                         }
                         if (channel_add_encoder (channel, pipeline_string) != 0) {
                                 GST_ERROR ("Add encoder pipeline 4 error");
-                                exit (-1);
+                                exit (0);
                         }
 
                         GST_INFO ("Four encoder pipelines found.");
@@ -299,32 +299,32 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO ("\nchannel %s has %d encoder pipeline.>>>>>>>>>>>>>>>>>>>>>>>>>\nchannel decoder pipeline string is %s",
+                GST_INFO ("channel %s has %d encoder pipeline. channel source pipeline string is %s",
                         channel->name,
                         channel->encoder_array->len,
                         channel->source->pipeline_string);
                 if (channel_source_start (channel->source) !=0 ) {
                         GST_ERROR ("Fatal error! exit");
-                        exit (-1);
+                        exit (0);
                 }
                 for (j=0; j<channel->encoder_array->len; j++) {
                         Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        GST_INFO ("\nchannel encoder pipeline string is %s", encoder->pipeline_string);
+                        GST_INFO ("channel encoder pipeline string is %s", encoder->pipeline_string);
                         if (channel_encoder_start (encoder) != 0) {
                                 GST_ERROR ("Fatal error! exit");
-                                exit (-1);
+                                exit (0);
                         }
                 }
         }
 
         if (httpserver_start (itvencoder->httpserver, httpserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start streaming httpserver error!");
-                exit (-1);
+                exit (0);
         }
 
         if (httpserver_start (itvencoder->mgmt, mgmt_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
-                exit (-1);
+                exit (0);
         }
 
         return 0;
@@ -572,7 +572,7 @@ mgmt_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
         gchar *buf;
-        int i = 0, j, ret;
+        gint i;
         Encoder *encoder;
         Channel *channel;
         RequestDataUserData *request_user_data;

@@ -107,7 +107,7 @@ main(int argc, char *argv[])
         g_option_context_add_group (ctx, gst_init_get_option_group ());
         if (!g_option_context_parse (ctx, &argc, &argv, &err)) {
                 g_print ("Error initializing: %s\n", GST_STR_NULL (err->message));
-                exit (1);
+                exit (0);
         }
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
@@ -122,9 +122,9 @@ main(int argc, char *argv[])
 
         if (!foreground) { /* run in background */
                 /* daemon */
-                if (daemon (0,0) != 0) {
+                if (daemon (0, 0) != 0) {
                         GST_ERROR ("Failed to daemonize");
-                        exit (-1);
+                        exit (0);
                 }
 
                 for (;;) {
