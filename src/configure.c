@@ -126,6 +126,23 @@ config_load_config_file_func (Config *config)
                 return -1;
         }
 
+        /* http managment port */
+        j = json_object_get (config->config, "http_mgmt_port");
+        if (j == NULL) {
+                GST_ERROR ("parse itvencoder config file error : http_mgmt_port");
+                return -1;
+        }
+        config->http_mgmt_port = json_integer_value (j);
+        
+        /* http streaming port */
+        j = json_object_get (config->config, "http_streaming_port");
+        if (j == NULL) {
+                GST_ERROR ("parse itvencoder config file error : http_mgmt_port");
+                return -1;
+        }
+        config->http_streaming_port = json_integer_value (j);
+        
+        /* channel configs */
         j = json_object_get (config->config, "channel_configs");
         if (j == NULL) {
                 GST_ERROR ("parse itvencoder config file error : channel_configs");

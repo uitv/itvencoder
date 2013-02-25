@@ -383,14 +383,14 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         /* start http streaming */
-        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", 20129, NULL);
+        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", itvencoder->config->http_streaming_port, NULL);
         if (httpserver_start (itvencoder->httpserver, httpserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start streaming httpserver error!");
                 exit (0);
         }
 
         /* start managment */
-        itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", 20128, NULL);
+        itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", itvencoder->config->http_mgmt_port, NULL);
         if (httpserver_start (itvencoder->mgmt, mgmt_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
                 exit (0);
