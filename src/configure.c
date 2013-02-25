@@ -119,19 +119,19 @@ config_load_config_file_func (Config *config)
 
         GST_LOG ("config load config file func");
 
-        json_decref(config->config); //TODO: should check
-        config->config = json_load_file(config->config_file_path, 0, &error);
+        json_decref (config->config); //TODO: should check
+        config->config = json_load_file (config->config_file_path, 0, &error);
         if(!config->config) {
                 GST_ERROR("%d: %s", error.line, error.text);
                 return -1;
         }
 
-        j = json_object_get(config->config, "channel_configs");
+        j = json_object_get (config->config, "channel_configs");
         if (j == NULL) {
                 GST_ERROR ("parse itvencoder config file error : channel_configs");
                 return -1;
         }
-        channel_configs_pattern = (gchar *)json_string_value(j);
+        channel_configs_pattern = (gchar *)json_string_value (j);
         if (glob (channel_configs_pattern, GLOB_TILDE, NULL, &channel_config_paths) != 0) {
                 GST_ERROR ("Open channel config files failure.");
                 g_free (channel_configs_pattern);
@@ -139,9 +139,9 @@ config_load_config_file_func (Config *config)
         }
         for (i=0; i<channel_config_paths.gl_pathc; i++) { // TODO: name unique identifier check.
                 GST_DEBUG ("Find channel config file: %s.", channel_config_paths.gl_pathv[i]);
-                channel_config = (ChannelConfig *)g_malloc (sizeof(ChannelConfig));
+                channel_config = (ChannelConfig *)g_malloc (sizeof (ChannelConfig));
                 channel_config->config_path = g_strdup (channel_config_paths.gl_pathv[i]);
-                channel_config->config = json_load_file(channel_config->config_path, 0, &error);
+                channel_config->config = json_load_file (channel_config->config_path, 0, &error);
                 if (!channel_config->config) { //TODO: error check, free allocated.
                         GST_ERROR ("%d: %s", error.line, error.text);
                         return -1;
@@ -158,7 +158,7 @@ config_save_config_file_func (Config *config)
 {
         GST_LOG ("config save cofnig file func");
 
-        json_dump_file(config->config, config->config_file_path, JSON_INDENT(4)); //TODO: error check
+        json_dump_file (config->config, config->config_file_path, JSON_INDENT (4)); //TODO: error check
 }
 
 GType
@@ -191,7 +191,7 @@ config_load_config_file (Config *config)
 {
         GST_LOG ("config load config file");
 
-        if (CONFIG_GET_CLASS(config)->config_load_config_file_func(config) == -1) {
+        if (CONFIG_GET_CLASS(config)->config_load_config_file_func (config) == -1) {
                 GST_ERROR ("load config file error");
                 return -1;
         }
