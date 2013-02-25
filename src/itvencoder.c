@@ -124,9 +124,6 @@ itvencoder_init (ITVEncoder *itvencoder)
                            channel->encoder_array->len);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
-
-        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", 20129, NULL);
-        itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", 20128, NULL);
 }
 
 GType
@@ -317,11 +314,13 @@ itvencoder_start (ITVEncoder *itvencoder)
                 }
         }
 
+        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", 20129, NULL);
         if (httpserver_start (itvencoder->httpserver, httpserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start streaming httpserver error!");
                 exit (0);
         }
 
+        itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", 20128, NULL);
         if (httpserver_start (itvencoder->mgmt, mgmt_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
                 exit (0);
