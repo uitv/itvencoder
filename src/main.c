@@ -81,7 +81,7 @@ static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config = NULL;
 static GOptionEntry options[] = {
-        {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c itvencoder.conf: Specify a config file"), NULL},
+        {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
