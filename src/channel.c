@@ -26,7 +26,6 @@ static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GP
 static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data);
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
-static void encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data);
 static gint channel_source_appsink_get_caps (Channel *channel);
 static void channel_encoder_appsrc_set_caps (Encoder *encoder);
 
@@ -446,92 +445,56 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
         Encoder *encoder;
-        gint i;
 
         GST_LOG ("encoder %d appsrc need data callback func type %c; length %d", index, type, length);
 
         encoder = (Encoder *)g_array_index (channel->encoder_array, gpointer, index);
         switch (type) {
         case 'a':
-                encoder->audio_enough = FALSE;
                 /* next buffer */
-                i = encoder->current_audio_position + 1;
-                i = i % AUDIO_RING_SIZE;
+                encoder->current_audio_position = (encoder->current_audio_position + 1) % AUDIO_RING_SIZE;
                 for (;;) {
                         encoder->last_audio_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current buffer */
-                        if (i == channel->source->current_audio_position ||
+                        if (encoder->current_audio_position == channel->source->current_audio_position ||
                                 channel->source->current_audio_position == -1) { /*FIXME: condition variable*/
-                                GST_LOG ("waiting audio source ready");
+                                GST_DEBUG ("waiting audio source ready");
                                 g_usleep (50000); /* wiating 50ms */
                                 continue;
                         }
-                        if (encoder->audio_enough) {
-                                GST_LOG ("audio enough.");
-                                break;
-                        }
                         GST_DEBUG ("audio encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
-                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[i])),
+                                   encoder->current_audio_position,
+                                   GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[encoder->current_audio_position])),
                                    channel->source->current_audio_position);
-                        if (gst_app_src_push_buffer (src, gst_buffer_ref (channel->source->audio_ring[i])) != GST_FLOW_OK) {
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref (channel->source->audio_ring[encoder->current_audio_position])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer audio failure.");
                                 break;
                         }
-                        encoder->current_audio_position = i;
-                        i = (i + 1) % AUDIO_RING_SIZE;
+                        break;
                 }
                 break;
         case 'v':
-                encoder->video_enough = FALSE;
                 /* next buffer */
-                i = encoder->current_video_position + 1;
-                i = i % VIDEO_RING_SIZE;
+                encoder->current_video_position = (encoder->current_video_position + 1) % VIDEO_RING_SIZE;
                 for (;;) {
                         encoder->last_video_heartbeat = gst_clock_get_time (channel->system_clock);
                         /* insure next buffer isn't current buffer */
-                        if (i == channel->source->current_video_position ||
+                        if (encoder->current_video_position == channel->source->current_video_position ||
                                 channel->source->current_video_position == -1) {
-                                GST_LOG ("waiting video source ready");
+                                GST_DEBUG ("waiting video source ready");
                                 g_usleep (50000); /* waiting 50ms */
                                 continue;
                         }
-                        if (encoder->video_enough) {
-                                GST_LOG ("video enough, break for need data signal.");
-                                break;
-                        }
                         GST_DEBUG ("video encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
-                                   i, GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[i])),
+                                   encoder->current_video_position,
+                                   GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (channel->source->video_ring[encoder->current_video_position])),
                                    channel->source->current_video_position);
-                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[i])) != GST_FLOW_OK) {
+                        if (gst_app_src_push_buffer (src, gst_buffer_ref(channel->source->video_ring[encoder->current_video_position])) != GST_FLOW_OK) {
                                 GST_ERROR ("gst_app_src_push_buffer video failure.");
                                 break;
                         }
-                        encoder->current_video_position = i;
-                        i = (i + 1) % VIDEO_RING_SIZE;
+                        break;
                 }
-                break;
-        default:
-                GST_ERROR ("error");
-        }
-}
-
-static void
-encoder_appsrc_enough_data_callback (GstAppSrc *src, gpointer user_data)
-{
-        gint index = ((EncoderAppsrcUserData *)user_data)->index;
-        gchar type = ((EncoderAppsrcUserData *)user_data)->type;
-        Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
-        Encoder *encoder;
-
-        GST_LOG ("encoder appsrc enough data callback func type %c", type);
-
-        encoder = (Encoder *)g_array_index (channel->encoder_array, gpointer, index);
-        switch (type) {
-        case 'a':
-                encoder->audio_enough = TRUE;
-                break;
-        case 'v':
-                encoder->video_enough = TRUE;
                 break;
         default:
                 GST_ERROR ("error");
@@ -582,7 +545,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         GstBus *bus;
         GstAppSrcCallbacks callbacks = {
                 encoder_appsrc_need_data_callback,
-                encoder_appsrc_enough_data_callback,
+                NULL,
                 NULL
         };
         GstAppSinkCallbacks encoder_appsink_callbacks = {
@@ -637,8 +600,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         encoder->pipeline = p;
         encoder->current_video_position = -1;
         encoder->current_audio_position = -1;
-        encoder->audio_enough = FALSE;
-        encoder->video_enough = FALSE;
         encoder->current_output_position = -1;
         encoder->output_count = 0;
 

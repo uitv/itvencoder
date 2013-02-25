@@ -73,12 +73,10 @@ struct _Encoder {
         
         EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
         gint current_video_position; // encoder read position
-        gboolean video_enough; /* appsrc enaugh_data signal */
         GstClockTime last_video_heartbeat;
 
         EncoderAppsrcUserData audio_cb_user_data; /* audio appsrc callback user_data */
         gint current_audio_position; // encoder read position
-        gboolean audio_enough;
         GstClockTime last_audio_heartbeat;
 
         GstBuffer *output_ring[OUTPUT_RING_SIZE];
