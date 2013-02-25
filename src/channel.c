@@ -688,11 +688,6 @@ gint
 channel_source_stop (Source *source)
 {
         Channel *channel = source->channel;
-        gint i;
-
-        for (i=0; i<channel->encoder_array->len; i++) {
-                channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
-        }
 
         gst_element_set_state (source->pipeline, GST_STATE_NULL);
         channel_source_pipeline_release (source);
