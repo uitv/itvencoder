@@ -527,7 +527,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                         }
                         ret = writev (request_data->sock, iov, 3);
                         if (ret == -1) {
-                                GST_WARNING ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                                GST_DEBUG ("write error %s sock %d", g_strerror (errno), request_data->sock);
                                 g_free (chunksize);
                                 return GST_CLOCK_TIME_NONE;
                         } else if (ret < (iov[0].iov_len + iov[1].iov_len + iov[2].iov_len)) {
