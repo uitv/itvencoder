@@ -202,9 +202,9 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
                 gst_message_parse_error (msg, &error, &debug);
                 g_free (debug);
                 if (bus_cb_user_data->type == 's') {
-                        GST_ERROR ("%s error: %s", source->channel->name, error->message);
+                        GST_WARNING ("%s error: %s", source->channel->name, error->message);
                 } else  if (bus_cb_user_data->type == 'e') {
-                        GST_ERROR ("%s error: %s", encoder->name, error->message);
+                        GST_WARNING ("%s error: %s", encoder->name, error->message);
                 }
                 g_error_free (error);
                 break;
@@ -235,9 +235,9 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         case GST_MESSAGE_ASYNC_DONE:
                 /*Posted by elements when they complete an ASYNC GstStateChange.*/
                 if (bus_cb_user_data->type == 's') {
-                        GST_ERROR ("source %s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
+                        GST_INFO ("source %s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
                 } else if (bus_cb_user_data->type == 'e') {
-                        GST_ERROR ("encoder %s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
+                        GST_INFO ("encoder %s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
                         gst_bin_recalculate_latency (GST_BIN (encoder->pipeline));
                 }
                 break;
