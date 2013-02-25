@@ -704,7 +704,9 @@ mgmt_dispatcher (gpointer data, gpointer user_data)
                         buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (PACKAGE_NAME) + strlen (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                        return 0; 
+                        return 0;
+                case 'k': /* kill self */
+                        exit (1);
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
