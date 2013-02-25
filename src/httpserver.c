@@ -657,7 +657,14 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else if (request_data->events & EPOLLIN) {
                 if ((request_data->status == HTTP_IDLE) || (request_data->status == HTTP_BLOCK)) {
                         /* in normal play status */
-                        request_data->status = HTTP_CONTINUE;
+                        ret = read_request (request_data);
+                        if (ret == -2) {
+                                GST_DEBUG ("Clinet close, FIN received.");
+                                request_data->status = HTTP_FINISH;
+                        } else {
+                                GST_DEBUG ("Unexpected request arrived, ignore.");
+                                request_data->status = HTTP_CONTINUE;
+                        }
                 } 
                 /* HTTP_REQUEST status */
                 request_data->events ^= EPOLLIN;
@@ -685,6 +692,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 ret = parse_request (request_data);
                 if (ret == 0) {
                         /* parse complete, call back user function */
+                        request_data->events ^= EPOLLIN;
                         cb_ret = http_server->user_callback (request_data, http_server->user_data);
                         if (cb_ret > 0) {
                                 GST_DEBUG ("insert idle queue end, sock %d wakeuptime %llu", request_data->sock, cb_ret);
