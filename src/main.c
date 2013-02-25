@@ -183,8 +183,8 @@ main(int argc, char *argv[])
 
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new (0, NULL);
-        print_itvencoder_info (itvencoder);
         itvencoder_start (itvencoder);
+        print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);
 
         return 0;

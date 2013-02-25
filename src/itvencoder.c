@@ -13,6 +13,8 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
+static void itvencoder_load_conf (ITVEncoder *itvencoder);
+static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
@@ -27,36 +29,31 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
 static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
-        ChannelConfig *channel_config;
-        Channel *channel;
-        gchar *pipeline_string;
-        GstClockID id;
-        GstClockTime t;
-        GstClockReturn ret;
-        guint i;
-        gchar *name;
-
-        GST_LOG ("itvencoder_init");
-
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
-        t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
-        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
-        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
-        if (ret != GST_CLOCK_OK) {
-                GST_WARNING ("Register itvencoder monitor failure");
-                exit (0);
-        }
-
         itvencoder->grand = g_rand_new ();
+}
 
+static void
+itvencoder_load_conf (ITVEncoder *itvencoder)
+{
         // load config
         itvencoder->config = config_new ("config_file_path", "/etc/itvencoder/itvencoder.conf", NULL);
         if (config_load_config_file(itvencoder->config) != 0) {
                 GST_ERROR ("Channel config files load error");
                 exit (0);
         }
+}
+
+static void
+itvencoder_initialize_channels (ITVEncoder *itvencoder)
+{
+        ChannelConfig *channel_config;
+        Channel *channel;
+        gchar *pipeline_string;
+        guint i;
+        gchar *name;
 
         // initialize channels
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
@@ -291,9 +288,16 @@ itvencoder_get_start_time (ITVEncoder *itvencoder)
 gint
 itvencoder_start (ITVEncoder *itvencoder)
 {
-        int i, j;
+        gint i, j;
         Channel *channel;
+        GstClockID id;
+        GstClockTime t;
+        GstClockReturn ret;
 
+        itvencoder_load_conf (itvencoder);
+        itvencoder_initialize_channels (itvencoder);
+
+        /* start encoder */
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 GST_INFO ("channel %s has %d encoder pipeline. channel source pipeline string is %s",
@@ -314,15 +318,26 @@ itvencoder_start (ITVEncoder *itvencoder)
                 }
         }
 
+        /* start http streaming */
         itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", 20129, NULL);
         if (httpserver_start (itvencoder->httpserver, httpserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start streaming httpserver error!");
                 exit (0);
         }
 
+        /* start managment */
         itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", 20128, NULL);
         if (httpserver_start (itvencoder->mgmt, mgmt_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
+                exit (0);
+        }
+
+        /* regist itvencoder monitor */
+        t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
+        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
+        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
+        if (ret != GST_CLOCK_OK) {
+                GST_WARNING ("Regist itvencoder monitor failure");
                 exit (0);
         }
 
