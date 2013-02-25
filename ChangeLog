@@ -1,5 +1,12 @@
 releases are sorted from youngest to oldest.
 
+v-0.2.1 2013-2-25 zhangping
+- pure pull mode encoder app src.
+- FIN -> EPOLLIN bug fix.
+- specify conf file in command line.
+- seperate mgmt and streaming http port.
+- kill itvencoder via http mgmt.
+
 v-0.1.3 2012-12-20 zhangping
 - bugfix.
 - rpmbuild.
