@@ -10,8 +10,16 @@
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
 
+enum {
+        ITVENCODER_PROP_0,
+        ITVENCODER_PROP_CONF_PATH,
+};
+
 static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
 static void itvencoder_init (ITVEncoder *itvencoder);
+static GObject *itvencoder_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
+static void itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
+static void itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static void itvencoder_load_conf (ITVEncoder *itvencoder);
 static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
@@ -24,6 +32,21 @@ static GstClockTime mgmt_dispatcher (gpointer data, gpointer user_data);
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
 {
+        GObjectClass *g_object_class = G_OBJECT_CLASS (itvencoderclass);
+        GParamSpec *param;
+
+        g_object_class->constructor = itvencoder_constructor;
+        g_object_class->set_property = itvencoder_set_property;
+        g_object_class->get_property = itvencoder_get_property;
+
+        param = g_param_spec_string (
+                "conf_path",
+                "config path",
+                "path of configure file",
+                "/etc/itvencoder/itvencoder.conf",
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONF_PATH, param);
 }
 
 static void
@@ -35,13 +58,54 @@ itvencoder_init (ITVEncoder *itvencoder)
         itvencoder->grand = g_rand_new ();
 }
 
+static GObject *
+itvencoder_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties)
+{
+        GObject *obj;
+        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+
+        obj = parent_class->constructor(type, n_construct_properties, construct_properties);
+
+        return obj;
+}
+
+static void
+itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+        g_return_if_fail(IS_ITVENCODER(obj));
+
+        switch(prop_id) {
+        case ITVENCODER_PROP_CONF_PATH:
+                ITVENCODER(obj)->conf_path = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_file_path?
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
+                break;
+        }
+}
+
+static void
+itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+        ITVEncoder  *itvencoder = ITVENCODER(obj);
+
+        switch(prop_id) {
+        case ITVENCODER_PROP_CONF_PATH:
+                g_value_set_string (value, itvencoder->conf_path);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
+                break;
+        }
+}
+
 static void
 itvencoder_load_conf (ITVEncoder *itvencoder)
 {
         // load config
-        itvencoder->config = config_new ("config_file_path", "/etc/itvencoder/itvencoder.conf", NULL);
-        if (config_load_config_file(itvencoder->config) != 0) {
-                GST_ERROR ("Channel config files load error");
+        itvencoder->config = config_new ("config_file_path", itvencoder->conf_path, NULL);
+        if (config_load_config_file (itvencoder->config) != 0) {
+                GST_ERROR ("config files load error: %s", itvencoder->conf_path);
                 exit (0);
         }
 }

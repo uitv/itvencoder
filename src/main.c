@@ -182,7 +182,13 @@ main(int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        itvencoder = itvencoder_new (0, NULL);
+        if (config) {
+                /* use command line -c conf_file */
+                itvencoder = itvencoder_new ("conf_path", config, NULL);
+        } else {
+                /* use default config path */
+                itvencoder = itvencoder_new ("conf_path", "/etc/itvencoder/itvencoder.conf", NULL);
+        }
         itvencoder_start (itvencoder);
         print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);
