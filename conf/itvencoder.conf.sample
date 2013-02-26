@@ -2,5 +2,6 @@
     "http_mgmt_port": 20128,
     "http_streaming_port": 20129,
     "channel_configs": "/etc/itvencoder/channels.d/*.conf",
-    "log_directory": "/var/log/itvencoder"
+    "log_dir": "/var/log/itvencoder",
+    "pid_file": "/var/run/itvencoder.pid"
 }

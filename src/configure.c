@@ -150,6 +150,14 @@ config_load_config_file_func (Config *config)
         }
         config->log_dir = (gchar *)json_string_value (j);
 
+        /* pid file */
+        j = json_object_get (config->config, "pid_file");
+        if (j == NULL) {
+                GST_ERROR ("parse itvencoder config file error : pid_file");
+                return -1;
+        }
+        config->pid_file = (gchar *)json_string_value (j);
+
         /* channel configs */
         j = json_object_get (config->config, "channel_configs");
         if (j == NULL) {

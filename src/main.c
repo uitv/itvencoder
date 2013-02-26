@@ -22,13 +22,13 @@ static void sighandler (gint number)
         log_reopen (_log);
 }
 
-static gint create_pid_file ()
+static gint create_pid_file (gchar *pid_file)
 {
         pid_t pid;
         FILE *fd;
 
         pid = getpid ();
-        fd = fopen ("/var/run/itvencoder.pid", "w");
+        fd = fopen (pid_file, "w");
         if (fd == NULL) {
                 perror ("open /var/run/itvencoder.pid file error\n");
                 return 1;
@@ -185,7 +185,7 @@ main (int argc, char *argv[])
                                 /* remove gstInfo default handler. */
                                 gst_debug_remove_log_function (gst_debug_log_default);
 
-                                if (create_pid_file () != 0) { //FIXME remove when process exit
+                                if (create_pid_file (config->pid_file) != 0) { //FIXME remove when process exit
                                         exit (1);
                                 }
                                 break;
