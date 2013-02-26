@@ -71,7 +71,7 @@ print_itvencoder_info (ITVEncoder *itvencoder)
         GST_WARNING ("start time : %lld", itvencoder_get_start_time(itvencoder));
         GST_WARNING ("listening ports : %d", json_integer_value (json_object_get (itvencoder->config->config, "listening_ports")));
         GST_WARNING ("channel configs : %s", json_string_value (json_object_get (itvencoder->config->config, "channel_configs")));
-        GST_WARNING ("log directory : %s", json_string_value (json_object_get (itvencoder->config->config, "log_directory")));
+        GST_WARNING ("log directory : %s", itvencoder->config->log_dir);
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 GST_WARNING ("config file %d - %s", i, channel_config->config_path);
@@ -168,7 +168,15 @@ main (int argc, char *argv[])
                                 }
                         } else if (process_id == 0) {
                                 /* children process, itvencoder server */
-                                _log = log_new ("log_path", "/var/log/itvencoder/itvencoder.log", NULL);
+                                gchar *log_path;
+
+                                if (config->log_dir[strlen(config->log_dir) - 1] == '/') {
+                                        log_path = g_strdup_printf ("%sitvencoder.log", config->log_dir);
+                                } else {
+                                        log_path = g_strdup_printf ("%s/itvencoder.log", config->log_dir);
+                                }
+                                _log = log_new ("log_path", log_path, NULL);
+                                g_free (log_path);
                                 ret = log_set_log_handler (_log);
                                 if (ret != 0) {
                                         exit (ret);

@@ -26,6 +26,7 @@ struct _Config {
         json_t *config;
         gint http_mgmt_port;
         gint http_streaming_port;
+        gchar *log_dir;
         gboolean dirty; // config have been modified?
         GArray *channel_config_array; // array of json_t * type
 };
