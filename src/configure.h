@@ -22,7 +22,7 @@ struct _ChannelConfig {
 struct _Config {
         GObject parent;
 
-        gchar *config_file_path;
+        gchar *config_path;
         json_t *config;
         gint http_mgmt_port;
         gint http_streaming_port;

@@ -41,7 +41,7 @@ config_class_init (ConfigClass *configclass)
         configclass->config_save_config_file_func = config_save_config_file_func;
 
         param = g_param_spec_string (
-                "config_file_path",
+                "config_path",
                 "configf",
                 "config file path",
                 "itvencoder.conf",
@@ -55,7 +55,7 @@ config_init (Config *config)
 {
         GST_LOG ("config init");
 
-        config->config_file_path = NULL;
+        config->config_path = NULL;
         config->config = NULL;
         config->channel_config_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
@@ -82,7 +82,7 @@ config_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpe
 
         switch(prop_id) {
         case CONFIG_PROP_CONFIG_FILE_PATH:
-                CONFIG(obj)->config_file_path = (gchar *)g_value_dup_string(value); //TODO: should release dup string config_file_path?
+                CONFIG(obj)->config_path = (gchar *)g_value_dup_string(value); //TODO: should release dup string config_path?
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -99,7 +99,7 @@ config_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *psp
 
         switch(prop_id) {
         case CONFIG_PROP_CONFIG_FILE_PATH:
-                g_value_set_string(value, config->config_file_path);
+                g_value_set_string(value, config->config_path);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -120,7 +120,7 @@ config_load_config_file_func (Config *config)
         GST_LOG ("config load config file func");
 
         json_decref (config->config); //TODO: should check
-        config->config = json_load_file (config->config_file_path, 0, &error);
+        config->config = json_load_file (config->config_path, 0, &error);
         if(!config->config) {
                 GST_ERROR("%d: %s", error.line, error.text);
                 return -1;
@@ -175,7 +175,7 @@ config_save_config_file_func (Config *config)
 {
         GST_LOG ("config save cofnig file func");
 
-        json_dump_file (config->config, config->config_file_path, JSON_INDENT (4)); //TODO: error check
+        json_dump_file (config->config, config->config_path, JSON_INDENT (4)); //TODO: error check
 }
 
 GType

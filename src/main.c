@@ -124,13 +124,13 @@ main (int argc, char *argv[])
 
         /* config command line option */
         if (config_path) {
-                config = config_new ("config_file_path", config_path, NULL);
+                config = config_new ("config_path", config_path, NULL);
                 if (config_load_config_file (config) != 0) {
                         GST_ERROR ("config files load error: %s", config_path);
                         exit (0);
                 }
         } else {
-                config = config_new ("config_file_path", "/etc/itvencoder/itvencoder.conf");
+                config = config_new ("config_path", "/etc/itvencoder/itvencoder.conf");
                 if (config_load_config_file (config) != 0) {
                         GST_ERROR ("config files load error: /etc/itvencoder/itvencoder.conf");
                         exit (0);

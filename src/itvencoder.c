@@ -74,7 +74,7 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
 
         switch(prop_id) {
         case ITVENCODER_PROP_CONFIG:
-                ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value); //TODO: should release dup string config_file_path?
+                ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value); //TODO: should release dup string?
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
