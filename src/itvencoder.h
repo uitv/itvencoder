@@ -27,7 +27,6 @@ struct _ITVEncoder {
         GstClock *system_clock;
         GRand *grand;
 
-        gchar *conf_path;
         Config *config;
 
         GArray *channel_array;

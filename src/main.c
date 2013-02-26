@@ -10,6 +10,7 @@
 
 #include "log.h"
 #include "itvencoder.h"
+#include "configure.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -79,17 +80,18 @@ print_itvencoder_info (ITVEncoder *itvencoder)
 
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
-static gchar *config = NULL;
+static gchar *config_path = NULL;
 static GOptionEntry options[] = {
-        {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
+        {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
 };
 
 int
-main(int argc, char *argv[])
+main (int argc, char *argv[])
 {
+        Config *config;
         ITVEncoder *itvencoder;
         GMainLoop *loop;
         pid_t process_id = 0;
@@ -110,7 +112,7 @@ main(int argc, char *argv[])
                 exit (0);
         }
         g_option_context_free (ctx);
-        GST_DEBUG_CATEGORY_INIT(ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+        GST_DEBUG_CATEGORY_INIT (ITVENCODER, "ITVENCODER", 0, "itvencoder log");
 
         if (version) {
                 g_print ("iTVEncoder version: %s\n", VERSION);
@@ -120,7 +122,23 @@ main(int argc, char *argv[])
 
         signal (SIGPIPE, SIG_IGN);
 
-        if (!foreground) { /* run in background */
+        /* config command line option */
+        if (config_path) {
+                config = config_new ("config_file_path", config_path, NULL);
+                if (config_load_config_file (config) != 0) {
+                        GST_ERROR ("config files load error: %s", config_path);
+                        exit (0);
+                }
+        } else {
+                config = config_new ("config_file_path", "/etc/itvencoder/itvencoder.conf");
+                if (config_load_config_file (config) != 0) {
+                        GST_ERROR ("config files load error: /etc/itvencoder/itvencoder.conf");
+                        exit (0);
+                }
+        }
+
+        /* run in background? */
+        if (!foreground) {
                 /* daemon */
                 if (daemon (0, 0) != 0) {
                         GST_ERROR ("Failed to daemonize");
@@ -182,13 +200,7 @@ main(int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        if (config) {
-                /* use command line -c conf_file */
-                itvencoder = itvencoder_new ("conf_path", config, NULL);
-        } else {
-                /* use default config path */
-                itvencoder = itvencoder_new ("conf_path", "/etc/itvencoder/itvencoder.conf", NULL);
-        }
+        itvencoder = itvencoder_new ("config", config, NULL);
         itvencoder_start (itvencoder);
         print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);
