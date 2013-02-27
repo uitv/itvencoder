@@ -35,8 +35,6 @@ channel_class_init (ChannelClass *channelclass)
         GObjectClass *g_object_class = G_OBJECT_CLASS(channelclass);
         GParamSpec *param;
 
-        GST_LOG ("channel class init.");
-
         g_object_class->constructor = channel_constructor;
         g_object_class->set_property = channel_set_property;
         g_object_class->get_property = channel_get_property;
@@ -54,8 +52,6 @@ channel_class_init (ChannelClass *channelclass)
 static void
 channel_init (Channel *channel)
 {
-        GST_LOG ("channel object init");
-
         channel->system_clock = gst_system_clock_obtain ();
         channel->operate_mutex = g_mutex_new ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
@@ -72,8 +68,6 @@ channel_constructor (GType type, guint n_construct_properties, GObjectConstructP
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
-        GST_LOG ("channel constructor");
-
         obj = parent_class->constructor(type, n_construct_properties, construct_properties);
 
         return obj;
@@ -83,8 +77,6 @@ static void
 channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CHANNEL(obj));
-
-        GST_LOG ("channel set property");
 
         switch(prop_id) {
         case CHANNEL_PROP_NAME:
@@ -101,8 +93,6 @@ channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
 {
         Channel *channel = CHANNEL(obj);
 
-        GST_LOG ("channel get property");
-
         switch(prop_id) {
         case CHANNEL_PROP_NAME:
                 g_value_set_string (value, channel->name);
@@ -117,8 +107,6 @@ GType
 channel_get_type (void)
 {
         static GType type = 0;
-
-        GST_LOG ("channel get type");
 
         if (type) return type;
         static const GTypeInfo info = {
@@ -260,8 +248,6 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
         Encoder *encoder;
         guint i, j;
 
-        GST_LOG ("source appsink callback func %c", type);
-
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         switch (type) {
         case 'a':
@@ -310,8 +296,6 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
 {
         SourceAppsinkUserData *user_data;
         gint i;
-
-        GST_LOG ("channel set source pipeline : %s", pipeline_string);
 
         channel->source->pipeline_string = pipeline_string;
         channel->source->video_cb_user_data.type = 'v';
@@ -425,8 +409,6 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         Encoder *encoder = (Encoder *)user_data;
         gint i;
 
-        GST_LOG ("encoder appsink callback func");
-
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         i = encoder->current_output_position + 1;
         i = i % OUTPUT_RING_SIZE;
@@ -445,8 +427,6 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         gchar type = ((EncoderAppsrcUserData *)user_data)->type;
         Channel *channel = ((EncoderAppsrcUserData *)user_data)->channel;
         Encoder *encoder;
-
-        GST_LOG ("encoder %d appsrc need data callback func type %c; length %d", index, type, length);
 
         encoder = (Encoder *)g_array_index (channel->encoder_array, gpointer, index);
         switch (type) {
@@ -554,8 +534,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
                 encoder_appsink_callback,
                 NULL
         };
-
-        GST_LOG ("channel add encoder pipeline : %s", encoder->pipeline_string);
 
         p = gst_parse_launch (encoder->pipeline_string, &e);
         if (e != NULL) {
