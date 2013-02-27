@@ -28,8 +28,6 @@ log_class_init (LogClass *logclass)
         GObjectClass *g_object_class = G_OBJECT_CLASS(logclass);
         GParamSpec *param;
 
-        GST_LOG ("channel class init.");
-
         g_object_class->constructor = log_constructor;
         g_object_class->set_property = log_set_property;
         g_object_class->get_property = log_get_property;
@@ -55,8 +53,6 @@ log_get_type (void)
 {
         static GType type = 0;
 
-        GST_LOG ("log get type");
-
         if (type) return type;
         static const GTypeInfo info = {
                 sizeof (LogClass),
@@ -81,8 +77,6 @@ log_constructor (GType type, guint n_construct_properties, GObjectConstructParam
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
-        GST_LOG ("channel constructor");
-
         obj = parent_class->constructor(type, n_construct_properties, construct_properties);
 
         return obj;
@@ -92,8 +86,6 @@ static void
 log_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail (IS_LOG (obj));
-
-        GST_LOG ("log set property %s", (gchar *)g_value_dup_string (value));
 
         switch(prop_id) {
         case LOG_PROP_PATH:
@@ -109,8 +101,6 @@ static void
 log_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
 {
         Log *log = LOG (obj);
-
-        GST_LOG ("log get property");
 
         switch(prop_id) {
         case LOG_PROP_PATH:
