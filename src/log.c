@@ -165,6 +165,12 @@ log_set_log_handler (Log *log)
 }
 
 gint
+log_set_stdout_handler ()
+{
+        gst_debug_add_log_function (log_func, &stdout);
+}
+
+gint
 log_reopen (Log *log)
 {
         log->log_hd = freopen (log->log_path, "w", log->log_hd);

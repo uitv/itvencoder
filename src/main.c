@@ -199,6 +199,9 @@ main (int argc, char *argv[])
                         /* parent exit */
                         exit (0);
                 }
+        } else {
+                log_set_stdout_handler ();
+                gst_debug_remove_log_function (gst_debug_log_default);
         }
 
         signal (SIGPIPE, SIG_IGN);
