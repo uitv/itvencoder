@@ -120,6 +120,10 @@ main (int argc, char *argv[])
                 exit (0);
         }
 
+        if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
+                gst_debug_set_default_threshold (GST_LEVEL_WARNING);
+        }
+
         signal (SIGPIPE, SIG_IGN);
 
         /* config command line option */
@@ -195,10 +199,6 @@ main (int argc, char *argv[])
                         /* parent exit */
                         exit (0);
                 }
-        }
-
-        if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
-                gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         }
 
         signal (SIGPIPE, SIG_IGN);
