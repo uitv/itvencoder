@@ -179,8 +179,6 @@ itvencoder_get_type (void)
 {
         static GType type = 0;
 
-        GST_LOG ("itvencoder get type");
-
         if (type) return type;
         static const GTypeInfo info = {
                 sizeof (ITVEncoderClass),
@@ -209,8 +207,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
         Channel *channel;
         gint i, j;
-
-        GST_INFO ("itvencoder channel monitor");
 
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
@@ -331,8 +327,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 GstClockTime
 itvencoder_get_start_time (ITVEncoder *itvencoder)
 {
-        GST_LOG ("itvencoder get start time");
-
         return itvencoder->start_time;
 }
 
@@ -481,8 +475,6 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
         RequestDataUserData *request_user_data;
         gchar *chunksize;
         struct iovec iov[3];
-
-        GST_LOG ("hello");
 
         switch (request_data->status) {
         case HTTP_REQUEST:
@@ -640,8 +632,6 @@ mgmt_dispatcher (gpointer data, gpointer user_data)
         Encoder *encoder;
         Channel *channel;
         RequestDataUserData *request_user_data;
-
-        GST_LOG ("hello");
 
         switch (request_data->status) {
         case HTTP_REQUEST:
