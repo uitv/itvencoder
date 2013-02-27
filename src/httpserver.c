@@ -200,7 +200,7 @@ read_request (RequestData *request_data)
                                 break;
                         }
                 } else if (count == 0) { /* closed by client */
-                        GST_WARNING ("client closed\n");
+                        GST_WARNING ("client closed");
                         return -2;
                 } else if (count > 0) {
                         read_pos += count;
