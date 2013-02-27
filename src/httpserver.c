@@ -119,8 +119,6 @@ httpserver_constructor (GType type, guint n_construct_properties, GObjectConstru
         GObject *obj;
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
-        GST_LOG ("httpserver constructor");
-
         obj = parent_class->constructor(type, n_construct_properties, construct_properties);
 
         return obj;
@@ -130,8 +128,6 @@ static void
 httpserver_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail (IS_HTTPSERVER (obj));
-
-        GST_LOG ("httpserver set property");
 
         switch(prop_id) {
         case HTTPSERVER_PROP_PORT:
@@ -151,8 +147,6 @@ httpserver_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
 {
         HTTPServer *httpserver = HTTPSERVER (obj);
 
-        GST_LOG ("httpserver get property");
-
         switch(prop_id) {
         case HTTPSERVER_PROP_PORT:
                 g_value_set_int (value, httpserver->listen_port);
@@ -170,8 +164,6 @@ GType
 httpserver_get_type (void)
 {
         static GType type = 0;
-
-        GST_LOG ("httpserver get type");
 
         if (type) return type;
         static const GTypeInfo info = {
