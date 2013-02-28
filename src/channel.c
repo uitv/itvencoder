@@ -404,6 +404,8 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
                 GST_INFO ("%s message: %s", g_value_get_string (&name), GST_MESSAGE_TYPE_NAME (msg));
         }
 
+        g_value_unset (&state);
+        g_value_unset (&name);
         return TRUE;
 }
 
