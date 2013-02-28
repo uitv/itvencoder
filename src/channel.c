@@ -32,9 +32,6 @@ static void source_set_property (GObject *obj, guint prop_id, const GValue *valu
 static void source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void encoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static void channel_class_init (ChannelClass *channelclass);
-static void channel_init (Channel *channel);
-static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data);
@@ -209,7 +206,6 @@ channel_class_init (ChannelClass *channelclass)
         GObjectClass *g_object_class = G_OBJECT_CLASS(channelclass);
         GParamSpec *param;
 
-        g_object_class->constructor = channel_constructor;
         g_object_class->set_property = channel_set_property;
         g_object_class->get_property = channel_get_property;
 
@@ -231,17 +227,6 @@ channel_init (Channel *channel)
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
-}
-
-static GObject *
-channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties)
-{
-        GObject *obj;
-        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
-
-        obj = parent_class->constructor(type, n_construct_properties, construct_properties);
-
-        return obj;
 }
 
 static void
