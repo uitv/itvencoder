@@ -23,8 +23,15 @@ enum {
         SOURCE_PROP_NAME,
 };
 
+enum {
+        ENCODER_PROP_0,
+        ENCODER_PROP_NAME,
+};
+
 static void source_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static void encoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
+static void encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void channel_class_init (ChannelClass *channelclass);
 static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
@@ -121,10 +128,24 @@ source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *psp
 static void
 encoder_class_init (EncoderClass *encoderclass)
 {
+        GObjectClass *g_object_class = G_OBJECT_CLASS(encoderclass);
+        GParamSpec *param;
+
+        g_object_class->set_property = encoder_set_property;
+        g_object_class->get_property = encoder_get_property;
+
+        param = g_param_spec_string (
+                "name",
+                "name",
+                "name of encoder",
+                NULL,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, ENCODER_PROP_NAME, param);
 }
 
 static void
-encoder_init (Source *encoder)
+encoder_init (Encoder *encoder)
 {
 }
 
@@ -149,6 +170,36 @@ encoder_get_type (void)
         type = g_type_register_static (G_TYPE_OBJECT, "Encoder", &info, 0);
 
         return type;
+}
+
+static void
+encoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+        g_return_if_fail(IS_ENCODER(obj));
+
+        switch(prop_id) {
+        case ENCODER_PROP_NAME:
+                ENCODER(obj)->name = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_file_path?
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
+                break;
+        }
+}
+
+static void
+encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+        Encoder *encoder = ENCODER(obj);
+
+        switch(prop_id) {
+        case ENCODER_PROP_NAME:
+                g_value_set_string (value, encoder->name);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
+                break;
+        }
 }
 
 /* channel class */
