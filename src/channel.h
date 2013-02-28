@@ -38,6 +38,7 @@ typedef struct _EncoderAppsrcUserData {
 struct _Source {
         GObject parent;
 
+        gchar *name;
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
@@ -83,12 +84,12 @@ GType source_get_type (void);
 struct _Encoder {
         GObject parent;
 
+        gchar *name;
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
         gint id;
-        gchar *name;
         GstState state; /* state of the pipeline */
         
         EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */

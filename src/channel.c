@@ -18,6 +18,13 @@ enum {
         CHANNEL_PROP_NAME,
 };
 
+enum {
+        SOURCE_PROP_0,
+        SOURCE_PROP_NAME,
+};
+
+static void source_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
+static void source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void channel_class_init (ChannelClass *channelclass);
 static void channel_init (Channel *channel);
 static GObject *channel_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
@@ -33,6 +40,20 @@ static void channel_encoder_appsrc_set_caps (Encoder *encoder);
 static void
 source_class_init (SourceClass *sourceclass)
 {
+        GObjectClass *g_object_class = G_OBJECT_CLASS(sourceclass);
+        GParamSpec *param;
+
+        g_object_class->set_property = source_set_property;
+        g_object_class->get_property = source_get_property;
+
+        param = g_param_spec_string (
+                "name",
+                "name",
+                "name of source",
+                NULL,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, SOURCE_PROP_NAME, param);
 }
 
 static void
@@ -64,6 +85,36 @@ source_get_type (void)
         type = g_type_register_static (G_TYPE_OBJECT, "Source", &info, 0);
 
         return type;
+}
+
+static void
+source_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+        g_return_if_fail(IS_SOURCE(obj));
+
+        switch(prop_id) {
+        case SOURCE_PROP_NAME:
+                SOURCE(obj)->name = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_file_path?
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
+                break;
+        }
+}
+
+static void
+source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+        Source *source = SOURCE(obj);
+
+        switch(prop_id) {
+        case SOURCE_PROP_NAME:
+                g_value_set_string (value, source->name);
+                break;
+        default:
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
+                break;
+        }
 }
 
 /* Encoder class */
