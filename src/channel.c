@@ -29,6 +29,44 @@ static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpo
 static gint channel_source_appsink_get_caps (Channel *channel);
 static void channel_encoder_appsrc_set_caps (Encoder *encoder);
 
+/* Source class */
+static void
+source_class_init (SourceClass *sourceclass)
+{
+}
+
+static void
+source_init (Source *source)
+{
+        source->audio_caps = NULL;
+        source->video_caps = NULL;
+        source->sync_error_times = 0;
+}
+
+GType
+source_get_type (void)
+{
+        static GType type = 0;
+
+        if (type) return type;
+        static const GTypeInfo info = {
+                sizeof (SourceClass),
+                NULL, // base class initializer
+                NULL, // base class finalizer
+                (GClassInitFunc)source_class_init,
+                NULL,
+                NULL,
+                sizeof (Source),
+                0,
+                (GInstanceInitFunc)source_init,
+                NULL
+        };
+        type = g_type_register_static (G_TYPE_OBJECT, "Source", &info, 0);
+
+        return type;
+}
+
+/* channel class */
 static void
 channel_class_init (ChannelClass *channelclass)
 {
@@ -55,10 +93,7 @@ channel_init (Channel *channel)
         channel->system_clock = gst_system_clock_obtain ();
         channel->operate_mutex = g_mutex_new ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
-        channel->source = g_malloc (sizeof (Source)); //TODO free!
-        channel->source->audio_caps = NULL;
-        channel->source->video_caps = NULL;
-        channel->source->sync_error_times = 0;
+        channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
 }
 

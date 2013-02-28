@@ -13,7 +13,9 @@
 #define OUTPUT_RING_SIZE (4*250)
 
 typedef struct _Source Source;
+typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
+typedef struct _EncoderClass EncoderClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
@@ -34,6 +36,8 @@ typedef struct _EncoderAppsrcUserData {
 } EncoderAppsrcUserData;
 
 struct _Source {
+        GObject parent;
+
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
@@ -62,7 +66,23 @@ struct _Source {
         GstClockTime last_video_heartbeat;
 };
 
+struct _SourceClass {
+        GObjectClass parent;
+};
+
+#define TYPE_SOURCE           (source_get_type())
+#define SOURCE(obj)           (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_SOURCE, Source))
+#define SOURCE_CLASS(cls)     (G_TYPE_CHECK_CLASS_CAST    ((cls), TYPE_SOURCE, SourceClass))
+#define IS_SOURCE(obj)        (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_SOURCE))
+#define IS_SOURCE_CLASS(cls)  (G_TYPE_CHECK_CLASS_TYPE    ((cls), TYPE_SOURCE))
+#define SOURCE_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS  ((obj), TYPE_SOURCE, SourceClass))
+#define source_new(...)       (g_object_new(TYPE_SOURCE, ## __VA_ARGS__, NULL))
+
+GType source_get_type (void);
+
 struct _Encoder {
+        GObject parent;
+
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
@@ -82,6 +102,10 @@ struct _Encoder {
         GstBuffer *output_ring[OUTPUT_RING_SIZE];
         gint current_output_position; // encoder output position
         guint64 output_count; // total output packet counts
+};
+
+struct _EncoderClass {
+        GObjectClass parent;
 };
 
 struct _Channel {
