@@ -469,8 +469,6 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
         channel->source->video_cb_user_data.channel = channel;
         channel->source->audio_cb_user_data.type = 'a';
         channel->source->audio_cb_user_data.channel = channel;
-        channel->source->bus_cb_user_data.type = 's';
-        channel->source->bus_cb_user_data.user_data = channel->source;
         channel->source->channel = channel;
 
         for (i=0; i<AUDIO_RING_SIZE; i++) {
@@ -669,9 +667,6 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->audio_cb_user_data.index = encoder->id;
         encoder->audio_cb_user_data.type = 'a';
         encoder->audio_cb_user_data.channel = channel;
-
-        encoder->bus_cb_user_data.type = 'e';
-        encoder->bus_cb_user_data.user_data = encoder;
 
         for (i=0; i<OUTPUT_RING_SIZE; i++) {
                 encoder->output_ring[i] = NULL;

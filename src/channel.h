@@ -19,11 +19,6 @@ typedef struct _EncoderClass EncoderClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
-typedef struct _BusCallbackUserData {
-        gchar type;
-        gpointer user_data;
-} BusCallbackUserData;
-
 typedef struct _SourceAppsinkUserData {
         gchar type;
         Channel *channel;
@@ -41,7 +36,6 @@ struct _Source {
         gchar *name;
         GstState state; /* state of the pipeline */
         Channel *channel;
-        BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
 
@@ -87,7 +81,6 @@ struct _Encoder {
         gchar *name;
         GstState state; /* state of the pipeline */
         Channel *channel;
-        BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
         gint id;
