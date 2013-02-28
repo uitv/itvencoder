@@ -39,11 +39,11 @@ struct _Source {
         GObject parent;
 
         gchar *name;
+        GstState state; /* state of the pipeline */
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
-        GstState state; /* state of the pipeline */
 
         /*  sync error cause sync_error_times inc, 
          *  sync normal cause sync_error_times reset to zero,
@@ -85,12 +85,12 @@ struct _Encoder {
         GObject parent;
 
         gchar *name;
+        GstState state; /* state of the pipeline */
         Channel *channel;
         BusCallbackUserData bus_cb_user_data;
         gchar *pipeline_string;
         GstElement *pipeline;
         gint id;
-        GstState state; /* state of the pipeline */
         
         EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
         gint current_video_position; // encoder read position
