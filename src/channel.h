@@ -109,7 +109,7 @@ struct _EncoderClass {
         GObjectClass parent;
 };
 
-#define TYPE_ENCODER           (source_get_type())
+#define TYPE_ENCODER           (encoder_get_type())
 #define ENCODER(obj)           (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_ENCODER, Encoder))
 #define ENCODER_CLASS(cls)     (G_TYPE_CHECK_CLASS_CAST    ((cls), TYPE_ENCODER, EncoderClass))
 #define IS_ENCODER(obj)        (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_ENCODER))

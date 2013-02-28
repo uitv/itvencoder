@@ -62,9 +62,9 @@ source_class_init (SourceClass *sourceclass)
         g_object_class_install_property (g_object_class, SOURCE_PROP_NAME, param);
 
         param = g_param_spec_int (
-                "statu",
-                "statuf",
-                "tstatu",
+                "state",
+                "statef",
+                "state",
                 GST_STATE_VOID_PENDING,
                 GST_STATE_PLAYING,
                 GST_STATE_VOID_PENDING,
@@ -79,6 +79,7 @@ source_init (Source *source)
         source->audio_caps = NULL;
         source->video_caps = NULL;
         source->sync_error_times = 0;
+        source->name = "source-0";
 }
 
 GType
@@ -160,9 +161,9 @@ encoder_class_init (EncoderClass *encoderclass)
         g_object_class_install_property (g_object_class, ENCODER_PROP_NAME, param);
 
         param = g_param_spec_int (
-                "statu",
-                "statuf",
-                "tstatu",
+                "state",
+                "statef",
+                "state",
                 GST_STATE_VOID_PENDING,
                 GST_STATE_PLAYING,
                 GST_STATE_VOID_PENDING,
@@ -350,24 +351,20 @@ print_one_tag (const GstTagList * list, const gchar * tag, gpointer user_data)
 }
 
 static gboolean
-bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
+bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
 {
         gchar *debug;
         GError *error;
         GstState old, new, pending;
         GstStreamStatusType type;
-        BusCallbackUserData *bus_cb_user_data = data;
-        Source *source;
-        Encoder *encoder;
         GstClock *clock;
         GstTagList *tags;
+        GObject *object = user_data;
+        GValue state = { 0, }, name = { 0, };
 
-        if (bus_cb_user_data->type == 's') {
-                source = bus_cb_user_data->user_data;
-        } else  if (bus_cb_user_data->type == 'e') {
-                encoder = bus_cb_user_data->user_data;
-                source = encoder->channel->source;
-        }
+        
+        g_value_init (&name, G_TYPE_STRING);
+        g_object_get_property (object, "name", &name);
 
         switch (GST_MESSAGE_TYPE (msg)) {
         case GST_MESSAGE_EOS:
@@ -381,52 +378,30 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer data)
         case GST_MESSAGE_ERROR: 
                 gst_message_parse_error (msg, &error, &debug);
                 g_free (debug);
-                if (bus_cb_user_data->type == 's') {
-                        GST_WARNING ("%s error: %s", source->channel->name, error->message);
-                } else  if (bus_cb_user_data->type == 'e') {
-                        GST_WARNING ("%s error: %s", encoder->name, error->message);
-                }
+                GST_WARNING ("%s error: %s", g_value_get_string (&name), error->message);
                 g_error_free (error);
                 break;
         case GST_MESSAGE_STATE_CHANGED:
-                if (bus_cb_user_data->type == 's') {
-                        gst_message_parse_state_changed (msg, &old, &new, &pending);
-                        GST_INFO ("%s state from %s to %s", source->channel->name, gst_element_state_get_name (old), gst_element_state_get_name (new));
-                        source->state = new;
-                } else  if (bus_cb_user_data->type == 'e') {
-                        gst_message_parse_state_changed (msg, &old, &new, &pending);
-                        GST_INFO ("%s state from %s to %s", encoder->name, gst_element_state_get_name (old), gst_element_state_get_name (new));
-                        encoder->state = new;
-                }
+                g_value_init (&state, G_TYPE_INT);
+                gst_message_parse_state_changed (msg, &old, &new, &pending);
+                GST_INFO ("%s state from %s to %s", g_value_get_string (&name), gst_element_state_get_name (old), gst_element_state_get_name (new));
+                g_value_set_int (&state, new);
+                g_object_set_property (object, "state", &state);
                 break;
         case GST_MESSAGE_STREAM_STATUS:
                 gst_message_parse_stream_status (msg, &type, NULL);
                 GST_INFO ("stream status %d", type);
                 break;
         case GST_MESSAGE_NEW_CLOCK:
-                if (bus_cb_user_data->type == 's') {
-                        gst_message_parse_new_clock (msg, &clock);
-                        GST_INFO ("New source clock %s", GST_OBJECT_NAME (clock));
-                } else if (bus_cb_user_data->type == 'e') {
-                        gst_message_parse_new_clock (msg, &clock);
-                        GST_INFO ("New encoder clock %s", GST_OBJECT_NAME (clock));
-                }
+                gst_message_parse_new_clock (msg, &clock);
+                GST_INFO ("New source clock %s", GST_OBJECT_NAME (clock));
                 break;
         case GST_MESSAGE_ASYNC_DONE:
-                /*Posted by elements when they complete an ASYNC GstStateChange.*/
-                if (bus_cb_user_data->type == 's') {
-                        GST_INFO ("source %s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
-                } else if (bus_cb_user_data->type == 'e') {
-                        GST_INFO ("encoder %s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
-                        gst_bin_recalculate_latency (GST_BIN (encoder->pipeline));
-                }
+                GST_INFO ("source %s message: %s", g_value_get_string (&name), GST_MESSAGE_TYPE_NAME (msg));
+                //gst_bin_recalculate_latency (GST_BIN (encoder->pipeline));
                 break;
         default:
-                if (bus_cb_user_data->type == 's') {
-                        GST_INFO ("%s message: %s", source->channel->name, GST_MESSAGE_TYPE_NAME (msg));
-                } else if (bus_cb_user_data->type == 'e') {
-                        GST_INFO ("%s message: %s", encoder->name, GST_MESSAGE_TYPE_NAME (msg));
-                }
+                GST_INFO ("%s message: %s", g_value_get_string (&name), GST_MESSAGE_TYPE_NAME (msg));
         }
 
         return TRUE;
@@ -530,7 +505,7 @@ channel_source_pipeline_initialize (Source *source)
         }
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        gst_bus_add_watch (bus, bus_callback, &source->bus_cb_user_data);
+        gst_bus_add_watch (bus, bus_callback, source);
         g_object_unref (bus);
 
         source->pipeline = p;
@@ -732,7 +707,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
 
         /* set bus watch callback */
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
-        gst_bus_add_watch (bus, bus_callback, &encoder->bus_cb_user_data);
+        gst_bus_add_watch (bus, bus_callback, encoder);
         g_object_unref (bus);
 
         /* set encoder appsink callback */
