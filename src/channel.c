@@ -66,6 +66,40 @@ source_get_type (void)
         return type;
 }
 
+/* Encoder class */
+static void
+encoder_class_init (EncoderClass *encoderclass)
+{
+}
+
+static void
+encoder_init (Source *encoder)
+{
+}
+
+GType
+encoder_get_type (void)
+{
+        static GType type = 0;
+
+        if (type) return type;
+        static const GTypeInfo info = {
+                sizeof (EncoderClass),
+                NULL, // base class initializer
+                NULL, // base class finalizer
+                (GClassInitFunc)encoder_class_init,
+                NULL,
+                NULL,
+                sizeof (Encoder),
+                0,
+                (GInstanceInitFunc)encoder_init,
+                NULL
+        };
+        type = g_type_register_static (G_TYPE_OBJECT, "Encoder", &info, 0);
+
+        return type;
+}
+
 /* channel class */
 static void
 channel_class_init (ChannelClass *channelclass)
@@ -522,11 +556,7 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         Encoder *encoder;
         gint i;
 
-        encoder = g_malloc (sizeof (Encoder)); //TODO free!
-        if (encoder == NULL) {
-                GST_ERROR ("g_malloc memeory error.");
-                return -1;
-        }
+        encoder = encoder_new (0, NULL); //TODO free!
 
         encoder->channel = channel;
         encoder->pipeline_string = pipeline_string;
