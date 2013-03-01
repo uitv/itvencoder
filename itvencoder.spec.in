@@ -40,8 +40,6 @@ rm -rf %{buildroot}
 /etc/itvencoder/channels.d/channel-2.conf.sample
 /etc/itvencoder/channels.d/channel-3.conf.sample
 /etc/itvencoder/itvencoder.conf.sample
-/etc/logrotate.d/itvencoder
-/etc/supervisord.conf
 /usr/bin/itvencoder
 
 
