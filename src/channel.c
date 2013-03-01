@@ -387,6 +387,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
                 GST_INFO ("%s state from %s to %s", g_value_get_string (&name), gst_element_state_get_name (old), gst_element_state_get_name (new));
                 g_value_set_int (&state, new);
                 g_object_set_property (object, "state", &state);
+                g_value_unset (&state);
                 break;
         case GST_MESSAGE_STREAM_STATUS:
                 gst_message_parse_stream_status (msg, &type, NULL);
@@ -404,7 +405,6 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
                 GST_INFO ("%s message: %s", g_value_get_string (&name), GST_MESSAGE_TYPE_NAME (msg));
         }
 
-        g_value_unset (&state);
         g_value_unset (&name);
         return TRUE;
 }
