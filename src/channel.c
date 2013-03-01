@@ -76,10 +76,6 @@ source_class_init (SourceClass *sourceclass)
 static void
 source_init (Source *source)
 {
-        source->audio_caps = NULL;
-        source->video_caps = NULL;
-        source->sync_error_times = 0;
-        source->name = "source-0";
 }
 
 GType
@@ -466,6 +462,10 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
         SourceAppsinkUserData *user_data;
         gint i;
 
+        channel->source->audio_caps = NULL;
+        channel->source->video_caps = NULL;
+        channel->source->sync_error_times = 0;
+        channel->source->name = channel->name;
         channel->source->pipeline_string = pipeline_string;
         channel->source->video_cb_user_data.type = 'v';
         channel->source->video_cb_user_data.channel = channel;
