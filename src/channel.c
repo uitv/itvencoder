@@ -89,16 +89,16 @@ source_get_type (void)
 
         if (type) return type;
         static const GTypeInfo info = {
-                sizeof (SourceClass),
+                sizeof (SourceClass), // class size
                 NULL, // base class initializer
                 NULL, // base class finalizer
-                (GClassInitFunc)source_class_init,
-                NULL,
-                NULL,
-                sizeof (Source),
-                0,
-                (GInstanceInitFunc)source_init,
-                NULL
+                (GClassInitFunc)source_class_init, // class init
+                NULL, // class finalize
+                NULL, // class data
+                sizeof (Source), //instance size
+                0, // n_preallocs
+                (GInstanceInitFunc)source_init, //instance_init
+                NULL // value_table
         };
         type = g_type_register_static (G_TYPE_OBJECT, "Source", &info, 0);
 
