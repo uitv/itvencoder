@@ -412,19 +412,23 @@ source_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         SourceStream *stream = (SourceStream *)user_data;
+        EncoderStream *encoder;
+        gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
         stream->current_position = (stream->current_position + 1) % VIDEO_RING_SIZE;
+
+        /* output running status */
         GST_DEBUG ("%s current position %d, buffer duration: %d", stream->name, stream->current_position, GST_BUFFER_DURATION(buffer));
-        #if 0
         for (i = 0; i < stream->encoders->len; i++) {
-                encoder = g_array_index (channel->encoder_array, gpointer, j);
-                if (i == encoder->current_audio_position) {
-                        GST_WARNING ("encoder %s audio encoder cant catch source output speed", encoder->name);
+                encoder = g_array_index (stream->encoders, gpointer, i);
+                if (stream->current_position == encoder->current_position) {
+                        GST_WARNING ("encoder %s audio encoder cant catch source %s output.", encoder->name, stream->name);
                 }
         }
-        #endif
+
+        /* out a buffer */
         if (stream->ring[stream->current_position] != NULL) {
                 gst_buffer_unref (stream->ring[stream->current_position]);
         }
@@ -514,6 +518,7 @@ channel_source_pipeline_initialize (Source *source)
                 }
                 stream->current_position = -1;
                 stream->system_clock = source->channel->system_clock;
+                stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
                 appsink = gst_bin_get_by_name (GST_BIN (p), stream->name); //TODO release
                 if (appsink == NULL) {
                         GST_ERROR ("Get %s sink error", stream->name);
@@ -699,6 +704,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
                         source = g_array_index (encoder->channel->source->streams, gpointer, j);
                         if (g_strcmp0 (source->name, stream->name) == 0) {
                                 stream->source = source;
+                                g_array_append_val (source->encoders, stream);
                                 break;
                         }
                 }
@@ -779,7 +785,6 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
         gint i;
         GstElement *appsrc;
         EncoderStream *stream;
-        //Channel *channel = encoder->channel;
 
         for (i = 0; i < encoder->streams->len; i++) {
                 stream = g_array_index (encoder->streams, gpointer, i);
