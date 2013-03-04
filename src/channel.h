@@ -30,6 +30,17 @@ typedef struct _EncoderAppsrcUserData {
         Channel *channel;
 } EncoderAppsrcUserData;
 
+typedef struct _SourceStream {
+        gchar *name;
+        GstCaps *caps;
+        GstBuffer *ring[VIDEO_RING_SIZE];
+        gint current_position; // source output position
+        GstClockTime current_timestamp;
+        GstClock *system_clock;
+        GstClockTime last_heartbeat;
+        GArray *encoders;
+} SourceStream;
+
 struct _Source {
         GObject parent;
 
@@ -44,6 +55,8 @@ struct _Source {
          *  sync_error_times == 5 cause the channel restart.
          * */
         gint sync_error_times;
+
+        GArray *streams;
 
         /* source produce, encoder consume */
         SourceAppsinkUserData audio_cb_user_data;
@@ -75,6 +88,15 @@ struct _SourceClass {
 
 GType source_get_type (void);
 
+typedef struct _EncoderStream {
+        gchar *name;
+        GstBuffer *ring[VIDEO_RING_SIZE];
+        gint current_position; // encoder position
+        GstClock *system_clock;
+        GstClockTime last_heartbeat;
+        SourceStream *source;
+} EncoderStream;
+
 struct _Encoder {
         GObject parent;
 
@@ -85,6 +107,8 @@ struct _Encoder {
         GstElement *pipeline;
         gint id;
         
+        GArray *streams;
+
         EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
         gint current_video_position; // encoder read position
         GstClockTime last_video_heartbeat;
