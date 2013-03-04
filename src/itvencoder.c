@@ -207,7 +207,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
         Channel *channel;
         gint i, j;
-
+#if 0
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->source->state != GST_STATE_PLAYING) {
@@ -310,7 +310,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                 }
         }
-
+#endif
         httpserver_report_request_data (itvencoder->httpserver);
 
         now = gst_clock_get_time (itvencoder->system_clock);
