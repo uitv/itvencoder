@@ -19,17 +19,6 @@ typedef struct _EncoderClass EncoderClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
-typedef struct _SourceAppsinkUserData {
-        gchar type;
-        Channel *channel;
-} SourceAppsinkUserData;
-
-typedef struct _EncoderAppsrcUserData {
-        gint index;
-        gchar type;
-        Channel *channel;
-} EncoderAppsrcUserData;
-
 typedef struct _SourceStream {
         gchar *name;
         GstCaps *caps;
@@ -57,21 +46,6 @@ struct _Source {
         gint sync_error_times;
 
         GArray *streams;
-
-        /* source produce, encoder consume */
-        SourceAppsinkUserData audio_cb_user_data;
-        GstCaps *audio_caps;
-        GstBuffer *audio_ring[AUDIO_RING_SIZE];
-        gint current_audio_position; // source write position
-        GstClockTime current_audio_timestamp;
-        GstClockTime last_audio_heartbeat;
-
-        SourceAppsinkUserData video_cb_user_data;
-        GstCaps *video_caps;
-        GstBuffer *video_ring[VIDEO_RING_SIZE];
-        gint current_video_position; // source write position
-        GstClockTime current_video_timestamp;
-        GstClockTime last_video_heartbeat;
 };
 
 struct _SourceClass {
@@ -108,14 +82,6 @@ struct _Encoder {
         gint id;
         
         GArray *streams;
-
-        EncoderAppsrcUserData video_cb_user_data; /* video appsrc callback user_data */
-        gint current_video_position; // encoder read position
-        GstClockTime last_video_heartbeat;
-
-        EncoderAppsrcUserData audio_cb_user_data; /* audio appsrc callback user_data */
-        gint current_audio_position; // encoder read position
-        GstClockTime last_audio_heartbeat;
 
         GstBuffer *output_ring[OUTPUT_RING_SIZE];
         gint current_output_position; // encoder output position
