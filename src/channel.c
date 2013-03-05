@@ -768,6 +768,7 @@ channel_source_appsink_get_caps (Source *source)
                                 g_usleep (100000); // 100ms
                         }
                         if (failure) {
+                                GST_ERROR ("stream %s get caps failure.", stream->name);
                                 break;
                         }
                 }
