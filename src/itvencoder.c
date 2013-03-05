@@ -201,21 +201,96 @@ static gboolean
 itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
 {
         GstClockID nextid;
-        GstClockTime now;
+        GstClockTime now, min, max;
         GstClockTimeDiff time_diff;
         GstClockReturn ret;
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
         Channel *channel;
+        SourceStream *source_stream;
+        EncoderStream *encoder_stream;
         gint i, j;
-#if 0
+
         for (i=0; i<itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->source->state != GST_STATE_PLAYING) {
                         continue;
                 }
-                time_diff = GST_CLOCK_DIFF (channel->source->current_video_timestamp, channel->source->current_audio_timestamp);
-                if ((time_diff > SYNC_THRESHHOLD) || (time_diff < - SYNC_THRESHHOLD)) {
-                        GST_ERROR ("channel %s audio and video sync error %lld", channel->name, time_diff);
+
+                /* source heartbeat check */
+                for (i = 0; i < channel->source->streams->len; i++) {
+                        source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        now = gst_clock_get_time (itvencoder->system_clock);
+                        time_diff = GST_CLOCK_DIFF (source_stream->last_heartbeat, now);
+                        if (time_diff > HEARTBEAT_THRESHHOLD) {
+                                GST_ERROR ("channel %s stream %s heart beat error %lld, restart channel %s",
+                                        channel->name,
+                                        source_stream->name,
+                                        time_diff,
+                                        channel->name);
+                                if (g_mutex_trylock (channel->operate_mutex)) {
+                                        channel_restart (channel);
+                                        g_mutex_unlock (channel->operate_mutex);
+                                } else {
+                                        GST_WARNING ("Try lock channel %s to restart failure!", channel->name);
+                                }
+                        } else {
+                                GST_INFO ("channel %s stream %s heart beat %" GST_TIME_FORMAT,
+                                        channel->name,
+                                        source_stream->name,
+                                        GST_TIME_ARGS (source_stream->last_heartbeat));
+                        }
+                }
+
+                /* encoder heartbeat check */
+                for (i = 0; i < channel->encoder_array->len; i++) {
+                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, i);
+                        if (encoder->state != GST_STATE_PLAYING) {
+                                continue;
+                        }
+
+                        for (j = 0; j < encoder->streams->len; j++) {
+                                encoder_stream = g_array_index (encoder->streams, gpointer, j);
+                                now = gst_clock_get_time (itvencoder->system_clock);
+                                time_diff = GST_CLOCK_DIFF (encoder_stream->last_heartbeat, now);
+                                if (time_diff > HEARTBEAT_THRESHHOLD) {
+                                        GST_ERROR ("endcoder %s stream %s heart beat error %lld, restart",
+                                                encoder->name,
+                                                encoder_stream->name,
+                                                time_diff);
+                                        channel_encoder_restart (encoder);
+                                } else {
+                                        GST_INFO ("channel %s encoder stream %s heart beat %" GST_TIME_FORMAT,
+                                                channel->name,
+                                                encoder_stream->name,
+                                                GST_TIME_ARGS (encoder_stream->last_heartbeat));
+                                }
+
+                                time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->current_position]),
+                                        GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->source->current_position]));
+                                if (time_diff > GST_SECOND) {
+                                        GST_WARNING ("channel %s encoder stream %s delay %" GST_TIME_FORMAT,
+                                                channel->name,
+                                                encoder_stream->name,
+                                                GST_TIME_ARGS (time_diff));
+                                }
+                        }
+                }
+
+                /* sync check */
+                min = GST_CLOCK_TIME_NONE;
+                max = 0;
+                for (i = 0; i < channel->source->streams->len; i++) {
+                        source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        if (min > source_stream->current_timestamp) {
+                                min = source_stream->current_timestamp;
+                        }
+                        if (max < source_stream->current_timestamp) {
+                                max = source_stream->current_timestamp;
+                        }
+                }
+                time_diff = GST_CLOCK_DIFF (min, max);
+                if (time_diff > SYNC_THRESHHOLD) {
+                        GST_ERROR ("channel %s sync error %lld", channel->name, time_diff);
                         channel->source->sync_error_times += 1;
                         if (channel->source->sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
@@ -229,88 +304,16 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                 } else {
                         channel->source->sync_error_times = 0;
-                        GST_INFO ("%s source video timestamp %" GST_TIME_FORMAT,
-                                  channel->name,
-                                  GST_TIME_ARGS (channel->source->current_video_timestamp));
-                        GST_INFO ("%s source audio timestamp %" GST_TIME_FORMAT,
-                                  channel->name,
-                                  GST_TIME_ARGS (channel->source->current_audio_timestamp));
-                }
-
-                now = gst_clock_get_time (itvencoder->system_clock);
-                time_diff = GST_CLOCK_DIFF (now, channel->source->last_video_heartbeat);
-                if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                        GST_ERROR ("video source heart beat error %lld, restart channel %s", time_diff, channel->name);
-                        if (g_mutex_trylock (channel->operate_mutex)) {
-                                channel_restart (channel);
-                                g_mutex_unlock (channel->operate_mutex);
-                        } else {
-                                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
-                        }
-                } else {
-                        GST_INFO ("%s source video heart beat %" GST_TIME_FORMAT,
-                                  channel->name,
-                                  GST_TIME_ARGS (channel->source->last_video_heartbeat));
-                }
-
-                now = gst_clock_get_time (itvencoder->system_clock);
-                time_diff = GST_CLOCK_DIFF (now, channel->source->last_audio_heartbeat);
-                if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                        GST_ERROR ("audio source heart beat error %lld, restart channel %s", time_diff, channel->name);
-                        if (g_mutex_trylock (channel->operate_mutex)) {
-                                channel_restart (channel);
-                                g_mutex_unlock (channel->operate_mutex);
-                        } else {
-                                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
-                        }
-                } else {
-                        GST_INFO ("%s source audio heart beat %" GST_TIME_FORMAT,
-                                  channel->name,
-                                  GST_TIME_ARGS (channel->source->last_audio_heartbeat));
-                }
-
-                for (j=0; j<channel->encoder_array->len; j++) {
-                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        if (encoder->state != GST_STATE_PLAYING) {
-                                continue;
-                        }
-                        now = gst_clock_get_time (itvencoder->system_clock);
-                        time_diff = GST_CLOCK_DIFF (now, encoder->last_video_heartbeat);
-                        if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                                GST_ERROR ("endcoder video heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
-                                channel_encoder_restart (encoder);
-                                continue;
-                        } else {
-                                GST_INFO ("%s video heart beat %" GST_TIME_FORMAT,
-                                          encoder->name,
-                                          GST_TIME_ARGS (encoder->last_video_heartbeat));
-                        }
-
-                        now = gst_clock_get_time (itvencoder->system_clock);
-                        time_diff = GST_CLOCK_DIFF (now, encoder->last_audio_heartbeat);
-                        if ((time_diff > HEARTBEAT_THRESHHOLD) || (time_diff < - HEARTBEAT_THRESHHOLD)) {
-                                GST_ERROR ("endcoder audio heart beat error %lld, restart endcoder %s", time_diff, encoder->name);
-                                channel_encoder_restart (encoder);
-                        } else {
-                                GST_INFO ("%s audio heart beat %" GST_TIME_FORMAT,
-                                          encoder->name,
-                                          GST_TIME_ARGS (encoder->last_audio_heartbeat));
-                        }
-
-                        time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (channel->source->audio_ring[encoder->current_audio_position]),
-                                                    GST_BUFFER_TIMESTAMP (channel->source->audio_ring[channel->source->current_audio_position]));
-                        if (time_diff > 1000000000) { // 1s
-                                GST_WARNING ("encoder %s audio encoder delay %" GST_TIME_FORMAT, encoder->name, GST_TIME_ARGS (time_diff));
-                        }
-
-                        time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (channel->source->video_ring[encoder->current_video_position]),
-                                                    GST_BUFFER_TIMESTAMP (channel->source->video_ring[channel->source->current_video_position]));
-                        if (time_diff > 1000000000) { // 1s
-                                GST_WARNING ("encoder %s video encoder delay %" GST_TIME_FORMAT, encoder->name, GST_TIME_ARGS (time_diff));
+                        for (i = 0; i < channel->source->streams->len; i++) {
+                                source_stream = g_array_index (channel->source->streams, gpointer, i);
+                                GST_INFO ("channel %s stream %s timestamp %" GST_TIME_FORMAT,
+                                        channel->name,
+                                        source_stream->name,
+                                        GST_TIME_ARGS (source_stream->current_timestamp));
                         }
                 }
         }
-#endif
+
         httpserver_report_request_data (itvencoder->httpserver);
 
         now = gst_clock_get_time (itvencoder->system_clock);

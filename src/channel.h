@@ -64,7 +64,6 @@ GType source_get_type (void);
 
 typedef struct _EncoderStream {
         gchar *name;
-        GstBuffer *ring[VIDEO_RING_SIZE];
         gint current_position; // encoder position
         GstClock *system_clock;
         GstClockTime last_heartbeat;
