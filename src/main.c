@@ -104,7 +104,7 @@ main (int argc, char *argv[])
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);
         }
-        ctx = g_option_context_new ("[ADDITIONAL ARGUMENTS]");
+        ctx = g_option_context_new (NULL);
         g_option_context_add_main_entries (ctx, options, NULL);
         g_option_context_add_group (ctx, gst_init_get_option_group ());
         if (!g_option_context_parse (ctx, &argc, &argv, &err)) {
