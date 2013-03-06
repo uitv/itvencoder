@@ -41,6 +41,8 @@ static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_d
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 static gint channel_source_appsink_get_caps (Source *source);
 static void channel_encoder_appsrc_set_caps (Encoder *encoder);
+static gboolean channel_source_stop_func (gpointer *user_data);
+static gboolean channel_source_start_func (gpointer *user_data);
 static gboolean channel_restart_func (gpointer *user_data);
 
 /* Source class */
@@ -817,35 +819,82 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
         }
 }
 
-gint
-channel_source_stop (Source *source)
+static gboolean
+channel_source_stop_func (gpointer *user_data)
 {
+        Source *source = (Source *)user_data;
         Channel *channel = source->channel;
+        Encoder *encoder;
+        gint i;
+
+        if (!g_mutex_trylock (channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                return TRUE;
+        }
+
+        for (i = 0; i < channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                encoder->state = GST_STATE_VOID_PENDING;
+                gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+                channel_encoder_pipeline_release (encoder);
+        }
 
         source->state = GST_STATE_VOID_PENDING;
         gst_element_set_state (source->pipeline, GST_STATE_NULL);
         channel_source_pipeline_release (source);
 
+        g_mutex_unlock (channel->operate_mutex);
+
         return 0;
 }
 
 gint
-channel_source_start (Source *source)
+channel_source_stop (Source *source)
 {
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_source_stop_func, (gpointer) source, NULL);
+        return 0;
+}
+
+static gboolean
+channel_source_start_func (gpointer *user_data)
+{
+        Source *source = (Source *)user_data;
         Channel *channel = source->channel;
+        Encoder *encoder;
         gint i;
 
+        if (!g_mutex_trylock (channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                return TRUE;
+        }
+
         if (channel_source_pipeline_initialize (source) != 0) {
-                return -1;
+                return TRUE;
         }
 
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
         if (channel_source_appsink_get_caps (source) != 0) {
                 GST_ERROR ("Get source caps failure!");
                 channel_source_pipeline_release (source);
-                return -1;
+                return TRUE;
         }
 
+        for (i=0; i<channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                channel_encoder_pipeline_initialize (encoder);
+                channel_encoder_appsrc_set_caps (encoder);
+                gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+        }
+
+        g_mutex_unlock (channel->operate_mutex);
+
+        return FALSE;
+}
+
+gint
+channel_source_start (Source *source)
+{
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_source_start_func, (gpointer) source, NULL);
         return 0;
 }
 
@@ -861,18 +910,25 @@ channel_restart_func (gpointer *user_data)
                 return TRUE;
         }
 
+        /* stop encoders */
         for (i=0; i<channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
                 encoder->state = GST_STATE_VOID_PENDING;
                 gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
                 channel_encoder_pipeline_release (encoder);
         }
+
+        /* stop source */
         channel->source->state = GST_STATE_VOID_PENDING;
         gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
         channel_source_pipeline_release (channel->source);
+
+        /* start source */
         channel_source_pipeline_initialize (channel->source);
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
         channel_source_appsink_get_caps (channel->source);
+
+        /* start encoders */
         for (i=0; i<channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
                 channel_encoder_pipeline_initialize (encoder);

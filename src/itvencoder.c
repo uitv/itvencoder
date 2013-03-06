@@ -651,38 +651,26 @@ mgmt_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 } else if (request_data->parameters[0] == 's') {
                                         GST_WARNING ("Stop source");
-                                        if (g_mutex_trylock (channel->operate_mutex)) {
-                                                for (i=0; i<channel->encoder_array->len; i++) {
-                                                        channel_encoder_stop (g_array_index (channel->encoder_array, gpointer, i));
-                                                }
-                                                if (channel_source_stop (channel->source) == 0) {
-                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                } else {
-                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                }
-                                                g_mutex_unlock (channel->operate_mutex);
+                                        if (channel_source_stop (channel->source) == 0) {
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
                                         }
                                         return 0;
                                 } else if (request_data->parameters[0] == 'p') {
                                         GST_WARNING ("Start source");
-                                        if (g_mutex_trylock (channel->operate_mutex)) {
-                                                if (channel_source_start (channel->source) == 0) {
-                                                        for (i=0; i<channel->encoder_array->len; i++) {
-                                                                channel_encoder_start (g_array_index (channel->encoder_array, gpointer, i));
-                                                        }
-                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                } else {
-                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                }
-                                                g_mutex_unlock (channel->operate_mutex);
+                                        if (channel_source_start (channel->source) == 0) {
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
                                         }
                                         return 0;
                                 } else if (request_data->parameters[0] == 'r') {
