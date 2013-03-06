@@ -687,17 +687,14 @@ mgmt_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 } else if (request_data->parameters[0] == 'r') {
                                         GST_WARNING ("Restart channel");
-                                        if (g_mutex_trylock (channel->operate_mutex)) {
-                                                if (channel_restart (channel) == 0) {
-                                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                } else {
-                                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                        write (request_data->sock, buf, strlen (buf));
-                                                        g_free (buf);
-                                                }
-                                                g_mutex_unlock (channel->operate_mutex);
+                                        if (channel_restart (channel) == 0) {
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
                                         }
                                         return 0;
                                 } else {
