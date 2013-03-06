@@ -606,27 +606,6 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         }
 }
 
-guint
-channel_add_encoder (Channel *channel, gchar *pipeline_string)
-{
-        Encoder *encoder;
-        gint i;
-
-        encoder = encoder_new (0, NULL); //TODO free!
-
-        encoder->channel = channel;
-        encoder->pipeline_string = pipeline_string;
-        encoder->id = channel->encoder_array->len;
-        encoder->name = g_strdup_printf ("%s:encoder-%d", channel->name, encoder->id);
-        g_array_append_val (channel->encoder_array, encoder);
-
-        for (i=0; i<OUTPUT_RING_SIZE; i++) {
-                encoder->output_ring[i] = NULL;
-        }
-
-        return 0;
-}
-
 static gint
 channel_encoder_extract_streams (Encoder *encoder)
 {
@@ -649,6 +628,28 @@ channel_encoder_extract_streams (Encoder *encoder)
                 g_array_append_val (encoder->streams, stream);
                 g_match_info_next (match_info, NULL);
         }
+}
+
+guint
+channel_add_encoder (Channel *channel, gchar *pipeline_string)
+{
+        Encoder *encoder;
+        gint i;
+
+        encoder = encoder_new (0, NULL); //TODO free!
+
+        encoder->channel = channel;
+        encoder->pipeline_string = pipeline_string;
+        encoder->id = channel->encoder_array->len;
+        encoder->name = g_strdup_printf ("%s:encoder-%d", channel->name, encoder->id);
+        channel_encoder_extract_streams (encoder);
+        g_array_append_val (channel->encoder_array, encoder);
+
+        for (i=0; i<OUTPUT_RING_SIZE; i++) {
+                encoder->output_ring[i] = NULL;
+        }
+
+        return 0;
 }
 
 gint
@@ -693,8 +694,6 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
         encoder->state = GST_STATE_NULL;
         gst_app_sink_set_callbacks (GST_APP_SINK(appsink), &encoder_appsink_callbacks, encoder, NULL);
         gst_object_unref (appsink);
-
-        channel_encoder_extract_streams (encoder);
 
         for (i = 0; i < encoder->streams->len; i++) {
                 stream = g_array_index (encoder->streams, gpointer, i);
