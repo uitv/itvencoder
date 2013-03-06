@@ -1,5 +1,9 @@
 releases are sorted from youngest to oldest.
 
+v-0.2.2 2013-3-15 zhangping
+- multiply stream type support.
+- restart channel or encoder async.
+
 v-0.2.1 2013-2-25 zhangping
 - pure pull mode encoder app src.
 - FIN -> EPOLLIN bug fix.
