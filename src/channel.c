@@ -863,13 +863,21 @@ channel_restart_func (gpointer *user_data)
 
         for (i=0; i<channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
-                channel_encoder_stop (encoder);
+                encoder->state = GST_STATE_VOID_PENDING;
+                gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+                channel_encoder_pipeline_release (encoder);
         }
-        channel_source_stop (channel->source);
-        channel_source_start (channel->source);
+        channel->source->state = GST_STATE_VOID_PENDING;
+        gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
+        channel_source_pipeline_release (channel->source);
+        channel_source_pipeline_initialize (channel->source);
+        gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
+        channel_source_appsink_get_caps (channel->source);
         for (i=0; i<channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
-                channel_encoder_start (encoder);
+                channel_encoder_pipeline_initialize (encoder);
+                channel_encoder_appsrc_set_caps (encoder);
+                gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
         }
 
         g_mutex_unlock (channel->operate_mutex);
