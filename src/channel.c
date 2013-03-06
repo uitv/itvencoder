@@ -856,6 +856,11 @@ channel_restart_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
+        if (!g_mutex_trylock (channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                return TRUE;
+        }
+
         for (i=0; i<channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
                 channel_encoder_stop (encoder);
@@ -867,20 +872,16 @@ channel_restart_func (gpointer *user_data)
                 channel_encoder_start (encoder);
         }
 
+        g_mutex_unlock (channel->operate_mutex);
+
         return FALSE;
 }
 
 gint
 channel_restart (Channel *channel)
 {
-        if (g_mutex_trylock (channel->operate_mutex)) {
-                g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_restart_func, (gpointer) channel, NULL);
-                g_mutex_unlock (channel->operate_mutex);
-                return 0;
-        } else {
-                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
-                return -1;
-        }
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_restart_func, (gpointer) channel, NULL);
+        return 0;
 }
 
 gint
