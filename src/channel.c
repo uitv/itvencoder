@@ -44,6 +44,9 @@ static void channel_encoder_appsrc_set_caps (Encoder *encoder);
 static gboolean channel_source_stop_func (gpointer *user_data);
 static gboolean channel_source_start_func (gpointer *user_data);
 static gboolean channel_restart_func (gpointer *user_data);
+static gboolean channel_encoder_stop_func (gpointer *user_data);
+static gboolean channel_encoder_start_func (gpointer *user_data);
+static gboolean channel_encoder_restart_func (gpointer *user_data);
 
 /* Source class */
 static void
@@ -948,12 +951,47 @@ channel_restart (Channel *channel)
         return 0;
 }
 
-gint
-channel_encoder_stop (Encoder *encoder)
-{//FIXME more check is must
+static gboolean
+channel_encoder_stop_func (gpointer *user_data)
+{
+        Encoder *encoder = (Encoder *)user_data;
+
+        if (!g_mutex_trylock (encoder->channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", encoder->channel->name);
+                return TRUE;
+        }
+
         encoder->state = GST_STATE_VOID_PENDING;
         gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
         channel_encoder_pipeline_release (encoder);
+
+        g_mutex_unlock (encoder->channel->operate_mutex);
+
+        return 0;
+}
+
+gint
+channel_encoder_stop (Encoder *encoder)
+{//FIXME more check is must
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_encoder_stop_func, (gpointer) encoder, NULL);
+        return 0;
+}
+
+static gboolean
+channel_encoder_start_func (gpointer *user_data)
+{
+        Encoder *encoder = (Encoder *)user_data;
+
+        if (!g_mutex_trylock (encoder->channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", encoder->channel->name);
+                return TRUE;
+        }
+
+        channel_encoder_pipeline_initialize (encoder);
+        channel_encoder_appsrc_set_caps (encoder);
+        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+
+        g_mutex_unlock (encoder->channel->operate_mutex);
 
         return 0;
 }
@@ -961,9 +999,31 @@ channel_encoder_stop (Encoder *encoder)
 gint
 channel_encoder_start (Encoder *encoder)
 {//FIXME more check is must
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_encoder_start_func, (gpointer) encoder, NULL);
+        return 0;
+}
+
+static gboolean
+channel_encoder_restart_func (gpointer *user_data)
+{
+        Encoder *encoder = (Encoder *)user_data;
+
+        if (!g_mutex_trylock (encoder->channel->operate_mutex)) {
+                GST_WARNING ("Try lock channel %s restart lock failure!", encoder->channel->name);
+                return TRUE;
+        }
+
+        /* stop encoder */
+        encoder->state = GST_STATE_VOID_PENDING;
+        gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+        channel_encoder_pipeline_release (encoder);
+
+        /* start encoder */
         channel_encoder_pipeline_initialize (encoder);
         channel_encoder_appsrc_set_caps (encoder);
         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+
+        g_mutex_unlock (encoder->channel->operate_mutex);
 
         return 0;
 }
@@ -971,9 +1031,7 @@ channel_encoder_start (Encoder *encoder)
 gint
 channel_encoder_restart (Encoder *encoder)
 {
-        channel_encoder_stop (encoder);
-        channel_encoder_start (encoder);
-
+        g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_encoder_restart_func, (gpointer) encoder, NULL);
         return 0;
 }
 
