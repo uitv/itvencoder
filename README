@@ -32,18 +32,4 @@ cd plugins
 需要修改的配置文件是channels.d目录下的通道配置文件，如何根据需求修改通道
 配置文件，参照docs目录下的iTVEncoderConfig.ppt。
 
-配置itvencoder在supervisor下运行
-supervisor用来监控unix下程序的运行，目前采用supervisor来运行itvencoder。
-安装supervisor：
-install setuptools 
-easy_install supervisor
-安装成功后把配置文件（conf/supervisor.conf）拷贝到/etc下。
 
-启动supervisor
-supervisor
-
-直接运行iTVEncoder
-iTVEncoder的log需要对logrotate进行配置。
-需要配置logrotate。
-依照conf/crontab的内容修改/etc/crontab。
-把itvencoder.logrotate拷贝到/etc/logrotate.d/itvencoder
