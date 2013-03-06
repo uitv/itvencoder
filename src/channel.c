@@ -436,27 +436,6 @@ source_appsink_callback (GstAppSink * elt, gpointer user_data)
         stream->current_timestamp = GST_BUFFER_TIMESTAMP (buffer);
 }
 
-guint
-channel_set_source (Channel *channel, gchar *pipeline_string)
-{
-        gint i, j;
-        SourceStream *stream;
-
-        channel->source->sync_error_times = 0;
-        channel->source->name = channel->name;
-        channel->source->pipeline_string = pipeline_string;
-        channel->source->channel = channel;
-
-        for (i = 0; i < channel->source->streams->len; i++) {
-                stream = g_array_index (channel->source->streams, gpointer, i);
-                for (j = 0; j < VIDEO_RING_SIZE; j++) {
-                        stream->ring[j] = NULL;
-                }
-        }
-
-        return 0;
-}
-
 static gint
 channel_source_extract_streams (Source *source)
 {
@@ -479,6 +458,34 @@ channel_source_extract_streams (Source *source)
                 g_array_append_val (source->streams, stream);
                 g_match_info_next (match_info, NULL);
         }
+}
+
+guint
+channel_set_source (Channel *channel, gchar *pipeline_string)
+{
+        gint i, j;
+        SourceStream *stream;
+
+        channel->source->sync_error_times = 0;
+        channel->source->name = channel->name;
+        channel->source->pipeline_string = pipeline_string;
+        channel->source->channel = channel;
+        channel_source_extract_streams (channel->source);
+
+        for (i = 0; i < channel->source->streams->len; i++) {
+                stream = g_array_index (channel->source->streams, gpointer, i);
+                stream->system_clock = channel->system_clock;
+                stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
+        }
+
+        for (i = 0; i < channel->source->streams->len; i++) {
+                stream = g_array_index (channel->source->streams, gpointer, i);
+                for (j = 0; j < VIDEO_RING_SIZE; j++) {
+                        stream->ring[j] = NULL;
+                }
+        }
+
+        return 0;
 }
 
 gint
@@ -509,7 +516,6 @@ channel_source_pipeline_initialize (Source *source)
 
         source->pipeline = p;
 
-        channel_source_extract_streams (source);
         for (i = 0; i < source->streams->len; i++) {
                 stream = g_array_index (source->streams, gpointer, i);
                 stream->caps = NULL;
@@ -517,8 +523,6 @@ channel_source_pipeline_initialize (Source *source)
                         stream->ring[j] = NULL;
                 }
                 stream->current_position = -1;
-                stream->system_clock = source->channel->system_clock;
-                stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
                 appsink = gst_bin_get_by_name (GST_BIN (p), stream->name); //TODO release
                 if (appsink == NULL) {
                         GST_ERROR ("Get %s sink error", stream->name);
@@ -634,7 +638,9 @@ guint
 channel_add_encoder (Channel *channel, gchar *pipeline_string)
 {
         Encoder *encoder;
-        gint i;
+        SourceStream *source;
+        EncoderStream *stream;
+        gint i, j;
 
         encoder = encoder_new (0, NULL); //TODO free!
 
@@ -644,6 +650,22 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
         encoder->name = g_strdup_printf ("%s:encoder-%d", channel->name, encoder->id);
         channel_encoder_extract_streams (encoder);
         g_array_append_val (channel->encoder_array, encoder);
+
+        for (i = 0; i < encoder->streams->len; i++) {
+                stream = g_array_index (encoder->streams, gpointer, i);
+                for (j = 0; j < encoder->channel->source->streams->len; j++) {
+                        source = g_array_index (encoder->channel->source->streams, gpointer, j);
+                        if (g_strcmp0 (source->name, stream->name) == 0) {
+                                stream->source = source;
+                                g_array_append_val (source->encoders, stream);
+                                break;
+                        }
+                }
+                if (stream->source == NULL) {
+                        GST_ERROR ("%s: cant find source.", stream->name);
+                        return -1;
+                }
+        }
 
         for (i=0; i<OUTPUT_RING_SIZE; i++) {
                 encoder->output_ring[i] = NULL;
@@ -719,6 +741,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
                 gst_app_src_set_callbacks (GST_APP_SRC (appsrc), &callbacks, stream, NULL);
                 gst_object_unref (appsrc);
         }
+
         encoder->pipeline = p;
         encoder->current_output_position = -1;
         encoder->output_count = 0;
