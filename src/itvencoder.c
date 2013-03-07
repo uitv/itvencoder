@@ -373,9 +373,9 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         /* start managment */
-        itvencoder->mgmt = httpserver_new ("maxthreads", 1, "port", itvencoder->config->http_mgmt_port, NULL);
-        if (httpserver_start (itvencoder->mgmt, mgmt_dispatcher, itvencoder) != 0) {
-                GST_ERROR ("Start mgmt httpserver error!");
+        itvencoder->mgmtserver = httpserver_new ("maxthreads", 1, "port", itvencoder->config->http_mgmt_port, NULL);
+        if (httpserver_start (itvencoder->mgmtserver, mgmt_dispatcher, itvencoder) != 0) {
+                GST_ERROR ("Start mgmtserver error!");
                 exit (0);
         }
 
