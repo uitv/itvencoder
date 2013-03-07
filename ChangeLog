@@ -3,6 +3,7 @@ releases are sorted from youngest to oldest.
 v-0.2.2 2013-3-15 zhangping
 - multiply streams support.
 - restart channel or encoder async.
+- log itvencoder cpu and memory usage
 
 v-0.2.1 2013-2-25 zhangping
 - pure pull mode encoder app src.
