@@ -3,6 +3,7 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <unistd.h>
 #include <gst/gst.h>
 #include <string.h>
 #include "itvencoder.h"
@@ -27,6 +28,7 @@ static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime httpserver_dispatcher (gpointer data, gpointer user_data);
 static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
+static void stat_report ();
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -315,6 +317,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         }
 
         httpserver_report_request_data (itvencoder->httpserver);
+
+        stat_report ();
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
@@ -759,3 +763,21 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
         }
 }
 
+static void
+stat_report ()
+{
+        gchar *stat_file, *stat, **stats;
+        gsize *length;
+        guint64 cpu_us, cpu_sys;
+        guint64 rss; // Resident Set Size.
+
+        stat_file = g_strdup_printf ("/proc/%d/stat", getpid ());
+        g_file_get_contents (stat_file, &stat, length, NULL);
+        stats = g_strsplit (stat, " ", 44);
+        cpu_us = g_ascii_strtoull (stats[13],  NULL, 10) / sysconf(_SC_CLK_TCK); // seconds
+        cpu_sys = g_ascii_strtoull (stats[14], NULL, 10) / sysconf(_SC_CLK_TCK);
+        rss = g_ascii_strtoull (stats[23], NULL, 10) * sysconf (_SC_PAGESIZE);
+        GST_INFO ("stat user: %llu kernel: %llu, rss: %lluMB", cpu_us, cpu_sys, rss/1000000);
+        g_free (stat_file);
+        g_free (stat);
+}
