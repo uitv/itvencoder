@@ -26,7 +26,7 @@ static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, 
 static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
 static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime httpserver_dispatcher (gpointer data, gpointer user_data);
-static GstClockTime mgmt_dispatcher (gpointer data, gpointer user_data);
+static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -374,7 +374,7 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* start managment */
         itvencoder->mgmtserver = httpserver_new ("maxthreads", 1, "port", itvencoder->config->http_mgmt_port, NULL);
-        if (httpserver_start (itvencoder->mgmtserver, mgmt_dispatcher, itvencoder) != 0) {
+        if (httpserver_start (itvencoder->mgmtserver, mgmtserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start mgmtserver error!");
                 exit (0);
         }
@@ -626,7 +626,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
  *      0 if have completed the processing.
  */
 static GstClockTime
-mgmt_dispatcher (gpointer data, gpointer user_data)
+mgmtserver_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         ITVEncoder *itvencoder = user_data;
