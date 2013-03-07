@@ -763,21 +763,38 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
         }
 }
 
+static guint64 utimel = 0, stimel = 0, ctimel = 0; // process user time, process system time, total cpu time
+
 static void
 stat_report ()
 {
-        gchar *stat_file, *stat, **stats;
+        gchar *stat_file, *stat, **stats, **cpustats;
         gsize *length;
-        guint64 cpu_us, cpu_sys;
+        guint64 utime, stime, ctime; // process user time, process system time, total cpu time
         guint64 rss; // Resident Set Size.
+        gint i;
 
         stat_file = g_strdup_printf ("/proc/%d/stat", getpid ());
         g_file_get_contents (stat_file, &stat, length, NULL);
         stats = g_strsplit (stat, " ", 44);
-        cpu_us = g_ascii_strtoull (stats[13],  NULL, 10) / sysconf(_SC_CLK_TCK); // seconds
-        cpu_sys = g_ascii_strtoull (stats[14], NULL, 10) / sysconf(_SC_CLK_TCK);
+        utime = g_ascii_strtoull (stats[13],  NULL, 10); // seconds
+        stime = g_ascii_strtoull (stats[14], NULL, 10);
         rss = g_ascii_strtoull (stats[23], NULL, 10) * sysconf (_SC_PAGESIZE);
-        GST_INFO ("stat user: %llu kernel: %llu, rss: %lluMB", cpu_us, cpu_sys, rss/1000000);
         g_free (stat_file);
         g_free (stat);
+        g_strfreev (stats);
+        g_file_get_contents ("/proc/stat", &stat, length, NULL);
+        stats = g_strsplit (stat, "\n", 10);
+        cpustats = g_strsplit (stats[0], " ", 10);
+        ctime = 0;
+        for (i = 1; i < 8; i++) {
+                ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
+        }
+        g_free (stat);
+        g_strfreev (stats);
+        g_strfreev (cpustats);
+        GST_INFO ("cpu: %d, rss: %lluMB", ((utime - utimel + stime - stimel) * 100) / (ctime - ctimel), rss/1000000);
+        ctimel = ctime;
+        utimel = utime;
+        stimel = stime;
 }
