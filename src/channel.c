@@ -423,7 +423,7 @@ source_appsink_callback (GstAppSink * elt, gpointer user_data)
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
-        stream->current_position = (stream->current_position + 1) % VIDEO_RING_SIZE;
+        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
         /* output running status */
         GST_DEBUG ("%s current position %d, buffer duration: %d", stream->name, stream->current_position, GST_BUFFER_DURATION(buffer));
@@ -486,7 +486,7 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
 
         for (i = 0; i < channel->source->streams->len; i++) {
                 stream = g_array_index (channel->source->streams, gpointer, i);
-                for (j = 0; j < VIDEO_RING_SIZE; j++) {
+                for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
         }
@@ -525,7 +525,7 @@ channel_source_pipeline_initialize (Source *source)
         for (i = 0; i < source->streams->len; i++) {
                 stream = g_array_index (source->streams, gpointer, i);
                 stream->caps = NULL;
-                for (j = 0; j < VIDEO_RING_SIZE; j++) {
+                for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
                 stream->current_position = -1;
@@ -549,7 +549,7 @@ channel_source_pipeline_release (Source *source)
 
         for (i = 0; i < source->streams->len; i++) {
                 stream = g_array_index (source->streams, gpointer, i);
-                for (j = 0; j < VIDEO_RING_SIZE; j++) {
+                for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         if (stream->ring[j] != NULL) {
                                 gst_buffer_unref (stream->ring[j]);
                                 stream->ring[j] = NULL;
@@ -580,7 +580,7 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         i = encoder->current_output_position + 1;
-        i = i % OUTPUT_RING_SIZE;
+        i = i % ENCODER_RING_SIZE;
         encoder->current_output_position = i;
         if (encoder->output_ring[i] != NULL) {
                 gst_buffer_unref (encoder->output_ring[i]);
@@ -594,7 +594,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
 {
         EncoderStream *stream = (EncoderStream *)user_data;
 
-        stream->current_position = (stream->current_position + 1) % VIDEO_RING_SIZE;
+        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
         for (;;) {
                 stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
                 /* insure next buffer isn't current buffer */
@@ -673,7 +673,7 @@ channel_add_encoder (Channel *channel, gchar *pipeline_string)
                 }
         }
 
-        for (i=0; i<OUTPUT_RING_SIZE; i++) {
+        for (i=0; i<ENCODER_RING_SIZE; i++) {
                 encoder->output_ring[i] = NULL;
         }
 
@@ -760,7 +760,7 @@ channel_encoder_pipeline_release (Encoder *encoder)
 {
         gint i;
 
-        for (i=0; i<OUTPUT_RING_SIZE; i++) {
+        for (i=0; i<ENCODER_RING_SIZE; i++) {
                 if (encoder->output_ring[i] != NULL) {
                         gst_buffer_unref (encoder->output_ring[i]);
                         encoder->output_ring[i] = NULL;

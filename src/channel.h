@@ -8,9 +8,8 @@
 
 #include <gst/gst.h>
 
-#define AUDIO_RING_SIZE 3000
-#define VIDEO_RING_SIZE 1500
-#define OUTPUT_RING_SIZE (4*250)
+#define SOURCE_RING_SIZE 1500
+#define ENCODER_RING_SIZE (4*250)
 
 typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
@@ -22,7 +21,7 @@ typedef struct _ChannelClass ChannelClass;
 typedef struct _SourceStream {
         gchar *name;
         GstCaps *caps;
-        GstBuffer *ring[VIDEO_RING_SIZE];
+        GstBuffer *ring[SOURCE_RING_SIZE];
         gint current_position; // source output position
         GstClockTime current_timestamp;
         GstClock *system_clock;
@@ -82,7 +81,7 @@ struct _Encoder {
         
         GArray *streams;
 
-        GstBuffer *output_ring[OUTPUT_RING_SIZE];
+        GstBuffer *output_ring[ENCODER_RING_SIZE];
         gint current_output_position; // encoder output position
         guint64 output_count; // total output packet counts
 };

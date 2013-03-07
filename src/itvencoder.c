@@ -505,7 +505,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
-                                if (encoder->output_count < OUTPUT_RING_SIZE) {
+                                if (encoder->output_count < ENCODER_RING_SIZE) {
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
@@ -522,9 +522,9 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data->last_send_count = 0;
                                 request_user_data->encoder = encoder;
                                 /* should send a IDR with pat and pmt first */
-                                request_user_data->current_send_position = (encoder->current_output_position + 25) % OUTPUT_RING_SIZE;
+                                request_user_data->current_send_position = (encoder->current_output_position + 25) % ENCODER_RING_SIZE;
                                 while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
-                                        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % OUTPUT_RING_SIZE;
+                                        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
                                 }
                                 request_data->user_data = request_user_data;
                                 request_data->bytes_send = 0;
@@ -549,7 +549,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                 }
 
                 i = request_user_data->current_send_position;
-                i %= OUTPUT_RING_SIZE;
+                i %= ENCODER_RING_SIZE;
                 for (;;) {
                         if (i == encoder->current_output_position) { // catch up encoder output.
                                 break;
@@ -598,7 +598,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                         request_data->bytes_send += ret;
                         g_free (chunksize);
                         request_user_data->last_send_count = 0;
-                        i = (i + 1) % OUTPUT_RING_SIZE;
+                        i = (i + 1) % ENCODER_RING_SIZE;
                         request_user_data->current_send_position = i;
                 }
                 return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
