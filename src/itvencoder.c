@@ -183,16 +183,16 @@ itvencoder_get_type (void)
 
         if (type) return type;
         static const GTypeInfo info = {
-                sizeof (ITVEncoderClass),
-                NULL, // base class initializer
-                NULL, // base class finalizer
-                (GClassInitFunc) itvencoder_class_init,
-                NULL,
-                NULL,
+                sizeof (ITVEncoderClass), // class size.
+                NULL, // base initializer
+                NULL, // base finalizer
+                (GClassInitFunc) itvencoder_class_init, // class init.
+                NULL, // class finalize.
+                NULL, // class data.
                 sizeof (ITVEncoder),
-                0,
-                (GInstanceInitFunc) itvencoder_init,
-                NULL
+                0, // instance size.
+                (GInstanceInitFunc) itvencoder_init, // instance init.
+                NULL // value table.
         };
         type = g_type_register_static (G_TYPE_OBJECT, "ITVEncoder", &info, 0);
 
@@ -385,8 +385,9 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* regist itvencoder monitor */
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
-        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); // FIXME: id should be released
+        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
         ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
+        gst_clock_id_unref (id);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Regist itvencoder monitor failure");
                 exit (0);
