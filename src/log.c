@@ -153,7 +153,7 @@ log_set_log_handler (Log *log)
                 return 1;
         }
         log->log_hd = fopen (log->log_path, "a");
-        if (log->log_hd == NULL) { // FIXME compile warning
+        if (log->log_hd == NULL) {
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
                 return -1;
         } else {
