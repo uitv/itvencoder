@@ -76,7 +76,7 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
 
         switch(prop_id) {
         case ITVENCODER_PROP_CONFIG:
-                ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value); //TODO: should release dup string?
+                ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -793,7 +793,7 @@ stat_report ()
         g_free (stat);
         g_strfreev (stats);
         g_strfreev (cpustats);
-        GST_INFO ("cpu: %d, rss: %lluMB", ((utime - utimel + stime - stimel) * 100) / (ctime - ctimel), rss/1000000);
+        GST_INFO ("cpu: %d%%, rss: %lluMB", ((utime - utimel + stime - stimel) * 100) / (ctime - ctimel), rss/1000000);
         ctimel = ctime;
         utimel = utime;
         stimel = stime;
