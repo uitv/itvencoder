@@ -55,7 +55,6 @@ itvencoder_init (ITVEncoder *itvencoder)
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
-        itvencoder->grand = g_rand_new ();
 }
 
 static GObject *
@@ -598,7 +597,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data->last_send_count += ret;
                                 request_data->bytes_send += ret;
                                 g_free (chunksize);
-                                return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
+                                return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                         }
                         request_data->bytes_send += ret;
                         g_free (chunksize);
@@ -606,7 +605,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                         i = (i + 1) % ENCODER_RING_SIZE;
                         request_user_data->current_send_position = i;
                 }
-                return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_rand_int_range (itvencoder->grand, 1, 1000000);
+                return gst_clock_get_time (itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;

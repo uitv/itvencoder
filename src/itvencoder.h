@@ -25,10 +25,8 @@ struct _ITVEncoder {
     
         GstClockTime start_time;
         GstClock *system_clock;
-        GRand *grand;
 
         Config *config;
-
         GArray *channel_array;
 
         HTTPServer *httpserver; /* streaming via http */
