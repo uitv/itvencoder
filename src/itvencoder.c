@@ -24,8 +24,6 @@ static void itvencoder_get_property (GObject *obj, guint prop_id, GValue *value,
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static Encoder * get_encoder (gchar *uri, ITVEncoder *itvencoder);
-static Channel * get_channel (gchar *uri, ITVEncoder *itvencoder);
 static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
 static void stat_report ();
 
@@ -392,65 +390,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         return 0;
 }
 
-static Channel *
-get_channel (gchar *uri, ITVEncoder *itvencoder)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c;
-        Channel *channel;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < itvencoder->channel_array->len) {
-                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
-                } 
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return channel;
-}
-
-static Encoder *
-get_encoder (gchar *uri, ITVEncoder *itvencoder)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c, *e;
-        Channel *channel;
-        Encoder *encoder = NULL;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < itvencoder->channel_array->len) {
-                        channel = g_array_index (itvencoder->channel_array, gpointer, atoi (c));
-                        e = g_match_info_fetch_named (match_info, "encoder");
-                        if (atoi (e) < channel->encoder_array->len) {
-                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
-                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
-                        } 
-                        g_free (e);
-                } 
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return encoder;
-}
-
 typedef struct _RequestDataUserData {
         gint current_send_position;
         gint last_send_count;
@@ -483,9 +422,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        encoder = get_encoder (request_data->uri, itvencoder);
+                        encoder = channel_get_encoder (request_data->uri, itvencoder->channel_array);
                         if (encoder == NULL) {
-                                channel = get_channel (request_data->uri, itvencoder);
+                                channel = channel_get_channel (request_data->uri, itvencoder->channel_array);
                                 if (channel == NULL) {
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));

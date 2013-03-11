@@ -1035,3 +1035,62 @@ channel_encoder_restart (Encoder *encoder)
         return 0;
 }
 
+Channel *
+channel_get_channel (gchar *uri, GArray *channels)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c;
+        Channel *channel;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < channels->len) {
+                        channel = g_array_index (channels, gpointer, atoi (c));
+                } 
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return channel;
+}
+
+Encoder *
+channel_get_encoder (gchar *uri, GArray *channels)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c, *e;
+        Channel *channel;
+        Encoder *encoder = NULL;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < channels->len) {
+                        channel = g_array_index (channels, gpointer, atoi (c));
+                        e = g_match_info_fetch_named (match_info, "encoder");
+                        if (atoi (e) < channel->encoder_array->len) {
+                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
+                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
+                        } 
+                        g_free (e);
+                } 
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return encoder;
+}
+

@@ -134,5 +134,7 @@ gint channel_restart (Channel *channel);
 gint channel_encoder_stop (Encoder *encoder);
 gint channel_encoder_start (Encoder *encoder);
 gint channel_encoder_restart (Encoder *encoder);
+Encoder * channel_get_encoder (gchar *uri, GArray *channel);
+Channel * channel_get_channel (gchar *uri, GArray *channel);
 
 #endif /* __CHANNEL_H__ */

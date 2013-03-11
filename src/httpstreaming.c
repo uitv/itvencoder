@@ -24,8 +24,6 @@ static void httpstreaming_init (HTTPStreaming *httpstreaming);
 static GObject *httpstreaming_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void httpstreaming_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpstreaming_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static Encoder * get_encoder (gchar *uri, GArray *channel);
-static Channel * get_channel (gchar *uri, GArray *channel);
 static GstClockTime httpserver_dispatcher (gpointer data, gpointer user_data);
 
 static void
@@ -143,65 +141,6 @@ httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads, gint port)
         return 0;
 }
 
-static Channel *
-get_channel (gchar *uri, GArray *channels)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c;
-        Channel *channel;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < channels->len) {
-                        channel = g_array_index (channels, gpointer, atoi (c));
-                } 
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return channel;
-}
-
-static Encoder *
-get_encoder (gchar *uri, GArray *channels)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c, *e;
-        Channel *channel;
-        Encoder *encoder = NULL;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < channels->len) {
-                        channel = g_array_index (channels, gpointer, atoi (c));
-                        e = g_match_info_fetch_named (match_info, "encoder");
-                        if (atoi (e) < channel->encoder_array->len) {
-                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
-                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
-                        } 
-                        g_free (e);
-                } 
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return encoder;
-}
-
 typedef struct _RequestDataUserData {
         gint current_send_position;
         gint last_send_count;
@@ -236,7 +175,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        encoder = get_encoder (request_data->uri, httpstreaming->channels);
+                        encoder = channel_get_encoder (request_data->uri, httpstreaming->channels);
                         if (encoder == NULL) {
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
