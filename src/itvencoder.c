@@ -315,7 +315,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
         }
 
-        httpserver_report_request_data (itvencoder->httpserver);
+        httpserver_report_request_data (itvencoder->httpstreaming);
 
         stat_report ();
 
@@ -369,8 +369,8 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         /* start http streaming */
-        itvencoder->httpserver = httpserver_new ("maxthreads", 10, "port", itvencoder->config->http_streaming_port, NULL);
-        if (httpserver_start (itvencoder->httpserver, httpserver_dispatcher, itvencoder) != 0) {
+        itvencoder->httpstreaming = httpserver_new ("maxthreads", 10, "port", itvencoder->config->http_streaming_port, NULL);
+        if (httpserver_start (itvencoder->httpstreaming, httpserver_dispatcher, itvencoder) != 0) {
                 GST_ERROR ("Start streaming httpserver error!");
                 exit (0);
         }

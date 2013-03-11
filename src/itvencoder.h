@@ -29,7 +29,7 @@ struct _ITVEncoder {
         Config *config;
         GArray *channel_array;
 
-        HTTPServer *httpserver; /* streaming via http */
+        HTTPServer *httpstreaming; /* streaming via http */
         HTTPServer *mgmtserver; /* management via http */
 };
 
