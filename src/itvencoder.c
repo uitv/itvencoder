@@ -322,6 +322,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
         ret = gst_clock_id_wait_async (nextid, itvencoder_channel_monitor, itvencoder);
+        gst_clock_id_unref (nextid);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Register itvencoder monitor failure");
                 return FALSE;
