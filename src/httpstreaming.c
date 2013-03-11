@@ -141,12 +141,6 @@ httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads, gint port)
         return 0;
 }
 
-typedef struct _RequestDataUserData {
-        gint current_send_position;
-        gint last_send_count;
-        gpointer encoder;
-} RequestDataUserData;
-
 /**
  * httpserver_dispatcher:
  * @data: RequestData type pointer

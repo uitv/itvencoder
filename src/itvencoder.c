@@ -390,12 +390,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         return 0;
 }
 
-typedef struct _RequestDataUserData {
-        gint current_send_position;
-        gint last_send_count;
-        gpointer encoder;
-} RequestDataUserData;
-
 /**
  * mgmt_dispatcher:
  * @data: RequestData type pointer
@@ -415,7 +409,6 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
         gint i;
         Encoder *encoder;
         Channel *channel;
-        RequestDataUserData *request_user_data;
 
         switch (request_data->status) {
         case HTTP_REQUEST:

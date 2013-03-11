@@ -13,6 +13,12 @@
 #include "channel.h"
 #include "httpserver.h"
 
+typedef struct _RequestDataUserData {
+        gint current_send_position;
+        gint last_send_count;
+        gpointer encoder;
+} RequestDataUserData;
+
 typedef struct _HTTPStreaming      HTTPStreaming;
 typedef struct _HTTPStreamingClass HTTPStreamingClass;
 
