@@ -11,6 +11,7 @@
 #include "log.h"
 #include "itvencoder.h"
 #include "configure.h"
+#include "httpmgmt.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -93,6 +94,7 @@ main (int argc, char *argv[])
 {
         Config *config;
         ITVEncoder *itvencoder;
+        HTTPMgmt *httpmgmt;
         GMainLoop *loop;
         pid_t process_id = 0;
         gint status;
@@ -213,6 +215,8 @@ main (int argc, char *argv[])
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new ("config", config, NULL);
         itvencoder_start (itvencoder);
+        httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
+        httpmgmt_start (httpmgmt);
         print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);
 

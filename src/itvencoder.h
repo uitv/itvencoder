@@ -12,7 +12,6 @@
 
 #include "configure.h"
 #include "channel.h"
-#include "httpserver.h"
 #include "httpstreaming.h"
 
 #define SYNC_THRESHHOLD 3000000000 /* 1000ms */
@@ -33,9 +32,7 @@ struct _ITVEncoder {
 
         Config *config;
         GArray *channel_array;
-
         HTTPStreaming *httpstreaming; /* streaming via http */
-        HTTPServer *mgmtserver; /* management via http */
 };
 
 struct _ITVEncoderClass {

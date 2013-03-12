@@ -24,7 +24,6 @@ static void itvencoder_get_property (GObject *obj, guint prop_id, GValue *value,
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
 static void stat_report (ITVEncoder *itvencoder);
 
 static void
@@ -381,13 +380,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         itvencoder->httpstreaming = httpstreaming_new ("channels", itvencoder->channel_array, "system_clock", itvencoder->system_clock, NULL);
         httpstreaming_start (itvencoder->httpstreaming, 10, itvencoder->config->http_streaming_port);
 
-        /* start managment */
-        itvencoder->mgmtserver = httpserver_new ("maxthreads", 1, "port", itvencoder->config->http_mgmt_port, NULL);
-        if (httpserver_start (itvencoder->mgmtserver, mgmtserver_dispatcher, itvencoder) != 0) {
-                GST_ERROR ("Start mgmtserver error!");
-                exit (0);
-        }
-
         /* regist itvencoder monitor */
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
         id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
@@ -399,149 +391,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         return 0;
-}
-
-/**
- * mgmt_dispatcher:
- * @data: RequestData type pointer
- * @user_data: itvencoder type pointer
- *
- * Process http request.
- *
- * Returns: positive value if have not completed the processing, for example live streaming.
- *      0 if have completed the processing.
- */
-static GstClockTime
-mgmtserver_dispatcher (gpointer data, gpointer user_data)
-{
-        RequestData *request_data = data;
-        ITVEncoder *itvencoder = user_data;
-        gchar *buf;
-        gint i;
-        Encoder *encoder;
-        Channel *channel;
-
-        switch (request_data->status) {
-        case HTTP_REQUEST:
-                GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
-                switch (request_data->uri[1]) {
-                case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        encoder = channel_get_encoder (request_data->uri, itvencoder->channel_array);
-                        if (encoder == NULL) {
-                                channel = channel_get_channel (request_data->uri, itvencoder->channel_array);
-                                if (channel == NULL) {
-                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                } else if (request_data->parameters[0] == 's') {
-                                        GST_WARNING ("Stop source");
-                                        if (channel_source_stop (channel->source) == 0) {
-                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        }
-                                        return 0;
-                                } else if (request_data->parameters[0] == 'p') {
-                                        GST_WARNING ("Start source");
-                                        if (channel_source_start (channel->source) == 0) {
-                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        }
-                                        return 0;
-                                } else if (request_data->parameters[0] == 'r') {
-                                        GST_WARNING ("Restart channel");
-                                        if (channel_restart (channel) == 0) {
-                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        }
-                                        return 0;
-                                } else {
-                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
-                        } else if (request_data->parameters[0] == 's') {
-                                GST_WARNING ("Stop endcoder");
-                                if (channel_encoder_stop (encoder) == 0) {
-                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                }
-                                return 0;
-                        } else if (request_data->parameters[0] == 'p') {
-                                GST_WARNING ("Start endcoder");
-                                if (channel_encoder_start (encoder) ==0) {
-                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                }
-                                return 0;
-                        } else if (request_data->parameters[0] == 'r') {
-                                GST_WARNING ("Restart endcoder");
-                                if (channel_encoder_restart (encoder) ==0) {
-                                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                }
-                                return 0;
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
-                        }
-                case 'i': /* uri is /itvencoder/..... */
-                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (PACKAGE_NAME) + strlen (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
-                        write (request_data->sock, buf, strlen (buf));
-                        g_free (buf);
-                        return 0;
-                case 'k': /* kill self */
-                        exit (1);
-                default:
-                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
-                        g_free (buf);
-                        return 0;
-                }
-        case HTTP_FINISH:
-                g_free (request_data->user_data);
-                request_data->user_data = NULL;
-                return 0;
-        default:
-                GST_ERROR ("Unknown status %d", request_data->status);
-                buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                write (request_data->sock, buf, strlen (buf));
-                g_free (buf);
-                return 0;
-        }
 }
 
 static void
