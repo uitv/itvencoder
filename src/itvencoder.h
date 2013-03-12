@@ -24,8 +24,12 @@ typedef struct _ITVEncoderClass ITVEncoderClass;
 struct _ITVEncoder {
         GObject parent;
     
-        GstClockTime start_time;
         GstClock *system_clock;
+        GstClockTime start_time;
+        guint64 last_utime; // last process user time.
+        guint64 last_stime; // last process system time.
+        guint64 last_ctime; // last process cpu time.
+        guint64 start_ctime; // cpu time at process start.
 
         Config *config;
         GArray *channel_array;

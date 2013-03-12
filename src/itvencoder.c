@@ -25,7 +25,7 @@ static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
 static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
-static void stat_report ();
+static void stat_report (ITVEncoder *itvencoder);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -49,9 +49,20 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
 static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
+        gchar *stat, **stats, **cpustats;
+        gsize *length;
+        gint i;
+
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
+        g_file_get_contents ("/proc/stat", &stat, length, NULL);
+        stats = g_strsplit (stat, "\n", 10);
+        cpustats = g_strsplit (stats[0], " ", 10);
+        itvencoder->start_ctime = 0;
+        for (i = 1; i < 8; i++) {
+                itvencoder->start_ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
+        }
 }
 
 static GObject *
@@ -314,7 +325,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         httpserver_report_request_data (itvencoder->httpstreaming->httpserver);
 
-        stat_report ();
+        stat_report (itvencoder);
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
@@ -533,10 +544,8 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
         }
 }
 
-static guint64 utimel = 0, stimel = 0, ctimel = 0; // process user time, process system time, total cpu time
-
 static void
-stat_report ()
+stat_report (ITVEncoder *itvencoder)
 {
         gchar *stat_file, *stat, **stats, **cpustats;
         gsize *length;
@@ -563,8 +572,11 @@ stat_report ()
         g_free (stat);
         g_strfreev (stats);
         g_strfreev (cpustats);
-        GST_INFO ("cpu: %d%%, rss: %lluMB", ((utime - utimel + stime - stimel) * 100) / (ctime - ctimel), rss/1000000);
-        ctimel = ctime;
-        utimel = utime;
-        stimel = stime;
+        GST_INFO ("average cpu: %d%%, cpu: %d%%, rss: %lluMB",
+                ((utime + stime) * 100) / (ctime - itvencoder->start_ctime),
+                ((utime - itvencoder->last_utime + stime - itvencoder->last_stime) * 100) / (ctime - itvencoder->last_ctime),
+                rss/1000000);
+        itvencoder->last_ctime = ctime;
+        itvencoder->last_utime = utime;
+        itvencoder->last_stime = stime;
 }
