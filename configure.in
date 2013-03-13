@@ -34,6 +34,30 @@ AC_PROG_LIBTOOL
 PKG_CHECK_MODULES([gstreamer], [gstreamer-0.10])
 PKG_CHECK_MODULES([gstreamerapp], [gstreamer-app-0.10])
 
+dnl *** decklink  ***
+translit(dnm, m, l) AM_CONDITIONAL(USE_DECKLINK, true)
+AG_GST_CHECK_FEATURE(DECKLINK, [decklink], decklink, [
+   HAVE_DECKLINK=no
+   case "$host" in
+     *-*linux*)
+       if test "x$HAVE_PTHREAD_H" = "xyes"; then
+         AC_CHECK_LIB(dl, dlopen,
+           [
+            HAVE_DECKLINK=yes
+            DECKLINK_CXXFLAGS=
+            DECKLINK_LIBS="-lpthread -ldl"
+           ])
+       fi
+       ;;
+     *)
+       HAVE_DECKLINK=no
+       ;;
+   esac
+
+   AC_SUBST(DECKLINK_CXXFLAGS)
+   AC_SUBST(DECKLINK_LIBS)
+])
+
 # Checks for header files.
 
 
@@ -42,6 +66,8 @@ PKG_CHECK_MODULES([gstreamerapp], [gstreamer-app-0.10])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+plugins/Makefile
+plugins/decklink/Makefile
 itvencoder.spec
 ])
 
