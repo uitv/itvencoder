@@ -817,6 +817,10 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
 
         for (i = 0; i < encoder->streams->len; i++) {
                 stream = g_array_index (encoder->streams, gpointer, i);
+                if (stream->source->caps == NULL) {
+                        GST_WARNING ("encoder %s source caps is NULL, not ready.", encoder->name);
+                        return TRUE;
+                }
                 appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), stream->name);
                 gst_app_src_set_caps ((GstAppSrc *)appsrc, stream->source->caps);
         }
@@ -848,7 +852,7 @@ channel_source_stop_func (gpointer *user_data)
 
         g_mutex_unlock (channel->operate_mutex);
 
-        return 0;
+        return FALSE;
 }
 
 gint
@@ -880,13 +884,6 @@ channel_source_start_func (gpointer *user_data)
                 GST_ERROR ("Get source caps failure!");
                 channel_source_pipeline_release (source);
                 return TRUE;
-        }
-
-        for (i=0; i<channel->encoder_array->len; i++) {
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                channel_encoder_pipeline_initialize (encoder);
-                channel_encoder_appsrc_set_caps (encoder);
-                gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
         }
 
         g_mutex_unlock (channel->operate_mutex);
@@ -967,7 +964,7 @@ channel_encoder_stop_func (gpointer *user_data)
 
         g_mutex_unlock (encoder->channel->operate_mutex);
 
-        return 0;
+        return FALSE;
 }
 
 gint
@@ -983,7 +980,7 @@ channel_encoder_start_func (gpointer *user_data)
         Encoder *encoder = (Encoder *)user_data;
 
         if (!g_mutex_trylock (encoder->channel->operate_mutex)) {
-                GST_WARNING ("Try lock channel %s restart lock failure!", encoder->channel->name);
+                GST_WARNING ("Try lock channel %s lock failure!", encoder->channel->name);
                 return TRUE;
         }
 
@@ -993,7 +990,7 @@ channel_encoder_start_func (gpointer *user_data)
 
         g_mutex_unlock (encoder->channel->operate_mutex);
 
-        return 0;
+        return FALSE;
 }
 
 gint
