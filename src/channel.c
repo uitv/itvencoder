@@ -900,7 +900,7 @@ channel_source_start (Source *source)
 
 static gboolean
 channel_restart_func (gpointer *user_data)
-{
+{//FIXME
         Channel *channel = (Channel *)user_data;
         Encoder *encoder;
         gint i;

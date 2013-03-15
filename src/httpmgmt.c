@@ -158,7 +158,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 } else if (request_data->parameters[0] == 's') {
-                                        GST_WARNING ("Stop source");
+                                        GST_WARNING ("Stop channel %s", channel->name);
                                         if (channel_source_stop (channel->source) == 0) {
                                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
@@ -170,8 +170,15 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         }
                                         return 0;
                                 } else if (request_data->parameters[0] == 'p') {
-                                        GST_WARNING ("Start source");
+                                        GST_WARNING ("Start channel %s", channel->name);
                                         if (channel_source_start (channel->source) == 0) {
+                                                for (i=0; i<channel->encoder_array->len; i++) {
+                                                        encoder = g_array_index (channel->encoder_array, gpointer, i);
+                                                        GST_INFO ("channel encoder pipeline string is %s", encoder->pipeline_string);
+                                                        if (channel_encoder_start (encoder) != 0) {//FIXME; return error
+                                                                GST_ERROR ("Start encoder %s falure", encoder->name);
+                                                        }
+                                                }
                                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
