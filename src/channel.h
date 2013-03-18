@@ -20,7 +20,6 @@ typedef struct _ChannelClass ChannelClass;
 
 typedef struct _SourceStream {
         gchar *name;
-        GstCaps *caps;
         GstBuffer *ring[SOURCE_RING_SIZE];
         gint current_position; // source output position
         GstClockTime current_timestamp;

@@ -39,7 +39,6 @@ static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GP
 static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data);
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
-static gint channel_source_appsink_get_caps (Source *source);
 static gint channel_encoder_appsrc_set_caps (Encoder *encoder);
 static gboolean channel_source_stop_func (gpointer *user_data);
 static gboolean channel_source_start_func (gpointer *user_data);
@@ -528,7 +527,6 @@ channel_source_pipeline_initialize (Source *source)
 
         for (i = 0; i < source->streams->len; i++) {
                 stream = g_array_index (source->streams, gpointer, i);
-                stream->caps = NULL;
                 for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
@@ -560,17 +558,7 @@ channel_source_pipeline_release (Source *source)
                         }
                 }
         }
-#if 0
-        if (source->audio_caps != NULL) {
-                g_object_unref (source->audio_caps);
-                source->audio_caps = NULL;
-        }
 
-        if (source->video_caps != NULL) {
-                g_object_unref (source->video_caps);
-                source->video_caps = NULL;
-        }
-#endif
         gst_object_unref (source->pipeline);
         source->pipeline = NULL;
 }
@@ -778,56 +766,23 @@ channel_encoder_pipeline_release (Encoder *encoder)
 }
 
 static gint
-channel_source_appsink_get_caps (Source *source)
-{
-        gint i;
-        gchar *caps;
-        SourceStream *stream;
-        gboolean failure;
-
-        for (i = 0; i < source->streams->len; i++) {
-                stream = g_array_index (source->streams, gpointer, i);
-                gint repeat = 0;
-                failure = FALSE;
-                while (stream->caps == NULL) {
-                        repeat++;
-                        if (stream->ring[0] != NULL) {
-                                stream->caps = GST_BUFFER_CAPS (stream->ring[0]);
-                                break;
-                        } else {
-                                if (repeat > 50) {
-                                        failure = TRUE;
-                                }
-                                g_usleep (100000); // 100ms
-                        }
-                        if (failure) {
-                                GST_ERROR ("stream %s get caps failure.", stream->name);
-                                break;
-                        }
-                }
-        }
-
-        if ( failure )
-                return 1;
-        else
-                return 0;
-}
-
-static gint
 channel_encoder_appsrc_set_caps (Encoder *encoder)
 {
         gint i;
         GstElement *appsrc;
         EncoderStream *stream;
+        GstCaps *caps;
 
         for (i = 0; i < encoder->streams->len; i++) {
                 stream = g_array_index (encoder->streams, gpointer, i);
-                if (stream->source->caps == NULL) {
-                        GST_WARNING ("encoder %s source caps is NULL, not ready.", encoder->name);
-                        return 1;
+                while (stream->source->ring[0] == NULL) {
+                        GST_WARNING ("encoder %s source stream %s is not ready. waiting...", encoder->name, stream->name);
+                        g_usleep (1000000);
+                        continue;
                 }
+                caps = GST_BUFFER_CAPS (stream->source->ring[0]);
                 appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), stream->name);
-                gst_app_src_set_caps ((GstAppSrc *)appsrc, stream->source->caps);
+                gst_app_src_set_caps ((GstAppSrc *)appsrc, caps);
         }
 }
 
@@ -876,7 +831,8 @@ channel_source_start_func (gpointer *user_data)
         gint i;
 
         if (!g_mutex_trylock (channel->operate_mutex)) {
-                GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
+                GST_WARNING ("start source %s, try lock channel %s failure!", source->name, channel->name);
+                g_usleep (1000000);
                 return TRUE;
         }
 
@@ -885,11 +841,6 @@ channel_source_start_func (gpointer *user_data)
         }
 
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
-        if (channel_source_appsink_get_caps (source) != 0) {
-                GST_ERROR ("Get source caps failure!");
-                channel_source_pipeline_release (source);
-                return TRUE;
-        }
 
         g_mutex_unlock (channel->operate_mutex);
 
@@ -931,7 +882,6 @@ channel_restart_func (gpointer *user_data)
         /* start source */
         channel_source_pipeline_initialize (channel->source);
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
-        channel_source_appsink_get_caps (channel->source);
 
         /* start encoders */
         for (i=0; i<channel->encoder_array->len; i++) {
@@ -986,6 +936,7 @@ channel_encoder_start_func (gpointer *user_data)
 
         if (!g_mutex_trylock (encoder->channel->operate_mutex)) {
                 GST_WARNING ("Try lock channel %s lock failure!", encoder->channel->name);
+                g_usleep (1000000);
                 return TRUE;
         }
 
