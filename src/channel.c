@@ -416,7 +416,7 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
 }
 
 static GstFlowReturn
-source_appsink_callback (GstAppSink * elt, gpointer user_data)
+source_appsink_callback (GstAppSink *elt, gpointer user_data)
 {
         GstBuffer *buffer;
         SourceStream *stream = (SourceStream *)user_data;
@@ -432,7 +432,7 @@ source_appsink_callback (GstAppSink * elt, gpointer user_data)
         for (i = 0; i < stream->encoders->len; i++) {
                 encoder = g_array_index (stream->encoders, gpointer, i);
                 if (stream->current_position == encoder->current_position) {
-                        GST_WARNING ("encoder %s audio encoder cant catch source %s output.", encoder->name, stream->name);
+                        GST_WARNING ("encoder %s stream %s can not catch up output.", encoder->name, stream->name);
                 }
         }
 
