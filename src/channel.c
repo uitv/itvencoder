@@ -40,7 +40,7 @@ static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_da
 static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
 static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 static gint channel_source_appsink_get_caps (Source *source);
-static void channel_encoder_appsrc_set_caps (Encoder *encoder);
+static gint channel_encoder_appsrc_set_caps (Encoder *encoder);
 static gboolean channel_source_stop_func (gpointer *user_data);
 static gboolean channel_source_start_func (gpointer *user_data);
 static gboolean channel_restart_func (gpointer *user_data);
@@ -813,7 +813,7 @@ channel_source_appsink_get_caps (Source *source)
                 return 0;
 }
 
-static void
+static gint
 channel_encoder_appsrc_set_caps (Encoder *encoder)
 {
         gint i;
@@ -824,7 +824,7 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
                 stream = g_array_index (encoder->streams, gpointer, i);
                 if (stream->source->caps == NULL) {
                         GST_WARNING ("encoder %s source caps is NULL, not ready.", encoder->name);
-                        return TRUE;
+                        return 1;
                 }
                 appsrc = gst_bin_get_by_name (GST_BIN (encoder->pipeline), stream->name);
                 gst_app_src_set_caps ((GstAppSrc *)appsrc, stream->source->caps);
