@@ -388,10 +388,13 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
         case GST_MESSAGE_STATE_CHANGED:
                 g_value_init (&state, G_TYPE_INT);
                 gst_message_parse_state_changed (msg, &old, &new, &pending);
-                GST_INFO ("%s state from %s to %s", g_value_get_string (&name), gst_element_state_get_name (old), gst_element_state_get_name (new));
-                g_value_set_int (&state, new);
-                g_object_set_property (object, "state", &state);
-                g_value_unset (&state);
+                GST_INFO ("pipeline %s element %s state from %s to %s", g_value_get_string (&name), GST_MESSAGE_SRC_NAME (msg), gst_element_state_get_name (old), gst_element_state_get_name (new));
+                if (g_strcmp0 (g_value_get_string (&name), GST_MESSAGE_SRC_NAME (msg)) == 0) {
+                        GST_INFO ("pipeline %s state change to %s", g_value_get_string (&name), gst_element_state_get_name (new));
+                        g_value_set_int (&state, new);
+                        g_object_set_property (object, "state", &state);
+                        g_value_unset (&state);
+                }
                 break;
         case GST_MESSAGE_STREAM_STATUS:
                 gst_message_parse_stream_status (msg, &type, NULL);
@@ -515,6 +518,7 @@ channel_source_pipeline_initialize (Source *source)
                 g_error_free (e);
                 return -1;
         }
+        gst_element_set_name (p, source->name);
 
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
         gst_bus_add_watch (bus, bus_callback, source);
@@ -707,6 +711,7 @@ channel_encoder_pipeline_initialize (Encoder *encoder)
                 g_error_free (e);
                 return -1;
         }
+        gst_element_set_name (p, encoder->name);
 
         /* set bus watch callback */
         bus = gst_pipeline_get_bus (GST_PIPELINE (p));
