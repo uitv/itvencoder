@@ -227,6 +227,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 /* source heartbeat check */
                 for (i = 0; i < channel->source->streams->len; i++) {
                         source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
+                                /* don't check subtitle */
+                                continue;
+                        }
                         now = gst_clock_get_time (itvencoder->system_clock);
                         time_diff = GST_CLOCK_DIFF (source_stream->last_heartbeat, now);
                         if (time_diff > HEARTBEAT_THRESHHOLD) {
@@ -289,6 +293,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 max = 0;
                 for (i = 0; i < channel->source->streams->len; i++) {
                         source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
+                                /* don't check subtitle */
+                                continue;
+                        }
                         if (min > source_stream->current_timestamp) {
                                 min = source_stream->current_timestamp;
                         }
