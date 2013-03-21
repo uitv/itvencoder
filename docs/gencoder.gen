@@ -11,7 +11,7 @@ type: clockoverlay
 property
     halign=left
     valign=bottom
-    time-format=\"%Y/%m/%d %H:%M:%S\"
+    time-format=%Y/%m/%d %H:%M:%S
 
 ELEMENT timeoverlay
 type: timeoverlay
