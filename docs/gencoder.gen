@@ -1,3 +1,15 @@
+# http streaming server
+httpstreaming: 0.0.0.0:20129
+
+# http managment server
+httpmgmt: 0.0.0.0:20128
+
+# log dirctory
+logdir: /var/log/itvencoder
+
+# pid file path
+pidfile: /var/run/itvencoder.pid
+
 ELEMENT videotestsrc
 type: videotestsrc
 caps:
@@ -75,6 +87,15 @@ CHANNEL test
         pipeline: (videosrc, audiosrc)
     encoder:
         bin:
-            videoenc=appsrc(name=video) >>> videoscale >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
+            videoenc=appsrc(name=video) >>> videoscale(caps=video/x-raw-yuv,width=$width,height=$height) >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
             audioenc=appsrc(name=audio) >>> faac >>> mpegtsmux
         pipeline: (videoenc, audioenc)
+        httpstreaming: yes
+        udpstreaming: 224.1.1.1:1111
+    encoder:
+        bin:
+            videoenc=appsrc(name=video) >>> videoscale(caps=video/x-raw-yuv,width=$width,height=$height) >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
+            audioenc=appsrc(name=audio) >>> faac >>> mpegtsmux
+        pipeline: (videoenc, audioenc)
+        httpstreaming: yes
+        udpstreaming: 224.1.1.2:1111
