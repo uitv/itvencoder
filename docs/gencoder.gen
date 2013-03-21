@@ -1,0 +1,80 @@
+ELEMENT videotestsrc
+type: videotestsrc
+caps:
+    video/x-raw-yuv,width=1280,height=720,framerate=25/1; 
+
+ELEMENT ffmpegcolorspace
+type: ffmpegcolorspace
+
+ELEMENT clockoverlay
+type: clockoverlay
+property
+    halign=left
+    valign=bottom
+    time-format=\"%Y/%m/%d %H:%M:%S\"
+
+ELEMENT timeoverlay
+type: timeoverlay
+property:
+    halign=right
+    valign=bottom
+
+ELEMENT textoverlay
+type: textoverlay
+property:
+    text=iTVEncoder-0.1.2
+    valign=top
+    halign=right
+
+ELEMENT appsink
+type:
+    appsink
+property:
+    name=video
+
+ELEMENT audiotestsrc
+type:
+    audiotestsrc
+property:
+    wave=8
+
+ELEMENT appsink
+type:
+    appsink
+
+ELEMENT appsrc
+type:
+    appsrc
+
+ELEMENT videoscale
+type:
+    videoscale
+
+ELEMENT x264enc
+type:
+    x264enc
+property:
+    byte-stream=true
+
+ELEMENT mpegtsmux
+type:
+    mpegtxmux
+
+ELEMENT faac
+type:
+    faac
+property:
+    outputformat=4
+
+CHANNEL test
+    onboot: yes
+    source:
+        bin:
+            audiosrc=audiotestsrc >>> appsink(name=audio)
+            videosrc=videotestsrc >>> clockoverlay >>> timeoverlay >>> textoverlay >>> appsink(name=video)
+        pipeline: (videosrc, audiosrc)
+    encoder:
+        bin:
+            videoenc=appsrc(name=video) >>> videoscale >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
+            audioenc=appsrc(name=audio) >>> faac >>> mpegtsmux
+        pipeline: (videoenc, audioenc)
