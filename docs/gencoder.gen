@@ -1,101 +1,84 @@
 # http streaming server
-httpstreaming: 0.0.0.0:20129
+httpstreaming := 0.0.0.0:20129
 
 # http managment server
-httpmgmt: 0.0.0.0:20128
+httpmgmt := 0.0.0.0:20128
 
 # log dirctory
-logdir: /var/log/itvencoder
+logdir= := /var/log/itvencoder
 
 # pid file path
-pidfile: /var/run/itvencoder.pid
+pidfile := /var/run/itvencoder.pid
 
-ELEMENT videotestsrc
-type: videotestsrc
-caps:
-    video/x-raw-yuv,width=1280,height=720,framerate=25/1; 
+videotestsrc := {
+    caps := video/x-raw-yuv,width=1280,height=720,framerate=25/1; 
+}
 
-ELEMENT ffmpegcolorspace
-type: ffmpegcolorspace
+clockoverlay := {
+    property := {
+        halign := left
+        valign := bottom
+        time-format := %Y/%m/%d %H:%M:%S
+    }
+}
 
-ELEMENT clockoverlay
-type: clockoverlay
-property
-    halign=left
-    valign=bottom
-    time-format=%Y/%m/%d %H:%M:%S
+timeoverlay := {
+    property := {
+        halign := right
+        valign := bottom
+    }
+}
 
-ELEMENT timeoverlay
-type: timeoverlay
-property:
-    halign=right
-    valign=bottom
+textoverlay := {
+    property := {
+        text := iTVEncoder-0.1.2
+        valign := top
+        halign := right
+    }
+}
 
-ELEMENT textoverlay
-type: textoverlay
-property:
-    text=iTVEncoder-0.1.2
-    valign=top
-    halign=right
+audiotestsrc := {
+    property := {
+        wave := 8
+    }
+}
 
-ELEMENT appsink
-type:
-    appsink
-property:
-    name=video
+x264enc := {
+    property := {
+        byte-stream := true
+    }
+}
 
-ELEMENT audiotestsrc
-type:
-    audiotestsrc
-property:
-    wave=8
+faac := {
+    property := {
+        outputformat := 4
+    }
+}
 
-ELEMENT appsink
-type:
-    appsink
-
-ELEMENT appsrc
-type:
-    appsrc
-
-ELEMENT videoscale
-type:
-    videoscale
-
-ELEMENT x264enc
-type:
-    x264enc
-property:
-    byte-stream=true
-
-ELEMENT mpegtsmux
-type:
-    mpegtxmux
-
-ELEMENT faac
-type:
-    faac
-property:
-    outputformat=4
-
-CHANNEL test
-    onboot: yes
-    source:
-        bin:
-            audiosrc=audiotestsrc >>> appsink(name=audio)
-            videosrc=videotestsrc >>> clockoverlay >>> timeoverlay >>> textoverlay >>> appsink(name=video)
-        pipeline: (videosrc, audiosrc)
-    encoder:
-        bin:
-            videoenc=appsrc(name=video) >>> videoscale(caps=video/x-raw-yuv,width=$width,height=$height) >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
-            audioenc=appsrc(name=audio) >>> faac >>> mpegtsmux
-        pipeline: (videoenc, audioenc)
-        httpstreaming: yes
-        udpstreaming: 224.1.1.1:1111
-    encoder:
-        bin:
-            videoenc=appsrc(name=video) >>> videoscale(caps=video/x-raw-yuv,width=$width,height=$height) >>> x264enc(bitrate=$bitrate) >>> mpegtsmux >>> appsink(name=output)
-            audioenc=appsrc(name=audio) >>> faac >>> mpegtsmux
-        pipeline: (videoenc, audioenc)
-        httpstreaming: yes
-        udpstreaming: 224.1.1.2:1111
+channel test := {
+    onboot := yes
+    interchange<mpeg2enc, x264enc> $videocodec := x264enc
+    x264enc := {
+        bitrate := $bitrate
+    }
+    option $textoverlay := true
+    source := {
+        bin audiosrc := [audiotestsrc, appsink(name=audio)]
+        bin videosrc := [videotestsrc, clockoverlay, timeoverlay, $textoverlay, appsink(name=video)]
+        pipeline := (videosrc, audiosrc)
+    }
+    encoder := {
+        bin videoenc := [appsrc(name=video), videoscale(caps=video/x-raw-yuv,width=$width,height=$height), x264enc(bitrate=$bitrate), mpegtsmux, appsink(name=output)]
+        bin audioenc := [appsrc(name=audio), faac, mpegtsmux]
+        pipeline := (videoenc, audioenc)
+        httpstreaming := yes
+        udpstreaming := 224.1.1.1:1111
+    }
+    encoder := {
+        bin videoenc := [appsrc(name=video), videoscale(caps=video/x-raw-yuv,width=$width,height=$height), $videocodec(bitrate=$bitrate), mpegtsmux, appsink(name=output)]
+        bin audioenc := [appsrc(name=audio), faac, mpegtsmux]
+        pipeline := (videoenc, audioenc)
+        httpstreaming := yes
+        udpstreaming := 224.1.1.2:1111
+    }
+}
