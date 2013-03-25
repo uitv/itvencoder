@@ -10,6 +10,7 @@ logdir= := /var/log/itvencoder
 # pid file path
 pidfile := /var/run/itvencoder.pid
 
+# globle customized elements
 videotestsrc := {
     caps := video/x-raw-yuv,width=1280,height=720,framerate=25/1; 
 }
@@ -57,30 +58,34 @@ faac := {
 
 channel test := {
     onboot := yes
+    # interchange define interchangeble elements
     interchange {
         mpeg2enc,
         x264enc
     } videocodec := x264enc
+    # option define option element
     option textoverlay := true
+    # channel customized element
     x264enc := {
         bitrate := $bitrate
     }
     source := {
+        # element can be customized by elemment(property=vlue, ...)
         bin audiosrc := [audiotestsrc, appsink(name=audio)]
-        bin videosrc := [videotestsrc, clockoverlay, timeoverlay, $textoverlay, appsink(name=video)]
-        pipeline := (videosrc, audiosrc)
+        bin videosrc := [videotestsrc, clockoverlay, timeoverlay, textoverlay, videocodec, appsink(name=video)]
+        pipeline := [videosrc, audiosrc]
     }
     encoder := {
         bin videoenc := [appsrc(name=video), videoscale(caps=video/x-raw-yuv,width=$width,height=$height), x264enc(bitrate=$bitrate), mpegtsmux, appsink(name=output)]
         bin audioenc := [appsrc(name=audio), faac, mpegtsmux]
-        pipeline := (videoenc, audioenc)
+        pipeline := [videoenc, audioenc]
         httpstreaming := yes
         udpstreaming := 224.1.1.1:1111
     }
     encoder := {
         bin videoenc := [appsrc(name=video), videoscale(caps=video/x-raw-yuv,width=$width,height=$height), $videocodec(bitrate=$bitrate), mpegtsmux, appsink(name=output)]
         bin audioenc := [appsrc(name=audio), faac, mpegtsmux]
-        pipeline := (videoenc, audioenc)
+        pipeline := [videoenc, audioenc]
         httpstreaming := yes
         udpstreaming := 224.1.1.2:1111
     }
