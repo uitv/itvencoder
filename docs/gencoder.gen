@@ -57,11 +57,14 @@ faac := {
 
 channel test := {
     onboot := yes
-    interchange<mpeg2enc, x264enc> $videocodec := x264enc
+    interchange {
+        mpeg2enc,
+        x264enc
+    } videocodec := x264enc
+    option textoverlay := true
     x264enc := {
         bitrate := $bitrate
     }
-    option $textoverlay := true
     source := {
         bin audiosrc := [audiotestsrc, appsink(name=audio)]
         bin videosrc := [videotestsrc, clockoverlay, timeoverlay, $textoverlay, appsink(name=video)]
