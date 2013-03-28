@@ -30,18 +30,92 @@ configure_file_parse (gchar *conf, gsize s)
 gchar *
 configure_extract_template (gchar *conf, gsize size)
 {
-        gchar *template;
+        gchar *template, *p, *p1, *p2, *p3, *p4, *p5; 
         GRegex *reg;
-        GError *e;
+        GError *e = NULL;
+        GArray *conf_array;
+        GArray *variable_array;
+        gint i, line_number;
+        gchar var_status;
 
-        e = NULL;
-        reg = g_regex_new ("(^[^#\\n]*>)[^<]*</", G_REGEX_MULTILINE, 0, &e);
-        if (reg == NULL) {
-                g_error (e->message);
-                return NULL;
+        conf_array = g_array_new (FALSE, FALSE, sizeof (gchar *));
+        template = g_strdup_printf ("");
+        p = g_strdup_printf ("%s", conf);
+        p1 = p2 = p3 = p;
+        line_number = 0;
+        for (;;) {
+                if (p1 - p >= size) break;
+
+                /* process one line every time */
+                while ((*p2 != '\n') && (*p2 != '\0')) {
+                        p2++;
+                }
+                line_number++;
+                
+                p5 = p1;
+                var_status = '\0';
+                for (;;) {
+                        switch (*p3) {
+                        case '#': /* line end by comment. */
+                        case '\n': /* end of line. */
+                                if (var_status == '\0') {
+                                        p4 = g_strndup (p1, p2 - p1 + 1);
+                                        g_array_append_val (conf_array, p4);
+                                        p3 = p2;
+                                } else if (var_status == 'v') {
+                                        p4 = g_strndup (p5, p2 - p5 + 1);
+                                        g_array_append_val (conf_array, p4);
+                                        p3 = p2;
+                                } else {
+                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        return NULL;
+                                }
+                                break;
+                        case '<':
+                                if ((var_status == '\0') || (var_status == 'v')) {
+                                        /* find a variable */
+                                        var_status = '<';
+                                } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
+                                        var_status = '/';
+                                        p4 = g_strndup (p5, p3 - p5);
+                                        g_array_append_val (conf_array, p4);
+                                        p5 = p3;
+                                } else {
+                                        g_print ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        return NULL;
+                                }
+                                break;
+                        case '>':
+                                if (var_status == '<') {
+                                        /* open variable define */
+                                        var_status = '>';
+                                        p4 = g_strndup (p5, p3 - p5 + 1);
+                                        g_array_append_val (conf_array, p4);
+                                        p5 = p3 + 1;
+                                } else if (var_status == '/') {
+                                        /* close variable define */
+                                        var_status = 'v';
+                                        //p5 = p3 + 1;
+                                } else {
+                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        return NULL;
+                                }
+                                break;
+                        }
+
+                        if (p3 == p2) {
+                                /* complete one line processing. */
+                                break;
+                        }
+                        p3++;
+                }
+                p2++;
+                p1 = p3 = p2;
         }
-        template = g_regex_replace (reg, conf, -1, 0, "\\1%s</", G_REGEX_MATCH_NOTBOL | G_REGEX_MATCH_NOTEOL, &e);
-        g_print ("%s", template);
+        g_free (p);
+        for (i = 0; i < conf_array->len; i++) {
+                g_print ("%s\n", g_array_index (conf_array, gchar *, i));
+        }
         return template;
 }
 
