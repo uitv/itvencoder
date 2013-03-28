@@ -58,11 +58,7 @@ configure_extract_template (gchar *conf, gsize size)
                         switch (*p3) {
                         case '#': /* line end by comment. */
                         case '\n': /* end of line. */
-                                if (var_status == '\0') {
-                                        p4 = g_strndup (p1, p2 - p1 + 1);
-                                        g_array_append_val (conf_array, p4);
-                                        p3 = p2;
-                                } else if (var_status == 'v') {
+                                if ((var_status == '\0') || (var_status == 'v')) {
                                         p4 = g_strndup (p5, p2 - p5 + 1);
                                         g_array_append_val (conf_array, p4);
                                         p3 = p2;
