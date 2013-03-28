@@ -27,6 +27,24 @@ configure_file_parse (gchar *conf, gsize s)
         }
 }
 
+gchar *
+configure_extract_template (gchar *conf, gsize size)
+{
+        gchar *template;
+        GRegex *reg;
+        GError *e;
+
+        e = NULL;
+        reg = g_regex_new ("(^[^#\\n]*>)[^<]*</", G_REGEX_MULTILINE, 0, &e);
+        if (reg == NULL) {
+                g_error (e->message);
+                return NULL;
+        }
+        template = g_regex_replace (reg, conf, -1, 0, "\\1%s</", G_REGEX_MATCH_NOTBOL | G_REGEX_MATCH_NOTEOL, &e);
+        g_print ("%s", template);
+        return template;
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -34,19 +52,11 @@ main (gint argc, gchar *argv[])
         gsize size;
         gchar *p, *pp;
         gchar *conf, *conf_tmp, *conf_template;
-        GRegex *reg;
         gint right_square_bracket;
 
         g_file_get_contents ("configure.conf", &conf, &size, &e);
 
-        conf_template = g_malloc (size * 2);
-        reg = g_regex_new ("(^[^#]*>)[^<]*</", G_REGEX_MULTILINE | G_REGEX_DOTALL, 0, NULL);
-        if (reg == NULL) {
-                g_error (e->message);
-                return -1;
-        }
-        conf_template = g_regex_replace (reg, conf, -1, 0, "\\1%s</", G_REGEX_MATCH_NOTBOL | G_REGEX_MATCH_NOTEOL, NULL);
-        g_print ("%s", conf_template);
+        configure_extract_template (conf, size);
 
         conf_tmp = g_malloc (size * 2);
         p = conf;
@@ -82,7 +92,6 @@ main (gint argc, gchar *argv[])
                 if ((p - conf) == size) break;
         }
         *pp = '\0';
-        g_print ("%s",conf_tmp);
         g_free (conf);
         conf = conf_tmp;
         configure_file_parse (conf, pp - conf);
