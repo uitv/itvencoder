@@ -52,15 +52,15 @@ configure_extract_template (gchar *conf, gsize size)
                 }
                 line_number++;
                 
-                p5 = p1;
+                p4 = p1;
                 var_status = '\0';
                 for (;;) {
                         switch (*p3) {
                         case '#': /* line end by comment. */
                         case '\n': /* end of line. */
                                 if ((var_status == '\0') || (var_status == 'v')) {
-                                        p4 = g_strndup (p5, p2 - p5 + 1);
-                                        g_array_append_val (conf_array, p4);
+                                        p5 = g_strndup (p4, p2 - p4 + 1);
+                                        g_array_append_val (conf_array, p5);
                                         p3 = p2;
                                 } else {
                                         g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
@@ -73,9 +73,9 @@ configure_extract_template (gchar *conf, gsize size)
                                         var_status = '<';
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
                                         var_status = '/';
-                                        p4 = g_strndup (p5, p3 - p5);
-                                        g_array_append_val (conf_array, p4);
-                                        p5 = p3;
+                                        p5 = g_strndup (p4, p3 - p4);
+                                        g_array_append_val (conf_array, p5);
+                                        p4 = p3;
                                 } else {
                                         g_print ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
                                         return NULL;
@@ -85,13 +85,12 @@ configure_extract_template (gchar *conf, gsize size)
                                 if (var_status == '<') {
                                         /* open variable define */
                                         var_status = '>';
-                                        p4 = g_strndup (p5, p3 - p5 + 1);
-                                        g_array_append_val (conf_array, p4);
-                                        p5 = p3 + 1;
+                                        p5 = g_strndup (p4, p3 - p4 + 1);
+                                        g_array_append_val (conf_array, p5);
+                                        p4 = p3 + 1;
                                 } else if (var_status == '/') {
                                         /* close variable define */
                                         var_status = 'v';
-                                        //p5 = p3 + 1;
                                 } else {
                                         g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
                                         return NULL;
