@@ -3,10 +3,16 @@
 #include <glib.h>
 
 gint
-configure_element_parse (gchar *name, gchar *element)
+configure_channel_parse (gchar *name, gchar *element)
 {
         gchar *p1, *p2, *p3;
         gint right_square_bracket;
+        GKeyFile *channel;
+        GKeyFileFlags flags;
+        GError *e = NULL;
+        gchar **p, *v;
+        gint i;
+        gsize number;
 
         p1 = g_strdup_printf ("[%s]\n", name);
         p2 = element;
@@ -31,12 +37,18 @@ configure_element_parse (gchar *name, gchar *element)
                         break;
                 case '\\':
                         if ((right_square_bracket <= 1) && (*(p2 + 1) == 'n')) {
+                                /* \n found, and after first { */
                                 if (*(p2 - 1) != '{') {
+                                        /* {\n found */
                                         p3 = g_strdup_printf ("%s%c", p1, '\n');
                                         g_free (p1);
                                         p1 = p3;
-                                }
+                                } 
                                 p2++;
+                        } else {
+                                p3 = g_strdup_printf ("%s%c", p1, '\\');
+                                g_free (p1);
+                                p1 = p3;
                         }
                         break;
                 default:
@@ -50,7 +62,21 @@ configure_element_parse (gchar *name, gchar *element)
                         break;
                 }
         }
-        g_print ("element --- %s\n", p1);
+        *p2 = '\0';
+
+        channel = g_key_file_new ();
+        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+        if (!g_key_file_load_from_data (channel, p1, strlen(p1), flags, &e)) {
+                g_error (e->message);
+                return 1;
+        }
+        p = g_key_file_get_keys (channel, name, &number, &e);
+        g_print ("number is %d\n", number);
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (channel, name, p[i], &e);
+                g_print ("%s - %s\n", p[i], v);
+        }
+        g_strfreev (p);
 }
 
 gint
@@ -64,7 +90,6 @@ configure_file_parse (gchar *conf, gsize size)
         gint i;
 
         configure = g_key_file_new ();
-
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (configure, conf, size, flags, &e)) {
                 g_error (e->message);
@@ -88,6 +113,7 @@ configure_file_parse (gchar *conf, gsize size)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (configure, "channel", p[i], &e);
                 g_print ("%s - %s\n", p[i], v);
+                configure_channel_parse (p[i], v);
         }
         g_strfreev (p);
 }
