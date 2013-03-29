@@ -196,7 +196,7 @@ configure_extract_variable (gchar *conf, gsize size)
         }
         for (i = 0; i < variable_array->len; i++) {
                 configurable_var = g_array_index (variable_array, gpointer, i);
-                //g_print ("index %d value %s\n", configurable_var->index, configurable_var->value);
+                g_print ("index %d value %s\n", configurable_var->index, configurable_var->value);
         }
         return NULL;
 }
