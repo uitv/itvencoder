@@ -27,22 +27,32 @@ configure_file_parse (gchar *conf, gsize s)
         }
 }
 
+typedef struct _ConfigurableVar {
+        gint index;
+        gchar *name;
+        gchar *type;
+        gchar *description;
+        gchar *value;
+} ConfigurableVar;
+
 gchar *
-configure_extract_template (gchar *conf, gsize size)
+configure_extract_variable (gchar *conf, gsize size)
 {
-        gchar *template, *p, *p1, *p2, *p3, *p4, *p5; 
+        gchar *p, *p1, *p2, *p3, *p4, *p5; 
         GRegex *reg;
         GError *e = NULL;
         GArray *conf_array;
         GArray *variable_array;
-        gint i, line_number;
+        ConfigurableVar *configurable_var;
+        gint i, line_number, index;
         gchar var_status;
 
         conf_array = g_array_new (FALSE, FALSE, sizeof (gchar *));
-        template = g_strdup_printf ("");
+        variable_array = g_array_new (FALSE, FALSE, sizeof (gpointer));
         p = g_strdup_printf ("%s", conf);
         p1 = p2 = p3 = p;
         line_number = 0;
+        index = 0;
         for (;;) {
                 if (p1 - p >= size) break;
 
@@ -61,6 +71,7 @@ configure_extract_template (gchar *conf, gsize size)
                                 if ((var_status == '\0') || (var_status == 'v')) {
                                         p5 = g_strndup (p4, p2 - p4 + 1);
                                         g_array_append_val (conf_array, p5);
+                                        index++;
                                         p3 = p2;
                                 } else {
                                         g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
@@ -72,9 +83,15 @@ configure_extract_template (gchar *conf, gsize size)
                                         /* find a variable */
                                         var_status = '<';
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
+                                        /* variable value */
                                         var_status = '/';
                                         p5 = g_strndup (p4, p3 - p4);
                                         g_array_append_val (conf_array, p5);
+                                        configurable_var = g_malloc (sizeof (ConfigurableVar));
+                                        configurable_var->value = g_strdup (p5);
+                                        configurable_var->index = index;
+                                        g_array_append_val (variable_array, configurable_var);
+                                        index++;
                                         p4 = p3;
                                 } else {
                                         g_print ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
@@ -87,6 +104,7 @@ configure_extract_template (gchar *conf, gsize size)
                                         var_status = '>';
                                         p5 = g_strndup (p4, p3 - p4 + 1);
                                         g_array_append_val (conf_array, p5);
+                                        index++;
                                         p4 = p3 + 1;
                                 } else if (var_status == '/') {
                                         /* close variable define */
@@ -111,7 +129,11 @@ configure_extract_template (gchar *conf, gsize size)
         for (i = 0; i < conf_array->len; i++) {
                 g_print ("%s\n", g_array_index (conf_array, gchar *, i));
         }
-        return template;
+        for (i = 0; i < variable_array->len; i++) {
+                configurable_var = g_array_index (variable_array, gpointer, i);
+                g_print ("index %d value %s\n", configurable_var->index, configurable_var->value);
+        }
+        return NULL;
 }
 
 gint
@@ -125,7 +147,7 @@ main (gint argc, gchar *argv[])
 
         g_file_get_contents ("configure.conf", &conf, &size, &e);
 
-        configure_extract_template (conf, size);
+        configure_extract_variable (conf, size);
 
         conf_tmp = g_malloc (size * 2);
         p = conf;
