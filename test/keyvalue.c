@@ -1,12 +1,64 @@
+#include <unistd.h>
 #include <string.h>
 #include <glib.h>
+
+gint
+configure_element_parse (gchar *name, gchar *element)
+{
+        gchar *p1, *p2, *p3;
+        gint right_square_bracket;
+
+        p1 = g_strdup_printf ("[%s]\n", name);
+        p2 = element;
+        right_square_bracket = 0;
+        for (;;) {
+                switch (*p2) {
+                case '{':
+                        right_square_bracket++;
+                        if (right_square_bracket > 1) {
+                                p3 = g_strdup_printf ("%s%c", p1, *p2);
+                                g_free (p1);
+                                p1 = p3;
+                        }
+                        break;
+                case '}':
+                        right_square_bracket--;
+                        if (right_square_bracket > 0) {
+                                p3 = g_strdup_printf ("%s%c", p1, *p2);
+                                g_free (p1);
+                                p1 = p3;
+                        }
+                        break;
+                case '\\':
+                        if ((right_square_bracket <= 1) && (*(p2 + 1) == 'n')) {
+                                if (*(p2 - 1) != '{') {
+                                        p3 = g_strdup_printf ("%s%c", p1, '\n');
+                                        g_free (p1);
+                                        p1 = p3;
+                                }
+                                p2++;
+                        }
+                        break;
+                default:
+                        p3 = g_strdup_printf ("%s%c", p1, *p2);
+                        g_free (p1);
+                        p1 = p3;
+                        break;
+                }
+                p2++;
+                if (p2 - element >= strlen (element)) {
+                        break;
+                }
+        }
+        g_print ("element --- %s\n", p1);
+}
 
 gint
 configure_file_parse (gchar *conf, gsize size)
 {
         GKeyFile *configure;
         GKeyFileFlags flags;
-        GError *e;
+        GError *e = NULL;
         gsize number;
         gchar **p, *v;
         gint i;
@@ -16,29 +68,25 @@ configure_file_parse (gchar *conf, gsize size)
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (configure, conf, size, flags, &e)) {
                 g_error (e->message);
-                return -1;
+                return 1;
         }
 
-        p = g_key_file_get_keys (configure, "globle", &number, &e);
+        p = g_key_file_get_keys (configure, "server", &number, &e);
+        if (e != NULL) {
+                g_error (e->message);
+                return 1;
+        }
         g_print ("number is %d\n", number);
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (configure, "globle", p[i], &e);
+                v = g_key_file_get_value (configure, "server", p[i], &e);
                 g_print ("%s - %s\n", p[i], v);
         }
         g_strfreev (p);
 
-        p = g_key_file_get_keys (configure, "elements", &number, &e);
+        p = g_key_file_get_keys (configure, "channel", &number, &e);
         g_print ("number is %d\n", number);
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (configure, "elements", p[i], &e);
-                g_print ("%s - %s\n", p[i], v);
-        }
-        g_strfreev (p);
-
-        p = g_key_file_get_keys (configure, "channels", &number, &e);
-        g_print ("number is %d\n", number);
-        for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (configure, "channels", p[i], &e);
+                v = g_key_file_get_value (configure, "channel", p[i], &e);
                 g_print ("%s - %s\n", p[i], v);
         }
         g_strfreev (p);
@@ -170,28 +218,24 @@ configure_replace_newline (gchar *conf, gsize size)
                 case '{':
                         right_square_bracket++;
                         *p3 = *p2;
-                        p3++; p2++;
                         break;
                 case '}':
                         right_square_bracket--;
                         *p3 = *p2;
-                        p3++; p2++;
                         break;
                 case '\n':
                         if (right_square_bracket > 0) {
                                 *p3 = '\\'; p3++;
-                                *p3 = 'n'; p3++;
-                                p2++;
+                                *p3 = 'n'; 
                         } else {
                                 *p3 = *p2;
-                                p3++; p2++;
                         }
                         break;
                 default:
                         *p3 = *p2;
-                        p3++; p2++;
                         break;
                 }
+                p2++; p3++;
                 if ((p2 - conf) == size) break;
         }
         *p3 = '\0';
@@ -213,5 +257,7 @@ main (gint argc, gchar *argv[])
         configure_extract_variable (conf, size);
         
         p = configure_replace_newline (conf, size);
-        configure_file_parse (p, strlen (p));
+        if (configure_file_parse (p, strlen (p)) != 0) {
+                return 1;
+        }
 }
