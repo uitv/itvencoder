@@ -1,30 +1,47 @@
+#include <string.h>
 #include <glib.h>
 
 gint
-configure_file_parse (gchar *conf, gsize s)
+configure_file_parse (gchar *conf, gsize size)
 {
         GKeyFile *configure;
         GKeyFileFlags flags;
         GError *e;
-        gsize size;
+        gsize number;
         gchar **p, *v;
         gint i;
 
         configure = g_key_file_new ();
 
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (configure, conf, s, flags, &e)) {
+        if (!g_key_file_load_from_data (configure, conf, size, flags, &e)) {
                 g_error (e->message);
                 return -1;
         }
 
-        p = g_key_file_get_keys (configure, "globle", &size, &e);
-
-        g_print ("size is %d\n", size);
-        for (i = 0; i < size; i++) {
+        p = g_key_file_get_keys (configure, "globle", &number, &e);
+        g_print ("number is %d\n", number);
+        for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (configure, "globle", p[i], &e);
                 g_print ("%s - %s\n", p[i], v);
         }
+        g_strfreev (p);
+
+        p = g_key_file_get_keys (configure, "elements", &number, &e);
+        g_print ("number is %d\n", number);
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (configure, "elements", p[i], &e);
+                g_print ("%s - %s\n", p[i], v);
+        }
+        g_strfreev (p);
+
+        p = g_key_file_get_keys (configure, "channels", &number, &e);
+        g_print ("number is %d\n", number);
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (configure, "channels", p[i], &e);
+                g_print ("%s - %s\n", p[i], v);
+        }
+        g_strfreev (p);
 }
 
 typedef struct _ConfigurableVar {
@@ -127,13 +144,60 @@ configure_extract_variable (gchar *conf, gsize size)
         }
         g_free (p);
         for (i = 0; i < conf_array->len; i++) {
-                g_print ("%s\n", g_array_index (conf_array, gchar *, i));
+                //g_print ("%s\n", g_array_index (conf_array, gchar *, i));
         }
         for (i = 0; i < variable_array->len; i++) {
                 configurable_var = g_array_index (variable_array, gpointer, i);
-                g_print ("index %d value %s\n", configurable_var->index, configurable_var->value);
+                //g_print ("index %d value %s\n", configurable_var->index, configurable_var->value);
         }
         return NULL;
+}
+
+/*
+ * replace newline with \n, so it can be parsed by glib ini style parser.
+ */
+gchar *
+configure_replace_newline (gchar *conf, gsize size)
+{
+        gchar *p1, *p2, *p3;
+        gint right_square_bracket;
+
+        p3 = p1 = g_malloc (size * 2);
+        p2 = conf;
+        right_square_bracket = 0;
+        for (;;) {
+                switch (*p2) {
+                case '{':
+                        right_square_bracket++;
+                        *p3 = *p2;
+                        p3++; p2++;
+                        break;
+                case '}':
+                        right_square_bracket--;
+                        *p3 = *p2;
+                        p3++; p2++;
+                        break;
+                case '\n':
+                        if (right_square_bracket > 0) {
+                                *p3 = '\\'; p3++;
+                                *p3 = 'n'; p3++;
+                                p2++;
+                        } else {
+                                *p3 = *p2;
+                                p3++; p2++;
+                        }
+                        break;
+                default:
+                        *p3 = *p2;
+                        p3++; p2++;
+                        break;
+                }
+                if ((p2 - conf) == size) break;
+        }
+        *p3 = '\0';
+        p3 = g_strdup_printf ("%s", p1);
+        g_free (p1);
+        return p3;
 }
 
 gint
@@ -141,49 +205,13 @@ main (gint argc, gchar *argv[])
 {
         GError *e;
         gsize size;
-        gchar *p, *pp;
-        gchar *conf, *conf_tmp, *conf_template;
+        gchar *p, *conf;
         gint right_square_bracket;
 
         g_file_get_contents ("configure.conf", &conf, &size, &e);
 
         configure_extract_variable (conf, size);
-
-        conf_tmp = g_malloc (size * 2);
-        p = conf;
-        pp = conf_tmp;
-        right_square_bracket = 0;
-        for (;;) {
-                switch (*p) {
-                case '{':
-                        right_square_bracket++;
-                        *pp = *p;
-                        pp++; p++;
-                        break;
-                case '}':
-                        right_square_bracket--;
-                        *pp = *p;
-                        pp++; p++;
-                        break;
-                case '\n':
-                        if (right_square_bracket > 0) {
-                                *pp = '\\'; pp++;
-                                *pp = 'n'; pp++;
-                                p++;
-                        } else {
-                                *pp = *p;
-                                pp++; p++;
-                        }
-                        break;
-                default:
-                        *pp = *p;
-                        pp++; p++;
-                        break;
-                }
-                if ((p - conf) == size) break;
-        }
-        *pp = '\0';
-        g_free (conf);
-        conf = conf_tmp;
-        configure_file_parse (conf, pp - conf);
+        
+        p = configure_replace_newline (conf, size);
+        configure_file_parse (p, strlen (p));
 }
