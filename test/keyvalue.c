@@ -16,6 +16,8 @@ static void configure_set_property (GObject *obj, guint prop_id, const GValue *v
 static void configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gint configure_extract_lines (Configure *configure);
 static gint configure_replace_newline (Configure *configure);
+static gint configure_file_parse (Configure *configure);
+static gint configure_channel_parse (gchar *name, gchar *element);
 
 static void
 configure_class_init (ConfigureClass *configureclass)
@@ -110,9 +112,7 @@ configure_load_from_file (Configure *configure)
         configure_file_parse (configure);
 }
 
-GstStructure *configure_data;
-
-gint
+static gint
 configure_channel_parse (gchar *name, gchar *element)
 {
         gchar *p1, *p2, *p3;
@@ -189,7 +189,7 @@ configure_channel_parse (gchar *name, gchar *element)
         g_strfreev (p);
 }
 
-gint
+static gint
 configure_file_parse (Configure *configure)
 {
         GKeyFileFlags flags;
@@ -234,6 +234,55 @@ configure_file_parse (Configure *configure)
         gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
 
         return 0;
+}
+
+/*
+ * replace newline with \n, so it can be parsed by glib ini style parser.
+ */
+static gint
+configure_replace_newline (Configure *configure)
+{
+        gchar *p1, *p2, *p3;
+        gint right_square_bracket;
+
+        p3 = p1 = g_malloc (configure->size * 2);
+        p2 = configure->raw;
+        right_square_bracket = 0;
+        for (;;) {
+                switch (*p2) {
+                case '{':
+                        right_square_bracket++;
+                        *p3 = *p2;
+                        break;
+                case '}':
+                        right_square_bracket--;
+                        *p3 = *p2;
+                        break;
+                case '\n':
+                        if (right_square_bracket > 0) {
+                                *p3 = '\\';
+                                p3++;
+                                *p3 = 'n'; 
+                        } else {
+                                *p3 = *p2;
+                        }
+                        break;
+                default:
+                        *p3 = *p2;
+                        break;
+                }
+                p2++;
+                p3++;
+                if ((p2 - configure->raw) == configure->size) {
+                        break;
+                }
+        }
+        *p3 = '\0';
+        p3 = g_strdup_printf ("%s", p1);
+        g_free (p1);
+        configure->ini_raw = p3;
+        g_print ("%s\n", configure->ini_raw);
+        return 0; 
 }
 
 static gint
@@ -333,55 +382,6 @@ configure_extract_lines (Configure *configure)
                 g_print ("index %d value %s\n", variable->index, variable->value);
         }
         return 0;
-}
-
-/*
- * replace newline with \n, so it can be parsed by glib ini style parser.
- */
-static gint
-configure_replace_newline (Configure *configure)
-{
-        gchar *p1, *p2, *p3;
-        gint right_square_bracket;
-
-        p3 = p1 = g_malloc (configure->size * 2);
-        p2 = configure->raw;
-        right_square_bracket = 0;
-        for (;;) {
-                switch (*p2) {
-                case '{':
-                        right_square_bracket++;
-                        *p3 = *p2;
-                        break;
-                case '}':
-                        right_square_bracket--;
-                        *p3 = *p2;
-                        break;
-                case '\n':
-                        if (right_square_bracket > 0) {
-                                *p3 = '\\';
-                                p3++;
-                                *p3 = 'n'; 
-                        } else {
-                                *p3 = *p2;
-                        }
-                        break;
-                default:
-                        *p3 = *p2;
-                        break;
-                }
-                p2++;
-                p3++;
-                if ((p2 - configure->raw) == configure->size) {
-                        break;
-                }
-        }
-        *p3 = '\0';
-        p3 = g_strdup_printf ("%s", p1);
-        g_free (p1);
-        configure->ini_raw = p3;
-        g_print ("%s\n", configure->ini_raw);
-        return 0; 
 }
 
 gint
