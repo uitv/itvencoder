@@ -172,9 +172,42 @@ configure_ini_format (gchar *name, gchar *data)
         return p1;
 }
 
-static gint
+GstStructure *
 configure_element_parse (gchar *name, gchar *data)
 {
+        GKeyFile *gkeyfile;
+        GKeyFileFlags flags;
+        GError *e = NULL;
+        gchar *ini_data, **p, *v;
+        gint i;
+        gsize number;
+        GstStructure *structure, *elements, *element;
+        GValue value = { 0, { { 0 } } };
+
+        ini_data = configure_ini_format (name, data);
+        gkeyfile = g_key_file_new ();
+        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
+                g_free (ini_data);
+                g_error (e->message);
+                return NULL;
+        }
+        g_free (ini_data);
+
+        p = g_key_file_get_keys (gkeyfile, name, &number, &e);
+        g_print ("\n\n\n%s element parse, number is %d\n", name, number);
+        structure = gst_structure_empty_new (name);
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (gkeyfile, name, p[i], &e);
+                g_print ("%s : %s\n", p[i], v);
+                g_value_init (&value, G_TYPE_STRING);
+                g_value_set_static_string (&value, v);
+                gst_structure_set_value (structure, p[i], &value);
+                g_value_unset (&value);
+        }
+
+        g_strfreev (p);
+        return structure;
 }
 
 GstStructure *
@@ -186,7 +219,61 @@ configure_pipeline_parse (gchar *name, gchar *data)
         gchar *ini_data, **p, *v;
         gint i;
         gsize number;
-        GstStructure *structure;
+        GstStructure *structure, *elements, *element;
+        GValue value = { 0, { { 0 } } };
+
+        ini_data = configure_ini_format (name, data);
+        gkeyfile = g_key_file_new ();
+        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
+                g_free (ini_data);
+                g_error (e->message);
+                return NULL;
+        }
+        g_free (ini_data);
+        p = g_key_file_get_keys (gkeyfile, name, &number, &e);
+        g_print ("number is %d\n", number);
+        structure = gst_structure_empty_new (name);
+        elements = gst_structure_empty_new ("elements");
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (gkeyfile, name, p[i], &e);
+                g_print ("%s : %s\n", p[i], v);
+                if (g_strcmp0 (p[i], "pipeline") == 0) {
+                        /* pipeline found */
+                        g_value_init (&value, G_TYPE_STRING);
+                        g_value_set_static_string (&value, v);
+                        gst_structure_set_value (structure, p[i], &value);
+                        g_value_unset (&value);
+                } else if (g_strcmp0 (p[i], "bin") == 0) {
+                        /* bin found */
+                } else if (g_strcmp0 (p[i], "httpstreaming") == 0) {
+                        /* whether support http output or not */
+                } else if (g_strcmp0 (p[i], "udpstreaming") == 0) {
+                        /* whether support udp output or not */
+                } else if (v[0] == '<') {
+                        /* variable found */
+                } else {
+                        /* should be a element */
+                        element = configure_element_parse (p[i], v);
+                        gst_structure_set (elements, p[i], GST_TYPE_STRUCTURE, element, NULL);
+                }
+        }
+        gst_structure_set (structure, "elements", GST_TYPE_STRUCTURE, elements, NULL);
+        g_strfreev (p);
+
+        return structure;
+}
+
+GstStructure *
+configure_encoder_parse (gchar *name, gchar *data)
+{
+        GKeyFile *gkeyfile;
+        GKeyFileFlags flags;
+        GError *e = NULL;
+        gchar *ini_data, **p, *v;
+        gint i;
+        gsize number;
+        GstStructure *structure, *encoder;
         GValue value = { 0, { { 0 } } };
 
         ini_data = configure_ini_format (name, data);
@@ -204,10 +291,8 @@ configure_pipeline_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 g_print ("%s : %s\n", p[i], v);
-                g_value_init (&value, G_TYPE_STRING);
-                g_value_set_static_string (&value, v);
-                gst_structure_set_value (structure, p[i], &value);
-                g_value_unset (&value);
+                encoder = configure_pipeline_parse (p[i], v);
+                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
         }
         g_strfreev (p);
 
@@ -248,7 +333,7 @@ configure_channel_parse (gchar *name, gchar *data)
                         source = configure_pipeline_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, source, NULL);
                 } else if (g_strcmp0 (p[i], "encoder") == 0) {
-                        encoder = configure_pipeline_parse (p[i], v);
+                        encoder = configure_encoder_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
                 }
         }
