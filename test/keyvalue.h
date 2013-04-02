@@ -61,5 +61,7 @@ struct _ConfigureClass {
 GType configure_get_type (void);
 gint configure_load_from_file (Configure *configure);
 gint configure_save_to_file (Configure *configure);
+gchar *configure_get_server_param (Configure *configure, gchar *param);
+gchar * configure_get_source_pipeline (Configure *configure);
 
 #endif /* __CONFIGURE_H__ */
