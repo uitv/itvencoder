@@ -531,7 +531,7 @@ configure_file_parse (Configure *configure)
 static gint
 configure_extract_lines (Configure *configure)
 {
-        gchar *p, *p1, *p2, *p3, *p4, *p5; 
+        gchar *p, *p1, *p2, *p3, *p4, *p5, *group; 
         GError *e = NULL;
         ConfigurableVar *variable;
         gint i, line_number, index;
@@ -543,6 +543,7 @@ configure_extract_lines (Configure *configure)
         p1 = p2 = p3 = p;
         line_number = 0;
         index = 0;
+        group = NULL;
         for (;;) {
                 if (p1 - p >= configure->size) break;
 
@@ -568,6 +569,21 @@ configure_extract_lines (Configure *configure)
                                         return 1;
                                 }
                                 break;
+                        case '[':
+                                if (var_status == '\0') {
+                                        if (g_ascii_strncasecmp (p3, "[server]", 8) == 0) {
+                                                if (group == NULL) {
+                                                        g_free (group);
+                                                }
+                                                group = g_strdup_printf ("server");
+                                        } else if (g_ascii_strncasecmp (p3, "[channel]", 9) == 0) {
+                                                if (group == NULL) {
+                                                        g_free (group);
+                                                }
+                                                group = g_strdup_printf ("channel");
+                                        }
+                                }
+                                break;
                         case '<':
                                 if ((var_status == '\0') || (var_status == 'v')) {
                                         /* find a variable */
@@ -578,6 +594,7 @@ configure_extract_lines (Configure *configure)
                                         g_regex_unref (regex);
                                         variable->type = p5;
                                         variable->name = p5;
+                                        variable->group = g_strdup_printf ("%s", group);
                                         if (g_strcmp0 (p5, "interchange") == 0) {
                                                 regex = g_regex_new ("<interchange[^]]*]([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
@@ -727,7 +744,7 @@ configure_get_current_var (Configure *configure)
         p = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
-                var = g_strdup_printf ("%s<%s %s>%s</%s>\n", p, line->name, line->description, line->value, line->name);
+                var = g_strdup_printf ("%s<%s:%s %s>%s</%s>\n", p, line->group, line->name, line->description, line->value, line->name);
                 g_free (p);
                 p = var;
         }

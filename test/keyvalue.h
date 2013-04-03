@@ -13,6 +13,7 @@ typedef struct _ConfigureClass     ConfigureClass;
 
 typedef struct _ConfigurableVar {
         gint index;
+        gchar *group;
         gchar *name;
         gchar *type;
         gchar *description;
