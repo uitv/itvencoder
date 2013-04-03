@@ -33,9 +33,6 @@ struct _Configure {
         /* replace return in raw with \n, for ini parse */
         gchar *ini_raw;
 
-        /* glib key value type data. */
-        GKeyFile *key_value_data;
-
         /* GstStructure type of configure data */
         GstStructure *data;
 

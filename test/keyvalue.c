@@ -45,7 +45,6 @@ configure_init (Configure *configure)
         configure->lines = g_array_new (FALSE, FALSE, sizeof (gchar *));
         configure->variables = g_array_new (FALSE, FALSE, sizeof (gpointer));
         configure->data = gst_structure_empty_new ("configure");
-        configure->key_value_data = g_key_file_new ();
 }
 
 static void
@@ -489,6 +488,7 @@ configure_channel_parse (gchar *name, gchar *data)
 static gint
 configure_file_parse (Configure *configure)
 {
+        GKeyFile *key_value_data;
         GKeyFileFlags flags;
         GError *e = NULL;
         gsize number;
@@ -498,20 +498,21 @@ configure_file_parse (Configure *configure)
         GValue value = { 0, { { 0 } } };
 
 
+        key_value_data = g_key_file_new ();
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (configure->key_value_data, configure->ini_raw, strlen (configure->ini_raw), flags, &e)) {
+        if (!g_key_file_load_from_data (key_value_data, configure->ini_raw, strlen (configure->ini_raw), flags, &e)) {
                 g_error (e->message);
                 return 1;
         }
 
-        p = g_key_file_get_keys (configure->key_value_data, "server", &number, &e);
+        p = g_key_file_get_keys (key_value_data, "server", &number, &e);
         if (e != NULL) {
                 g_error (e->message);
                 return 1;
         }
         structure = gst_structure_empty_new ("server");
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (configure->key_value_data, "server", p[i], &e);
+                v = g_key_file_get_value (key_value_data, "server", p[i], &e);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -520,10 +521,10 @@ configure_file_parse (Configure *configure)
         g_strfreev (p);
         gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
 
-        p = g_key_file_get_keys (configure->key_value_data, "channel", &number, &e);
+        p = g_key_file_get_keys (key_value_data, "channel", &number, &e);
         structure = gst_structure_empty_new ("channel");
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (configure->key_value_data, "channel", p[i], &e);
+                v = g_key_file_get_value (key_value_data, "channel", p[i], &e);
                 channel = configure_channel_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
         }
