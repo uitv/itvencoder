@@ -487,7 +487,7 @@ configure_channel_parse (gchar *name, gchar *data)
  * replace newline with \n, so it can be parsed by glib ini style parser.
  */
 static gchar *
-configure_get_ini (Configure *configure)
+prepare_for_file_parse (Configure *configure)
 {
         gchar *p1, *p2, *p3;
         gint right_square_bracket;
@@ -543,7 +543,7 @@ configure_file_parse (Configure *configure)
         GstStructure *structure, *channel;
         GValue value = { 0, { { 0 } } };
 
-        ini = configure_get_ini (configure);
+        ini = prepare_for_file_parse (configure);
         key_value_data = g_key_file_new ();
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (key_value_data, ini, strlen (ini), flags, &e)) {
