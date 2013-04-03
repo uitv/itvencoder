@@ -49,7 +49,7 @@ configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParam
 
         switch (prop_id) {
         case CONFIGURE_PROP_FILE_PATH:
-                CONFIGURE(obj)->configure_file_path = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_path?
+                CONFIGURE(obj)->file_path = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_path?
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -64,7 +64,7 @@ configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *
 
         switch (prop_id) {
         case CONFIGURE_PROP_FILE_PATH:
-                g_value_set_string(value, configure->configure_file_path);
+                g_value_set_string(value, configure->file_path);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -169,6 +169,7 @@ ini_data_parse (gchar *name, gchar *data)
         if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
                 g_free (ini_data);
                 g_error (e->message);
+                g_error_free (e);
                 return NULL;
         }
         g_free (ini_data);
@@ -258,10 +259,12 @@ configure_element_parse (gchar *name, gchar *data)
                 } else if (g_strcmp0 (p[i], "option") == 0) {
                         regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
                         var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
+                        g_regex_unref (regex);
                         g_value_init (&value, G_TYPE_STRING);
                         g_value_set_static_string (&value, var);
                         gst_structure_set_value (structure, p[i], &value);
                         g_value_unset (&value);
+                        g_free (var);
                 }
         }
 
@@ -357,6 +360,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
                         gst_structure_set (elements, p[i], GST_TYPE_STRUCTURE, element, NULL);
                 }
         }
+        g_regex_unref (regex);
         gst_structure_set (structure, "elements", GST_TYPE_STRUCTURE, elements, NULL);
         g_strfreev (p);
 
@@ -489,6 +493,7 @@ configure_file_parse (Configure *configure)
         if (!g_key_file_load_from_data (key_value_data, ini, strlen (ini), flags, &e)) {
                 g_free (ini);
                 g_error (e->message);
+                g_error_free (e);
                 return 1;
         }
         g_free (ini);
@@ -496,6 +501,7 @@ configure_file_parse (Configure *configure)
         p = g_key_file_get_keys (key_value_data, "server", &number, &e);
         if (e != NULL) {
                 g_error (e->message);
+                g_error_free (e);
                 return 1;
         }
         structure = gst_structure_empty_new ("server");
@@ -532,6 +538,7 @@ configure_extract_lines (Configure *configure)
         gint i, line_number, index;
         gchar var_status;
         GstStructure *configure_mgmt;
+        GRegex *regex;
 
         p = g_strdup_printf ("%s", configure->raw);
         p1 = p2 = p3 = p;
@@ -566,12 +573,25 @@ configure_extract_lines (Configure *configure)
                                 if ((var_status == '\0') || (var_status == 'v')) {
                                         /* find a variable */
                                         var_status = '<';
+                                        variable = g_malloc (sizeof (ConfigurableVar));
+                                        regex = g_regex_new ("<([^ >[]*).*", G_REGEX_DOTALL, 0, NULL);
+                                        p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                        g_regex_unref (regex);
+                                        variable->type = p5;
+                                        variable->name = p5;
+                                        if (g_strcmp0 (p5, "interchange") == 0) {
+                                                regex = g_regex_new ("<interchange[^]]*]([^>]*).*", G_REGEX_DOTALL, 0, NULL);
+                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                                g_regex_unref (regex);
+                                                variable->description = p5;
+                                        } else {
+                                                variable->description = p5;
+                                        }
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
                                         /* variable value */
                                         var_status = '/';
                                         p5 = g_strndup (p4, p3 - p4);
                                         g_array_append_val (configure->lines, p5);
-                                        variable = g_malloc (sizeof (ConfigurableVar));
                                         variable->value = g_strdup (p5);
                                         variable->index = index;
                                         g_array_append_val (configure->variables, variable);
@@ -673,6 +693,52 @@ configure_load_from_file (Configure *configure)
 }
 
 gint
+configure_save_to_file (Configure *configure)
+{
+        gint i;
+        gchar *line, *contents, *p;
+        GError *e = NULL;
+
+        p = g_strdup_printf ("");
+        for (i = 0; i < configure->lines->len; i++) {
+                line = g_array_index (configure->lines, gchar *, i);
+                contents = g_strdup_printf ("%s%s", p, line);
+                g_free (p);
+                p = contents;
+        }
+
+        if (g_file_set_contents ("xxxx.xxx", contents, strlen (contents), &e) == FALSE) {
+                g_error (e->message);
+                g_error_free (e);
+                g_free (contents);
+                return 1;
+        }
+
+        g_free (contents);
+        return 0;
+}
+
+gchar*
+configure_get_current_var (Configure *configure)
+{
+        gint i;
+        gchar *var, *p;
+        ConfigurableVar *line;
+        
+        p = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
+        for (i = 0; i < configure->variables->len; i++) {
+                line = g_array_index (configure->variables, gpointer, i);
+                var = g_strdup_printf ("%s<%s %s>%s</%s>\n", p, line->name, line->description, line->value, line->name);
+                g_free (p);
+                p = var;
+        }
+        var = g_strdup_printf ("%s%s\n", p, "</root>");
+        g_free (p);
+
+        g_print ("%s", var);
+}
+
+gint
 main (gint argc, gchar *argv[])
 {
         Configure *configure;
@@ -683,6 +749,8 @@ main (gint argc, gchar *argv[])
         configure_load_from_file (configure);
 
         configure_get_server_param (configure, "pidfile");
+        configure_get_current_var (configure);
+        configure_save_to_file (configure);
         //configure_get_channels (configure);
         //g_print ("\n\n\nHello, gstructure %s!\n\n\n", gst_structure_to_string (configure->data));
 }
