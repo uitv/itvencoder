@@ -190,11 +190,11 @@ configure_caps_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("\n\n\n%s element parse, number is %d\n", name, number);
+        //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -217,11 +217,11 @@ configure_property_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("\n\n\n%s element parse, number is %d\n", name, number);
+        //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -245,11 +245,11 @@ configure_element_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("\n\n\n%s element parse, number is %d\n", name, number);
+        //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 if (g_strcmp0 (p[i], "property") == 0) {
                         property = configure_property_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, property, NULL);
@@ -285,11 +285,11 @@ configure_bin_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("\n\n\n%s element parse, number is %d\n", name, number);
+        //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -313,13 +313,13 @@ configure_pipeline_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("number is %d\n", number);
+        //g_print ("number is %d\n", number);
         structure = gst_structure_empty_new (name);
         elements = gst_structure_empty_new ("elements");
         regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 if (g_strcmp0 (p[i], "pipeline") == 0) {
                         /* pipeline found */
                         g_value_init (&value, G_TYPE_STRING);
@@ -380,11 +380,11 @@ configure_encoder_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("number is %d\n", number);
+        //g_print ("number is %d\n", number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 encoder = configure_pipeline_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
         }
