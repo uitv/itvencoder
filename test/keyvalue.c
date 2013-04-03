@@ -14,9 +14,6 @@ enum {
 
 static void configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static gint configure_extract_lines (Configure *configure);
-static gint configure_file_parse (Configure *configure);
-static GstStructure * configure_channel_parse (gchar *name, gchar *element);
 
 static void
 configure_class_init (ConfigureClass *configureclass)
@@ -96,17 +93,6 @@ configure_get_type (void)
         type = g_type_register_static (G_TYPE_OBJECT, "Configure", &info, 0);
 
         return type;
-}
-
-gint
-configure_load_from_file (Configure *configure)
-{
-        GError *e = NULL;
-
-        g_file_get_contents ("configure.conf", &configure->raw, &configure->size, &e);
-        configure_extract_lines (configure);
-
-        configure_file_parse (configure);
 }
 
 static gchar *
@@ -667,8 +653,23 @@ configure_get_server_param (Configure *configure, gchar *param)
         server = (GstStructure *)gst_value_get_structure (value);
         result = (gchar *)gst_structure_get_string (server, param);
 
-        g_print ("----------%s: %s\n", param, result);
         return param;
+}
+
+gint
+configure_load_from_file (Configure *configure)
+{
+        GError *e = NULL;
+        gint ret;
+
+        g_file_get_contents ("configure.conf", &configure->raw, &configure->size, &e);
+        ret = configure_extract_lines (configure);
+        if (ret != 0) {
+                return ret;
+        }
+        ret = configure_file_parse (configure);
+
+        return ret;
 }
 
 gint
