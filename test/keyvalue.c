@@ -601,6 +601,9 @@ configure_extract_lines (Configure *configure)
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
                                         } else {
+                                                regex = g_regex_new ("<[^ >]*([^>]*).*", G_REGEX_DOTALL, 0, NULL);
+                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                                g_regex_unref (regex);
                                                 variable->description = p5;
                                         }
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
