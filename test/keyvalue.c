@@ -532,7 +532,6 @@ static gint
 configure_extract_lines (Configure *configure)
 {
         gchar *p, *p1, *p2, *p3, *p4, *p5; 
-        GRegex *reg;
         GError *e = NULL;
         ConfigurableVar *variable;
         gint i, line_number, index;
