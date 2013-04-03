@@ -16,7 +16,6 @@ static void configure_set_property (GObject *obj, guint prop_id, const GValue *v
 static void configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gint configure_extract_lines (Configure *configure);
 static gint configure_file_parse (Configure *configure);
-static gchar * configure_ini_format (gchar *name, gchar *data);
 static GstStructure * configure_channel_parse (gchar *name, gchar *element);
 
 static void
@@ -111,7 +110,7 @@ configure_load_from_file (Configure *configure)
 }
 
 static gchar *
-configure_ini_format (gchar *name, gchar *data)
+ini_format (gchar *name, gchar *data)
 {
         gchar *p1, *p2, *p3;
         gint right_square_bracket;
@@ -169,19 +168,16 @@ configure_ini_format (gchar *name, gchar *data)
         return p1;
 }
 
-static GstStructure *
-configure_caps_parse (gchar *name, gchar *data)
+
+static GKeyFile *
+ini_data_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
         GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v;
-        gint i;
-        gsize number;
-        GstStructure *structure;
-        GValue value = { 0, { { 0 } } };
+        gchar *ini_data;
 
-        ini_data = configure_ini_format (name, data);
+        ini_data = ini_format (name, data);
         gkeyfile = g_key_file_new ();
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
@@ -191,6 +187,21 @@ configure_caps_parse (gchar *name, gchar *data)
         }
         g_free (ini_data);
 
+        return gkeyfile;
+}
+
+static GstStructure *
+configure_caps_parse (gchar *name, gchar *data)
+{
+        GKeyFile *gkeyfile;
+        GError *e = NULL;
+        gchar **p, *v;
+        gint i;
+        gsize number;
+        GstStructure *structure;
+        GValue value = { 0, { { 0 } } };
+
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
@@ -210,24 +221,14 @@ static GstStructure *
 configure_property_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
-        GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v;
+        gchar **p, *v;
         gint i;
         gsize number;
         GstStructure *structure;
         GValue value = { 0, { { 0 } } };
 
-        ini_data = configure_ini_format (name, data);
-        gkeyfile = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
-
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
@@ -247,25 +248,15 @@ static GstStructure *
 configure_element_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
-        GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v, *var;
+        gchar **p, *v, *var;
         gint i;
         gsize number;
         GstStructure *structure, *property, *caps;
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
-        ini_data = configure_ini_format (name, data);
-        gkeyfile = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
-
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
@@ -296,24 +287,14 @@ static GstStructure *
 configure_bin_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
-        GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v;
+        gchar **p, *v;
         gint i;
         gsize number;
         GstStructure *structure;
         GValue value = { 0, { { 0 } } };
 
-        ini_data = configure_ini_format (name, data);
-        gkeyfile = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
-
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("\n\n\n%s element parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
@@ -333,24 +314,15 @@ static GstStructure *
 configure_pipeline_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
-        GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v, *var;
+        gchar **p, *v, *var;
         gint i;
         gsize number;
         GstStructure *structure, *elements, *element, *bin;
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
-        ini_data = configure_ini_format (name, data);
-        gkeyfile = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("number is %d\n", number);
         structure = gst_structure_empty_new (name);
@@ -409,23 +381,14 @@ static GstStructure *
 configure_encoder_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
-        GKeyFileFlags flags;
         GError *e = NULL;
-        gchar *ini_data, **p, *v;
+        gchar **p, *v;
         gint i;
         gsize number;
         GstStructure *structure, *encoder;
         GValue value = { 0, { { 0 } } };
 
-        ini_data = configure_ini_format (name, data);
-        gkeyfile = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
+        gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         g_print ("number is %d\n", number);
         structure = gst_structure_empty_new (name);
@@ -443,28 +406,19 @@ configure_encoder_parse (gchar *name, gchar *data)
 static GstStructure *
 configure_channel_parse (gchar *name, gchar *data)
 {
-        GKeyFile *channel;
-        GKeyFileFlags flags;
+        GKeyFile *gkeyfile;
         GError *e = NULL;
-        gchar *ini_data, **p, *v;
+        gchar **p, *v;
         gint i;
         gsize number;
         GstStructure *structure, *source, *encoder;
         GValue value = { 0, { { 0 } } };
 
-        ini_data = configure_ini_format (name, data);
-        channel = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (channel, ini_data, strlen(ini_data), flags, &e)) {
-                g_free (ini_data);
-                g_error (e->message);
-                return NULL;
-        }
-        g_free (ini_data);
-        p = g_key_file_get_keys (channel, name, &number, &e);
+        gkeyfile = ini_data_parse (name, data);
+        p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (channel, name, p[i], &e);
+                v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 if (g_strcmp0 (p[i], "onboot") == 0) {
                         g_value_init (&value, G_TYPE_STRING);
                         g_value_set_static_string (&value, v);
