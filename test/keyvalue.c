@@ -534,7 +534,7 @@ configure_extract_lines (Configure *configure)
         gchar *p, *p1, *p2, *p3, *p4, *p5, *group; 
         GError *e = NULL;
         ConfigurableVar *variable;
-        gint i, line_number, index;
+        gint i, line_number, index, right_square_bracket;
         gchar var_status;
         GstStructure *configure_mgmt;
         GRegex *regex;
@@ -544,6 +544,7 @@ configure_extract_lines (Configure *configure)
         line_number = 0;
         index = 0;
         group = NULL;
+        right_square_bracket = 0;
         for (;;) {
                 if (p1 - p >= configure->size) break;
 
@@ -582,6 +583,24 @@ configure_extract_lines (Configure *configure)
                                                 }
                                                 group = g_strdup_printf ("channel");
                                         }
+                                }
+                                break;
+                        case '{':
+                                right_square_bracket++;
+                                if ((right_square_bracket == 1) && (g_strcmp0 (group, "channel") == 0)) {
+                                        g_free (group);
+                                        regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
+                                        p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
+                                        g_regex_unref (regex);
+                                        group = g_strdup_printf ("channel.%s", p5);
+                                        g_free (p5);
+                                }
+                                break;
+                        case '}':
+                                right_square_bracket--;
+                                if ((right_square_bracket == 0) && (g_ascii_strncasecmp (group, "channel.", 8) == 0)) {
+                                        g_free (group);
+                                        group = g_strdup_printf ("channel");
                                 }
                                 break;
                         case '<':
