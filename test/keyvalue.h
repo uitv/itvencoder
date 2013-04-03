@@ -30,9 +30,6 @@ struct _Configure {
         /* raw configure file content size */
         gsize size;
 
-        /* replace return in raw with \n, for ini parse */
-        gchar *ini_raw;
-
         /* GstStructure type of configure data */
         GstStructure *data;
 

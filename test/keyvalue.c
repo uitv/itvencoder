@@ -15,7 +15,6 @@ enum {
 static void configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static gint configure_extract_lines (Configure *configure);
-static gint configure_replace_newline (Configure *configure);
 static gint configure_file_parse (Configure *configure);
 static gchar * configure_ini_format (gchar *name, gchar *data);
 static GstStructure * configure_channel_parse (gchar *name, gchar *element);
@@ -108,7 +107,6 @@ configure_load_from_file (Configure *configure)
         g_file_get_contents ("configure.conf", &configure->raw, &configure->size, &e);
         configure_extract_lines (configure);
 
-        configure_replace_newline (configure);
         configure_file_parse (configure);
 }
 
@@ -485,60 +483,11 @@ configure_channel_parse (gchar *name, gchar *data)
         return structure;
 }
 
-static gint
-configure_file_parse (Configure *configure)
-{
-        GKeyFile *key_value_data;
-        GKeyFileFlags flags;
-        GError *e = NULL;
-        gsize number;
-        gchar **p, *v;
-        gint i;
-        GstStructure *structure, *channel;
-        GValue value = { 0, { { 0 } } };
-
-
-        key_value_data = g_key_file_new ();
-        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (key_value_data, configure->ini_raw, strlen (configure->ini_raw), flags, &e)) {
-                g_error (e->message);
-                return 1;
-        }
-
-        p = g_key_file_get_keys (key_value_data, "server", &number, &e);
-        if (e != NULL) {
-                g_error (e->message);
-                return 1;
-        }
-        structure = gst_structure_empty_new ("server");
-        for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (key_value_data, "server", p[i], &e);
-                g_value_init (&value, G_TYPE_STRING);
-                g_value_set_static_string (&value, v);
-                gst_structure_set_value (structure, p[i], &value);
-                g_value_unset (&value);
-        }
-        g_strfreev (p);
-        gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
-
-        p = g_key_file_get_keys (key_value_data, "channel", &number, &e);
-        structure = gst_structure_empty_new ("channel");
-        for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (key_value_data, "channel", p[i], &e);
-                channel = configure_channel_parse (p[i], v);
-                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
-        }
-        g_strfreev (p);
-        gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
-
-        return 0;
-}
-
 /*
  * replace newline with \n, so it can be parsed by glib ini style parser.
  */
-static gint
-configure_replace_newline (Configure *configure)
+static gchar *
+configure_get_ini (Configure *configure)
 {
         gchar *p1, *p2, *p3;
         gint right_square_bracket;
@@ -578,9 +527,59 @@ configure_replace_newline (Configure *configure)
         *p3 = '\0';
         p3 = g_strdup_printf ("%s", p1);
         g_free (p1);
-        configure->ini_raw = p3;
-        g_print ("%s\n", configure->ini_raw);
-        return 0; 
+
+        return p3; 
+}
+
+static gint
+configure_file_parse (Configure *configure)
+{
+        GKeyFile *key_value_data;
+        GKeyFileFlags flags;
+        GError *e = NULL;
+        gsize number;
+        gchar *ini, **p, *v;
+        gint i;
+        GstStructure *structure, *channel;
+        GValue value = { 0, { { 0 } } };
+
+        ini = configure_get_ini (configure);
+        key_value_data = g_key_file_new ();
+        flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+        if (!g_key_file_load_from_data (key_value_data, ini, strlen (ini), flags, &e)) {
+                g_free (ini);
+                g_error (e->message);
+                return 1;
+        }
+        g_free (ini);
+
+        p = g_key_file_get_keys (key_value_data, "server", &number, &e);
+        if (e != NULL) {
+                g_error (e->message);
+                return 1;
+        }
+        structure = gst_structure_empty_new ("server");
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (key_value_data, "server", p[i], &e);
+                g_value_init (&value, G_TYPE_STRING);
+                g_value_set_static_string (&value, v);
+                gst_structure_set_value (structure, p[i], &value);
+                g_value_unset (&value);
+        }
+        g_strfreev (p);
+        gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
+
+        p = g_key_file_get_keys (key_value_data, "channel", &number, &e);
+        structure = gst_structure_empty_new ("channel");
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (key_value_data, "channel", p[i], &e);
+                channel = configure_channel_parse (p[i], v);
+                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
+        }
+        g_strfreev (p);
+        gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
+
+        return 0;
 }
 
 static gint
