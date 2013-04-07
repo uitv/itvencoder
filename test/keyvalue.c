@@ -790,6 +790,32 @@ configure_get_var (Configure *configure, gchar *group)
                                 var = g_strdup_printf ("%s>\n", p1);
                                 g_free (p1);
                                 p1 = var;
+                        } else if (line->group[0] != path[0]) {
+                                tag = close_tag (path, 1);
+                                var = g_strdup_printf ("%s%s", p1, tag);
+                                g_free (p1);
+                                p1 = var;
+                                g_free (tag);
+                                g_free (path);
+                                path = g_strdup_printf ("%s", line->group);
+                                var = g_strdup_printf ("%s    <", p1);
+                                g_free (p1);
+                                p1 = var;
+                                for (j = 0; j < strlen (line->group); j++) {
+                                        if (line->group[j] == '.') {
+                                                indent += 1;
+                                                var = g_strdup_printf ("%s>\n        <", p1);
+                                                g_free (p1);
+                                                p1 = var;
+                                        } else {
+                                                var = g_strdup_printf ("%s%c", p1, line->group[j]);
+                                                g_free (p1);
+                                                p1 = var;
+                                        }
+                                }
+                                var = g_strdup_printf ("%s>\n", p1);
+                                g_free (p1);
+                                p1 = var;
                         }
                 
                         for (j = 0; j <= indent; j++) {
@@ -803,7 +829,7 @@ configure_get_var (Configure *configure, gchar *group)
                         p1 = var;
                 } 
         }
-g_print ("indent %d\n", indent);
+
         tag = close_tag (path, 1);
         var = g_strdup_printf ("%s%s</root>\n", var, tag);
         g_free (p1);
@@ -813,26 +839,6 @@ g_print ("indent %d\n", indent);
 }
 
 #if 0
-gchar*
-configure_get_current_var (Configure *configure)
-{
-        gint i;
-        gchar *var, *p;
-        ConfigurableVar *line;
-        
-        p = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
-        for (i = 0; i < configure->variables->len; i++) {
-                line = g_array_index (configure->variables, gpointer, i);
-                var = g_strdup_printf ("%s<%s:%s %s>%s</%s>\n", p, line->group, line->name, line->description, line->value, line->name);
-                g_free (p);
-                p = var;
-        }
-        var = g_strdup_printf ("%s%s\n", p, "</root>");
-        g_free (p);
-
-        g_print ("%s", var);
-}
-
 static gboolean
 structure_for_each_func (GQuark field_id, const GValue *value, gpointer user_data)
 {
