@@ -820,30 +820,8 @@ configure_get_var (Configure *configure, gchar *group)
         g_print ("%s", var);
 }
 
-#if 0
-static gboolean
-structure_for_each_func (GQuark field_id, const GValue *value, gpointer user_data)
-{
-        g_print ("%s\n", g_quark_to_string (field_id));
-        g_print ("%s\n", gst_structure_to_string ((GstStructure *)gst_value_get_structure (value)));
-
-        return TRUE;
-}
-
-gchar **
-configure_get_channels (Configure *configure)
-{
-        gchar **p;
-        GstStructure *channel;
-        GValue *value;
-
-        value = (GValue *) gst_structure_get_value (configure->data, "channel");
-        channel = (GstStructure *)gst_value_get_structure (value);
-        gst_structure_foreach (channel, structure_for_each_func, &p);
-}
-
 gchar *
-configure_get_server_param (Configure *configure, gchar *param)
+configure_get_param (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *server;
@@ -852,10 +830,10 @@ configure_get_server_param (Configure *configure, gchar *param)
         value = (GValue *)gst_structure_get_value (configure->data, "server");
         server = (GstStructure *)gst_value_get_structure (value);
         result = (gchar *)gst_structure_get_string (server, param);
-
-        return param;
+g_print ("param : %s\n", result);
+        return result;
 }
-#endif
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -870,7 +848,5 @@ main (gint argc, gchar *argv[])
         configure_get_var (configure, "channel");
         configure_get_var (configure, "server");
         configure_get_var (configure, "");
-        //configure_get_server_param (configure, "pidfile");
-        //configure_get_channels (configure);
-        //g_print ("\n\n\nHello, gstructure %s!\n\n\n", gst_structure_to_string (configure->data));
+        configure_get_param (configure, "httpstreaming");
 }
