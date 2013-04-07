@@ -824,12 +824,29 @@ gchar *
 configure_get_param (Configure *configure, gchar *param)
 {
         GValue *value;
-        GstStructure *server;
-        gchar *result;
+        GstStructure *structure;
+        gchar *key, *p1, *p2, *result;
 
-        value = (GValue *)gst_structure_get_value (configure->data, "server");
-        server = (GstStructure *)gst_value_get_structure (value);
-        result = (gchar *)gst_structure_get_string (server, param);
+        p2 = p1 = param;
+        structure = configure->data;
+        for (;;) {
+                p2++;
+                if (*p2 == '/') {
+                        key = g_strndup (p1, p2 - p1);
+                        p2++;
+                        p1 = p2;
+                        g_print ("key %s\n", key);
+                        value = (GValue *)gst_structure_get_value (structure, key);
+                        if ((p2 - param) >= strlen (param)) {
+                                result = (gchar *)gst_structure_get_string (structure, key);
+                                g_free (key);
+                                break;
+                        } else {
+                                structure = (GstStructure *)gst_value_get_structure (value);
+                                g_free (key);
+                        }
+                }
+        }
 g_print ("param : %s\n", result);
         return result;
 }
@@ -848,5 +865,7 @@ main (gint argc, gchar *argv[])
         configure_get_var (configure, "channel");
         configure_get_var (configure, "server");
         configure_get_var (configure, "");
-        configure_get_param (configure, "httpstreaming");
+        
+        configure_get_param (configure, "server/httpstreaming");
+        configure_get_param (configure, "server/httpmgmt");
 }
