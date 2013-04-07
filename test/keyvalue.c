@@ -769,34 +769,16 @@ configure_get_var (Configure *configure, gchar *group)
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
                 if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
-                        if (path == NULL) {
-                                /* begining of xml */
-                                path = g_strdup_printf ("%s", line->group);
-                                var = g_strdup_printf ("%s    <", p1);
-                                g_free (p1);
-                                p1 = var;
-                                for (j = 0; j < strlen (line->group); j++) {
-                                        if (line->group[j] == '.') {
-                                                indent += 1;
-                                                var = g_strdup_printf ("%s>\n        <", p1);
-                                                g_free (p1);
-                                                p1 = var;
-                                        } else {
-                                                var = g_strdup_printf ("%s%c", p1, line->group[j]);
-                                                g_free (p1);
-                                                p1 = var;
-                                        }
+                        if ((path == NULL) || (line->group[0] != path[0])) {
+                                /* gegin or another group found */
+                                if (path != NULL) {
+                                        tag = close_tag (path, 1);
+                                        var = g_strdup_printf ("%s%s", p1, tag);
+                                        g_free (p1);
+                                        p1 = var;
+                                        g_free (tag);
+                                        g_free (path);
                                 }
-                                var = g_strdup_printf ("%s>\n", p1);
-                                g_free (p1);
-                                p1 = var;
-                        } else if (line->group[0] != path[0]) {
-                                tag = close_tag (path, 1);
-                                var = g_strdup_printf ("%s%s", p1, tag);
-                                g_free (p1);
-                                p1 = var;
-                                g_free (tag);
-                                g_free (path);
                                 path = g_strdup_printf ("%s", line->group);
                                 var = g_strdup_printf ("%s    <", p1);
                                 g_free (p1);
