@@ -721,6 +721,98 @@ configure_save_to_file (Configure *configure)
         return 0;
 }
 
+static gchar*
+close_tag (gchar *path, gint indent)
+{
+        gchar *tag, *p1, *p2, *p3;
+        gint i, j, group_layer;
+
+        p1 = p2 = g_strdup_printf ("</");
+        group_layer = indent;
+        p3 = tag = g_strdup_printf ("");
+        for (i = 0; i <= strlen (path); i ++) {
+                if ((path[i] == '.') || i == strlen (path)) {
+                        for (j = 0; j < group_layer; j++) {
+                                p1 = g_strdup_printf ("    %s", p1);
+                                g_free (p2);
+                                p2 = p1;
+                        }
+                        tag = g_strdup_printf ("%s>\n%s", p1, p3);
+                        g_free (p2);
+                        g_free (p3);
+                        p3 = tag;
+                        p1 = p2 = g_strdup_printf ("</");
+                        group_layer++;
+                } else {
+                        p1 = g_strdup_printf ("%s%c", p1, path[i]);
+                        g_free (p2);
+                        p2 = p1;
+                }
+        }
+
+        return tag;
+}
+
+/*
+ * return xml format configure item.
+ */
+gchar*
+configure_get_var (Configure *configure, gchar *group)
+{
+        gint i, j, indent;
+        gchar *var, *p1, *p2, *path, *tag;
+        ConfigurableVar *line;
+        
+        path = NULL;
+        indent = 1;
+        p1 = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
+        for (i = 0; i < configure->variables->len; i++) {
+                line = g_array_index (configure->variables, gpointer, i);
+                if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
+                        if (path == NULL) {
+                                /* begining of xml */
+                                path = g_strdup_printf ("%s", line->group);
+                                var = g_strdup_printf ("%s    <", p1);
+                                g_free (p1);
+                                p1 = var;
+                                for (j = 0; j < strlen (line->group); j++) {
+                                        if (line->group[j] == '.') {
+                                                indent += 1;
+                                                var = g_strdup_printf ("%s>\n        <", p1);
+                                                g_free (p1);
+                                                p1 = var;
+                                        } else {
+                                                var = g_strdup_printf ("%s%c", p1, line->group[j]);
+                                                g_free (p1);
+                                                p1 = var;
+                                        }
+                                }
+                                var = g_strdup_printf ("%s>\n", p1);
+                                g_free (p1);
+                                p1 = var;
+                        }
+                
+                        for (j = 0; j <= indent; j++) {
+                                var = g_strdup_printf ("%s    ", p1);
+                                g_free (p1);
+                                p1 = var;
+                        }
+
+                        var = g_strdup_printf ("%s<%s:%s %s>%s</%s>\n", p1, line->group, line->name, line->description, line->value, line->name);
+                        g_free (p1);
+                        p1 = var;
+                } 
+        }
+g_print ("indent %d\n", indent);
+        tag = close_tag (path, 1);
+        var = g_strdup_printf ("%s%s</root>\n", var, tag);
+        g_free (p1);
+        g_free (tag);
+
+        g_print ("%s", var);
+}
+
+#if 0
 gchar*
 configure_get_current_var (Configure *configure)
 {
@@ -775,7 +867,7 @@ configure_get_server_param (Configure *configure, gchar *param)
 
         return param;
 }
-
+#endif
 gint
 main (gint argc, gchar *argv[])
 {
@@ -785,10 +877,12 @@ main (gint argc, gchar *argv[])
 
         configure = configure_new ("configure_path", "configure.conf", NULL);
         configure_load_from_file (configure);
-
-        configure_get_server_param (configure, "pidfile");
-        configure_get_current_var (configure);
         configure_save_to_file (configure);
+
+        configure_get_var (configure, "channel");
+        configure_get_var (configure, "server");
+        configure_get_var (configure, "");
+        //configure_get_server_param (configure, "pidfile");
         //configure_get_channels (configure);
         //g_print ("\n\n\nHello, gstructure %s!\n\n\n", gst_structure_to_string (configure->data));
 }
