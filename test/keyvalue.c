@@ -830,6 +830,12 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent);
                         p1 = var;
+                        var = g_strdup_printf ("%s<id>%d</id>\n", p1, line->index);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent);
+                        p1 = var;
                         var = g_strdup_printf ("%s<type>%s</type>\n", p1, line->type);
                         g_free (p1);
                         p1 = var;
