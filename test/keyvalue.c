@@ -823,9 +823,10 @@ configure_get_var (Configure *configure, gchar *group)
 GValue *
 configure_get_param (Configure *configure, gchar *param)
 {
-        GValue *value;
+        GValue *value, result = { 0, { { 0 } } };
         GstStructure *structure;
-        gchar *key, *p1, *p2;
+        gchar *key, *p1, *p2, **p;
+        gint n, i;
 
         if (param[0] != '/') {
                 /* must bu absolute path */
@@ -852,11 +853,27 @@ configure_get_param (Configure *configure, gchar *param)
                 }
         }
 
+        p1 = NULL;
         if (GST_VALUE_HOLDS_STRUCTURE (value)) {
-                g_print ("structure\n");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                n = gst_structure_n_fields (structure);
+                for (i = 0; i < n; i++) {
+                        key = (gchar *)gst_structure_nth_field_name (structure, i);
+                        if (p1 == NULL) {
+                                p1 = g_strdup_printf ("%s", key);
+                                p2 = p1;
+                        } else {
+                                p1 = g_strdup_printf ("%s,%s", p1, key);
+                                g_free (p2);
+                                p2 = p1;
+                        }
+                }
+                g_value_init (&result, G_TYPE_STRING);
+                g_value_set_string (&result, p1);
+                value = &result;
         }
 
-        return value;
+        return value; // FIXME: release
 }
 
 gint
@@ -882,4 +899,7 @@ main (gint argc, gchar *argv[])
         value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
         g_print ("videosource: %s\n", g_value_get_string (value));
         value = configure_get_param (configure, "/channel/test/source/bin");
+        g_print ("bin: %s\n", g_value_get_string (value));
+        value = configure_get_param (configure, "/channel");
+        g_print ("channel: %s\n", g_value_get_string (value));
 }
