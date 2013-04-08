@@ -754,7 +754,7 @@ close_tag (gchar *path, gint indent)
 }
 
 /*
- * return xml format configure item.
+ * get configurable item, managment interface.
  */
 gchar*
 configure_get_var (Configure *configure, gchar *group)
@@ -820,6 +820,9 @@ configure_get_var (Configure *configure, gchar *group)
         g_print ("%s", var);
 }
 
+/*
+ * get configuration parameter which used to construct encode channels.
+ */
 GValue *
 configure_get_param (Configure *configure, gchar *param)
 {
