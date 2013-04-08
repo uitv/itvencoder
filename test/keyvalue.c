@@ -753,6 +753,24 @@ close_tag (gchar *path, gint indent)
         return tag;
 }
 
+static gchar *
+add_indent (gchar *var, gint indent)
+{
+        gint i;
+        gchar *p1, *p2;
+        
+        p1 = var;
+        for (i = 0; i <= indent; i++) {
+                p2 = g_strdup_printf ("%s    ", p1);
+                g_free (p1);
+                p1 = p2;
+        }
+        p2 = g_strdup_printf ("%s    ", p1);
+        g_free (p1);
+
+        return p2;
+}
+
 /*
  * get configurable item, managment interface.
  */
@@ -806,7 +824,31 @@ configure_get_var (Configure *configure, gchar *group)
                                 p1 = var;
                         }
 
-                        var = g_strdup_printf ("%s<%s:%s %s>%s</%s>\n", p1, line->group, line->name, line->description, line->value, line->name);
+                        var = g_strdup_printf ("%s<%s>\n", p1, line->name);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent);
+                        p1 = var;
+                        var = g_strdup_printf ("%s<type>%s</type>\n", p1, line->type);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent);
+                        p1 = var;
+                        var = g_strdup_printf ("%s<description>%s</description>\n", p1, line->description);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent);
+                        p1 = var;
+                        var = g_strdup_printf ("%s<value>%s</value>\n", p1, line->value);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent - 1);
+                        p1 = var;
+                        var = g_strdup_printf ("%s</%s>\n", p1, line->name);
                         g_free (p1);
                         p1 = var;
                 } 
