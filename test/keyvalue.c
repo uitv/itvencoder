@@ -820,12 +820,12 @@ configure_get_var (Configure *configure, gchar *group)
         g_print ("%s", var);
 }
 
-gchar *
+GValue *
 configure_get_param (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *structure;
-        gchar *key, *p1, *p2, *result;
+        gchar *key, *p1, *p2;
 
         p2 = p1 = param;
         structure = configure->data;
@@ -838,7 +838,6 @@ configure_get_param (Configure *configure, gchar *param)
                         g_print ("key %s\n", key);
                         value = (GValue *)gst_structure_get_value (structure, key);
                         if ((p2 - param) >= strlen (param)) {
-                                result = (gchar *)gst_structure_get_string (structure, key);
                                 g_free (key);
                                 break;
                         } else {
@@ -847,14 +846,15 @@ configure_get_param (Configure *configure, gchar *param)
                         }
                 }
         }
-g_print ("param : %s\n", result);
-        return result;
+
+        return value;
 }
 
 gint
 main (gint argc, gchar *argv[])
 {
         Configure *configure;
+        GValue *value;
 
         gst_init (&argc, &argv);
 
@@ -868,4 +868,8 @@ main (gint argc, gchar *argv[])
         
         configure_get_param (configure, "server/httpstreaming");
         configure_get_param (configure, "server/httpmgmt");
+        value = configure_get_param (configure, "channel/test/source/pipeline");
+        g_print ("pipeline: %s\n", g_value_get_string (value));
+        value = configure_get_param (configure, "channel/test/source/bin/videosrc");
+        g_print ("videosource: %s\n", g_value_get_string (value));
 }
