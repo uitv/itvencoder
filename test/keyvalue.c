@@ -827,11 +827,16 @@ configure_get_param (Configure *configure, gchar *param)
         GstStructure *structure;
         gchar *key, *p1, *p2;
 
-        p2 = p1 = param;
+        if (param[0] != '/') {
+                /* must bu absolute path */
+                return NULL;
+        }
+
+        p2 = p1 = param + 1;
         structure = configure->data;
         for (;;) {
                 p2++;
-                if (*p2 == '/') {
+                if ((*p2 == '/') || (*p2 == '\0')) {
                         key = g_strndup (p1, p2 - p1);
                         p2++;
                         p1 = p2;
@@ -870,11 +875,11 @@ main (gint argc, gchar *argv[])
         configure_get_var (configure, "server");
         configure_get_var (configure, "");
         
-        configure_get_param (configure, "server/httpstreaming");
-        configure_get_param (configure, "server/httpmgmt");
-        value = configure_get_param (configure, "channel/test/source/pipeline");
+        configure_get_param (configure, "/server/httpstreaming");
+        configure_get_param (configure, "/server/httpmgmt");
+        value = configure_get_param (configure, "/channel/test/source/pipeline");
         g_print ("pipeline: %s\n", g_value_get_string (value));
-        value = configure_get_param (configure, "channel/test/source/bin/videosrc");
+        value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
         g_print ("videosource: %s\n", g_value_get_string (value));
-        value = configure_get_param (configure, "channel/test/source/bin");
+        value = configure_get_param (configure, "/channel/test/source/bin");
 }
