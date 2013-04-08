@@ -612,6 +612,9 @@ configure_extract_lines (Configure *configure)
                                         p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                         g_regex_unref (regex);
                                         variable->type = p5;
+                                        regex = g_regex_new (" *([^ =]*).*", G_REGEX_DOTALL, 0, NULL);
+                                        p5 = g_regex_replace (regex, p1, -1, 0, "\\1", 0, NULL);
+                                        g_regex_unref (regex);
                                         variable->name = p5;
                                         variable->group = g_strdup_printf ("%s", group);
                                         if (g_strcmp0 (p5, "interchange") == 0) {
@@ -620,7 +623,7 @@ configure_extract_lines (Configure *configure)
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
                                         } else {
-                                                regex = g_regex_new ("<[^ >]* ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
+                                                regex = g_regex_new ("<[^ >]*([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
