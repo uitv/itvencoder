@@ -847,6 +847,10 @@ configure_get_param (Configure *configure, gchar *param)
                 }
         }
 
+        if (GST_VALUE_HOLDS_STRUCTURE (value)) {
+                g_print ("structure\n");
+        }
+
         return value;
 }
 
@@ -872,4 +876,5 @@ main (gint argc, gchar *argv[])
         g_print ("pipeline: %s\n", g_value_get_string (value));
         value = configure_get_param (configure, "channel/test/source/bin/videosrc");
         g_print ("videosource: %s\n", g_value_get_string (value));
+        value = configure_get_param (configure, "channel/test/source/bin");
 }
