@@ -531,7 +531,7 @@ configure_file_parse (Configure *configure)
 static gint
 configure_extract_lines (Configure *configure)
 {
-        gchar *p, *p1, *p2, *p3, *p4, *p5, *group; 
+        gchar *p, *p1, *p2, *p3, *p4, *p5, *p6, *group, **group_array; 
         GError *e = NULL;
         ConfigurableVar *variable;
         gint i, line_number, index, right_square_bracket;
@@ -587,21 +587,46 @@ configure_extract_lines (Configure *configure)
                                 break;
                         case '{':
                                 right_square_bracket++;
-                                if ((right_square_bracket == 1) && (g_strcmp0 (group, "channel") == 0)) {
-                                        g_free (group);
-                                        regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
-                                        p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
-                                        g_regex_unref (regex);
-                                        group = g_strdup_printf ("channel.%s", p5);
-                                        g_free (p5);
+                                group_array = g_strsplit (group, ".", 5);
+                                if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
+                                        if ((right_square_bracket <= 2) || ((right_square_bracket == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                                regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
+                                                p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
+                                                g_regex_unref (regex);
+                                                p6 = g_strdup_printf ("%s.%s", group, p5);
+                                                g_free (group);
+                                                g_free (p5);
+                                                group = p6;
+                                        }
                                 }
+                                g_strfreev (group_array);
                                 break;
                         case '}':
                                 right_square_bracket--;
-                                if ((right_square_bracket == 0) && (g_ascii_strncasecmp (group, "channel.", 8) == 0)) {
-                                        g_free (group);
-                                        group = g_strdup_printf ("channel");
+                                group_array = g_strsplit (group, ".", 5);
+                                if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
+                                        if ((right_square_bracket == 1) || ((right_square_bracket == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                                i = 0;
+                                                while (group_array[i] != NULL) {
+                                                        i++;
+                                                }
+                                                i -= 2;
+                                                p5 = g_strdup (group_array[i]);
+                                                p6 = p5;
+                                                while (i != 0) {
+                                                        p5 = g_strdup_printf ("%s.%s", group_array[i - 1], p6);
+                                                        g_free (p6);
+                                                        p6 = p5;
+                                                        i--;
+                                                }
+                                                g_free (group);
+                                                group = p5;
+                                        } else if (right_square_bracket == 0) {
+                                                g_free (group);
+                                                group = g_strdup ("channel");
+                                        }
                                 }
+                                g_strfreev (group_array);
                                 break;
                         case '<':
                                 if ((var_status == '\0') || (var_status == 'v')) {
@@ -789,6 +814,7 @@ configure_get_var (Configure *configure, gchar *group)
         p1 = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
+                g_print ("group: %s\n", line->group);
                 if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
                         if ((path == NULL) || (line->group[0] != path[0])) {
                                 /* gegin or another group found */
@@ -941,8 +967,8 @@ main (gint argc, gchar *argv[])
         configure_load_from_file (configure);
         configure_save_to_file (configure);
 
-        configure_get_var (configure, "channel");
-        configure_get_var (configure, "server");
+        //configure_get_var (configure, "channel");
+        //configure_get_var (configure, "server");
         configure_get_var (configure, "");
         
         configure_get_param (configure, "/server/httpstreaming");
