@@ -841,7 +841,6 @@ configure_get_param (Configure *configure, gchar *param)
                         key = g_strndup (p1, p2 - p1);
                         p2++;
                         p1 = p2;
-                        g_print ("key %s\n", key);
                         value = (GValue *)gst_structure_get_value (structure, key);
                         if ((p2 - param) >= strlen (param)) {
                                 g_free (key);
