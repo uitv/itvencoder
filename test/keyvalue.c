@@ -99,31 +99,31 @@ static gchar *
 ini_format (gchar *name, gchar *data)
 {
         gchar *p1, *p2, *p3;
-        gint right_square_bracket;
+        gint bracket_depth;
  
         p1 = g_strdup_printf ("[%s]\n", name);
         p2 = data;
-        right_square_bracket = 0;
+        bracket_depth = 0;
         for (;;) {
                 switch (*p2) {
                 case '{':
-                        right_square_bracket++;
-                        if (right_square_bracket > 1) {
+                        bracket_depth++;
+                        if (bracket_depth > 1) {
                                 p3 = g_strdup_printf ("%s%c", p1, *p2);
                                 g_free (p1);
                                 p1 = p3;
                         }
                         break;
                 case '}':
-                        right_square_bracket--;
-                        if (right_square_bracket > 0) {
+                        bracket_depth--;
+                        if (bracket_depth > 0) {
                                 p3 = g_strdup_printf ("%s%c", p1, *p2);
                                 g_free (p1);
                                 p1 = p3;
                         }
                         break;
                 case '\\':
-                        if ((right_square_bracket <= 1) && (*(p2 + 1) == 'n')) {
+                        if ((bracket_depth <= 1) && (*(p2 + 1) == 'n')) {
                                 /* \n found, and after first { */
                                 if (*(p2 - 1) != '{') {
                                         /* {\n found */
@@ -434,23 +434,23 @@ static gchar *
 prepare_for_file_parse (Configure *configure)
 {
         gchar *p1, *p2, *p3;
-        gint right_square_bracket;
+        gint bracket_depth;
 
         p3 = p1 = g_malloc (configure->size * 2);
         p2 = configure->raw;
-        right_square_bracket = 0;
+        bracket_depth = 0;
         for (;;) {
                 switch (*p2) {
                 case '{':
-                        right_square_bracket++;
+                        bracket_depth++;
                         *p3 = *p2;
                         break;
                 case '}':
-                        right_square_bracket--;
+                        bracket_depth--;
                         *p3 = *p2;
                         break;
                 case '\n':
-                        if (right_square_bracket > 0) {
+                        if (bracket_depth > 0) {
                                 *p3 = '\\';
                                 p3++;
                                 *p3 = 'n'; 
@@ -534,7 +534,7 @@ configure_extract_lines (Configure *configure)
         gchar *p, *p1, *p2, *p3, *p4, *p5, *p6, *group, **group_array; 
         GError *e = NULL;
         ConfigurableVar *variable;
-        gint i, line_number, index, right_square_bracket;
+        gint i, line_number, index, bracket_depth;
         gchar var_status;
         GstStructure *configure_mgmt;
         GRegex *regex;
@@ -544,7 +544,7 @@ configure_extract_lines (Configure *configure)
         line_number = 0;
         index = 0;
         group = NULL;
-        right_square_bracket = 0;
+        bracket_depth = 0;
         for (;;) {
                 if (p1 - p >= configure->size) break;
 
@@ -586,10 +586,10 @@ configure_extract_lines (Configure *configure)
                                 }
                                 break;
                         case '{':
-                                right_square_bracket++;
+                                bracket_depth++;
                                 group_array = g_strsplit (group, ".", 5);
                                 if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
-                                        if ((right_square_bracket <= 2) || ((right_square_bracket == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                        if ((bracket_depth <= 2) || ((bracket_depth == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
                                                 g_regex_unref (regex);
@@ -602,10 +602,10 @@ configure_extract_lines (Configure *configure)
                                 g_strfreev (group_array);
                                 break;
                         case '}':
-                                right_square_bracket--;
+                                bracket_depth--;
                                 group_array = g_strsplit (group, ".", 5);
                                 if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
-                                        if ((right_square_bracket == 1) || ((right_square_bracket == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                        if ((bracket_depth == 1) || ((bracket_depth == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 i = 0;
                                                 while (group_array[i] != NULL) {
                                                         i++;
@@ -621,7 +621,7 @@ configure_extract_lines (Configure *configure)
                                                 }
                                                 g_free (group);
                                                 group = p5;
-                                        } else if (right_square_bracket == 0) {
+                                        } else if (bracket_depth == 0) {
                                                 g_free (group);
                                                 group = g_strdup ("channel");
                                         }
@@ -809,15 +809,13 @@ configure_get_var (Configure *configure, gchar *group)
         gchar *var, *p1, *p2, *path, *tag;
         ConfigurableVar *line;
         
-        path = NULL;
-        indent = 1;
         p1 = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
+        path = NULL;
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
-                g_print ("group: %s\n", line->group);
                 if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
                         if ((path == NULL) || (line->group[0] != path[0])) {
-                                /* gegin or another group found */
+                                /* begin of group or another group found */
                                 if (path != NULL) {
                                         tag = close_tag (path, 1);
                                         var = g_strdup_printf ("%s%s", p1, tag);
@@ -826,16 +824,22 @@ configure_get_var (Configure *configure, gchar *group)
                                         g_free (tag);
                                         g_free (path);
                                 }
+                                indent = 1;
                                 path = g_strdup_printf ("%s", line->group);
                                 var = g_strdup_printf ("%s    <", p1);
                                 g_free (p1);
                                 p1 = var;
                                 for (j = 0; j < strlen (line->group); j++) {
                                         if (line->group[j] == '.') {
-                                                indent += 1;
-                                                var = g_strdup_printf ("%s>\n        <", p1);
+                                                var = g_strdup_printf ("%s>\n", p1);
                                                 g_free (p1);
                                                 p1 = var;
+                                                var = add_indent (p1, indent - 1);
+                                                p1 = var;
+                                                var = g_strdup_printf ("%s<", p1);
+                                                g_free (p1);
+                                                p1 = var;
+                                                indent += 1;
                                         } else {
                                                 var = g_strdup_printf ("%s%c", p1, line->group[j]);
                                                 g_free (p1);
@@ -847,12 +851,8 @@ configure_get_var (Configure *configure, gchar *group)
                                 p1 = var;
                         }
                 
-                        for (j = 0; j <= indent; j++) {
-                                var = g_strdup_printf ("%s    ", p1);
-                                g_free (p1);
-                                p1 = var;
-                        }
-
+                        var = add_indent (p1, indent - 1);
+                        p1 = var;
                         var = g_strdup_printf ("%s<%s>\n", p1, line->name);
                         g_free (p1);
                         p1 = var;
