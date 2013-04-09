@@ -697,6 +697,7 @@ configure_extract_lines (Configure *configure)
         }
 
         g_free (p);
+        #if 0
         for (i = 0; i < configure->lines->len; i++) {
                 g_print ("%s\n", g_array_index (configure->lines, gchar *, i));
         }
@@ -704,6 +705,7 @@ configure_extract_lines (Configure *configure)
                 variable = g_array_index (configure->variables, gpointer, i);
                 g_print ("index %d value %s\n", variable->index, variable->value);
         }
+        #endif
         return 0;
 }
 
@@ -940,7 +942,12 @@ configure_get_var (Configure *configure, gchar *group)
         g_free (p1);
         g_free (tag);
 
-        g_print ("%s", var);
+        return var;
+}
+
+gint
+configure_set_var (Configure *configure, gchar *var)
+{
 }
 
 /*
@@ -1006,6 +1013,7 @@ main (gint argc, gchar *argv[])
 {
         Configure *configure;
         GValue *value;
+        gchar *xml;
 
         gst_init (&argc, &argv);
 
@@ -1015,7 +1023,7 @@ main (gint argc, gchar *argv[])
 
         //configure_get_var (configure, "channel");
         //configure_get_var (configure, "server");
-        configure_get_var (configure, "");
+        xml = configure_get_var (configure, "");
         
         configure_get_param (configure, "/server/httpstreaming");
         configure_get_param (configure, "/server/httpmgmt");
