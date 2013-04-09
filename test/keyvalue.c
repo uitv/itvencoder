@@ -753,16 +753,16 @@ static gchar*
 group_alter (gchar *path, gchar *group)
 {
         gchar *tag_close, *tag_open, *tag, *p1, *p2, *p3, *p4;
-        gint i, j, group_layer, depth;
+        gint i, j, indent, depth;
 
         p1 = p3 = path;
         p2 = p4 = group;
 
-        group_layer = 1;
+        indent = 1;
         for (;;) {
                 /* find out identical part path and group begining */
                 if (((*p3 == '.') || (*p3 == '\0')) && ((*p4 == '.') || (*p4 == '\0'))) {
-                        group_layer++;
+                        indent++;
                         p1 = p3 + 1;
                         p2 = p4 + 1;
                 }
@@ -774,9 +774,10 @@ group_alter (gchar *path, gchar *group)
                 p4++;
         }
 
+        /* close tag */
         tag_close = g_strdup ("");
         if (*p1 != '\0') {
-                depth = group_layer;
+                depth = indent;
                 p3 = p4 = g_strdup ("</");
                 for (;;) {
                         if ((*p1 == '.') || (*p1 == '\0')) {
@@ -806,9 +807,10 @@ group_alter (gchar *path, gchar *group)
                 }
         }
 
+        /* open tag */
         tag_open = g_strdup ("");
         if (*p2 != 0) {
-                depth = group_layer;
+                depth = indent;
                 p3 = p4 = g_strdup ("<");
                 for (;;) {
                         if ((*p2 == '.') || (*p2 == '\0')) {
