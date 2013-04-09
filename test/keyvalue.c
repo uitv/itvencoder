@@ -750,33 +750,97 @@ configure_save_to_file (Configure *configure)
 }
 
 static gchar*
-group_alter (gchar *path, gchar *group, gint indent)
+group_alter (gchar *path, gchar *group)
 {
-        gchar *tag, *p1, *p2, *p3;
-        gint i, j, group_layer;
+        gchar *tag_close, *tag_open, *tag, *p1, *p2, *p3, *p4;
+        gint i, j, group_layer, depth;
 
-        p1 = p2 = g_strdup_printf ("</");
-        group_layer = indent;
-        p3 = tag = g_strdup_printf ("");
-        for (i = 0; i <= strlen (path); i ++) {
-                if ((path[i] == '.') || i == strlen (path)) {
-                        for (j = 0; j < group_layer; j++) {
-                                p1 = g_strdup_printf ("    %s", p1);
-                                g_free (p2);
-                                p2 = p1;
-                        }
-                        tag = g_strdup_printf ("%s>\n%s", p1, p3);
-                        g_free (p2);
-                        g_free (p3);
-                        p3 = tag;
-                        p1 = p2 = g_strdup_printf ("</");
+        p1 = p3 = path;
+        p2 = p4 = group;
+
+        group_layer = 1;
+        for (;;) {
+                /* find out identical part path and group begining */
+                if (((*p3 == '.') || (*p3 == '\0')) && ((*p4 == '.') || (*p4 == '\0'))) {
                         group_layer++;
-                } else {
-                        p1 = g_strdup_printf ("%s%c", p1, path[i]);
-                        g_free (p2);
-                        p2 = p1;
+                        p1 = p3 + 1;
+                        p2 = p4 + 1;
+                }
+                if ((*p3 == '\0') || (*p4 == '\0') || (*p3 != *p4)) {
+
+                        break;
+                }
+                p3++;
+                p4++;
+        }
+
+        tag_close = g_strdup ("");
+        if (*p1 != '\0') {
+                depth = group_layer;
+                p3 = p4 = g_strdup ("</");
+                for (;;) {
+                        if ((*p1 == '.') || (*p1 == '\0')) {
+                                for (i = 0; i < depth; i++) {
+                                        p4 = g_strdup_printf ("    %s", p3);
+                                        g_free (p3);
+                                        p3 = p4;
+                                }
+                                p4 = g_strdup_printf ("%s>\n", p3);
+                                g_free (p3);
+                                p3 = tag_close;
+                                tag_close = g_strdup_printf ("%s%s", p4, p3);
+                                g_free (p3);
+                                g_free (p4);
+                                p3 = p4 = g_strdup ("</");
+                                depth++;
+                        } else {
+                                p4 = g_strdup_printf ("%s%c", p3, *p1);
+                                g_free (p3);
+                                p3 = p4;
+                        }
+                        if (*p1 == '\0') {
+                                g_free (p3);
+                                break;
+                        }
+                        p1++;
                 }
         }
+
+        tag_open = g_strdup ("");
+        if (*p2 != 0) {
+                depth = group_layer;
+                p3 = p4 = g_strdup ("<");
+                for (;;) {
+                        if ((*p2 == '.') || (*p2 == '\0')) {
+                                for (i = 0; i < depth; i++) {
+                                        p4 = g_strdup_printf ("    %s", p3);
+                                        g_free (p3);
+                                        p3 = p4;
+                                }
+                                p4 = g_strdup_printf ("%s>\n", p3);
+                                g_free (p3);
+                                p3 = tag_open;
+                                tag_open = g_strdup_printf ("%s%s", p3, p4);
+                                g_free (p3);
+                                g_free (p4);
+                                p3 = p4 = g_strdup ("<");
+                                depth++;
+                        } else {
+                                p4 = g_strdup_printf ("%s%c", p3, *p2);
+                                g_free (p3);
+                                p3 = p4;
+                        }
+                        if (*p2 == '\0') {
+                                g_free (p3);
+                                break;
+                        }
+                        p2++;
+                }
+        }
+
+        tag = g_strdup_printf ("%s%s", tag_close, tag_open);
+        g_free (tag_close);
+        g_free (tag_open);
 
         return tag;
 }
@@ -810,45 +874,25 @@ configure_get_var (Configure *configure, gchar *group)
         ConfigurableVar *line;
         
         p1 = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
-        path = NULL;
+        path = g_strdup ("");
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
                 if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
                         if (g_strcmp0 (line->group, path) != 0) {
-                                /* begin of group or another group found */
-                                if (path != NULL) {
-                                        tag = group_alter (path, line->group, indent);
-                                        var = g_strdup_printf ("%s%s", p1, tag);
-                                        g_free (p1);
-                                        p1 = var;
-                                        g_free (tag);
-                                        g_free (path);
-                                }
+                                /* group alternation */
+                                tag = group_alter (path, line->group);
+                                var = g_strdup_printf ("%s%s", p1, tag);
+                                g_free (p1);
+                                p1 = var;
+                                g_free (tag);
+                                g_free (path);
                                 indent = 1;
                                 path = g_strdup_printf ("%s", line->group);
-                                var = g_strdup_printf ("%s    <", p1);
-                                g_free (p1);
-                                p1 = var;
                                 for (j = 0; j < strlen (line->group); j++) {
                                         if (line->group[j] == '.') {
-                                                var = g_strdup_printf ("%s>\n", p1);
-                                                g_free (p1);
-                                                p1 = var;
-                                                var = add_indent (p1, indent - 1);
-                                                p1 = var;
-                                                var = g_strdup_printf ("%s<", p1);
-                                                g_free (p1);
-                                                p1 = var;
-                                                indent += 1;
-                                        } else {
-                                                var = g_strdup_printf ("%s%c", p1, line->group[j]);
-                                                g_free (p1);
-                                                p1 = var;
+                                                indent++;
                                         }
                                 }
-                                var = g_strdup_printf ("%s>\n", p1);
-                                g_free (p1);
-                                p1 = var;
                         }
 
                         var = add_indent (p1, indent - 1);
@@ -889,7 +933,7 @@ configure_get_var (Configure *configure, gchar *group)
                 } 
         }
 
-        tag = group_alter (path, NULL, 1);
+        tag = group_alter (path, "");
         var = g_strdup_printf ("%s%s</root>\n", var, tag);
         g_free (p1);
         g_free (tag);
