@@ -760,7 +760,7 @@ group_alter (gchar *path, gchar *group)
 
         indent = 1;
         for (;;) {
-                /* find out identical part path and group begining */
+                /* find out identical part of path and group */
                 if (((*p3 == '.') || (*p3 == '\0')) && ((*p4 == '.') || (*p4 == '\0'))) {
                         indent++;
                         p1 = p3 + 1;
