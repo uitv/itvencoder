@@ -750,7 +750,7 @@ configure_save_to_file (Configure *configure)
 }
 
 static gchar*
-close_tag (gchar *path, gint indent)
+close_tag (gchar *path, gchar *group, gint indent)
 {
         gchar *tag, *p1, *p2, *p3;
         gint i, j, group_layer;
@@ -814,10 +814,10 @@ configure_get_var (Configure *configure, gchar *group)
         for (i = 0; i < configure->variables->len; i++) {
                 line = g_array_index (configure->variables, gpointer, i);
                 if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
-                        if ((path == NULL) || (line->group[0] != path[0])) {
+                        if (g_strcmp0 (line->group, path) != 0) {
                                 /* begin of group or another group found */
                                 if (path != NULL) {
-                                        tag = close_tag (path, 1);
+                                        tag = close_tag (path, line->group, indent);
                                         var = g_strdup_printf ("%s%s", p1, tag);
                                         g_free (p1);
                                         p1 = var;
@@ -850,7 +850,7 @@ configure_get_var (Configure *configure, gchar *group)
                                 g_free (p1);
                                 p1 = var;
                         }
-                
+                        
                         var = add_indent (p1, indent - 1);
                         p1 = var;
                         var = g_strdup_printf ("%s<%s>\n", p1, line->name);
@@ -889,7 +889,7 @@ configure_get_var (Configure *configure, gchar *group)
                 } 
         }
 
-        tag = close_tag (path, 1);
+        tag = close_tag (path, NULL, 1);
         var = g_strdup_printf ("%s%s</root>\n", var, tag);
         g_free (p1);
         g_free (tag);
