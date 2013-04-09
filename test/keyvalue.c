@@ -750,7 +750,7 @@ configure_save_to_file (Configure *configure)
 }
 
 static gchar*
-close_tag (gchar *path, gchar *group, gint indent)
+group_alter (gchar *path, gchar *group, gint indent)
 {
         gchar *tag, *p1, *p2, *p3;
         gint i, j, group_layer;
@@ -817,7 +817,7 @@ configure_get_var (Configure *configure, gchar *group)
                         if (g_strcmp0 (line->group, path) != 0) {
                                 /* begin of group or another group found */
                                 if (path != NULL) {
-                                        tag = close_tag (path, line->group, indent);
+                                        tag = group_alter (path, line->group, indent);
                                         var = g_strdup_printf ("%s%s", p1, tag);
                                         g_free (p1);
                                         p1 = var;
@@ -889,7 +889,7 @@ configure_get_var (Configure *configure, gchar *group)
                 } 
         }
 
-        tag = close_tag (path, NULL, 1);
+        tag = group_alter (path, NULL, 1);
         var = g_strdup_printf ("%s%s</root>\n", var, tag);
         g_free (p1);
         g_free (tag);
