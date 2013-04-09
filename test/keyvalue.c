@@ -850,7 +850,7 @@ configure_get_var (Configure *configure, gchar *group)
                                 g_free (p1);
                                 p1 = var;
                         }
-                        
+
                         var = add_indent (p1, indent - 1);
                         p1 = var;
                         var = g_strdup_printf ("%s<%s>\n", p1, line->name);
