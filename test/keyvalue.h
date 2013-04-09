@@ -56,7 +56,8 @@ struct _ConfigureClass {
 GType configure_get_type (void);
 gint configure_load_from_file (Configure *configure);
 gint configure_save_to_file (Configure *configure);
-gchar* configure_get_var (Configure *configure, gchar *var);
+gchar* configure_get_var (Configure *configure, gchar *group);
+gint configure_set_var (Configure *configure, gchar *var);
 GValue* configure_get_param (Configure *configure, gchar *param);
 
 #endif /* __CONFIGURE_H__ */

@@ -945,9 +945,47 @@ configure_get_var (Configure *configure, gchar *group)
         return var;
 }
 
+static void
+start_element (GMarkupParseContext *context, const gchar *element, const gchar **attr_names, const gchar **attr_vals, gpointer data, GError **e)
+{
+        g_print ("start: %s\n", element);
+}
+
+static void
+end_element (GMarkupParseContext *context, const gchar *element, gpointer data, GError **e)
+{
+        g_print ("end: %s\n", element);
+}
+
+static void
+text (GMarkupParseContext *context, const char *text, gsize length, gpointer data, GError **e)
+{
+        g_print ("text: %s\n", text);
+}
+
 gint
 configure_set_var (Configure *configure, gchar *var)
 {
+        GMarkupParser parser = {
+                start_element,
+                end_element,
+                text,
+                NULL,
+                NULL
+        };
+        GMarkupParseContext *context;
+        GError *e = NULL;
+
+        context = g_markup_parse_context_new (&parser, 0, NULL, NULL);
+        if (!g_markup_parse_context_parse (context, var, -1, &e)) {
+                g_markup_parse_context_free (context);
+                g_print ("parse error\n");
+                return 1;
+        }
+
+        g_markup_parse_context_free (context);
+
+        return 0;
 }
 
 /*
@@ -1013,7 +1051,7 @@ main (gint argc, gchar *argv[])
 {
         Configure *configure;
         GValue *value;
-        gchar *xml;
+        gchar *var;
 
         gst_init (&argc, &argv);
 
@@ -1023,8 +1061,9 @@ main (gint argc, gchar *argv[])
 
         //configure_get_var (configure, "channel");
         //configure_get_var (configure, "server");
-        xml = configure_get_var (configure, "");
-        
+        var = configure_get_var (configure, "");
+        configure_set_var (configure, var);
+
         configure_get_param (configure, "/server/httpstreaming");
         configure_get_param (configure, "/server/httpmgmt");
         value = configure_get_param (configure, "/channel/test/source/pipeline");
