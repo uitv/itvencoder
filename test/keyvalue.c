@@ -649,12 +649,10 @@ configure_extract_lines (Configure *configure)
                                         variable->name = p5;
                                         variable->group = g_strdup_printf ("%s", group);
                                         if (g_ascii_strncasecmp (variable->type, "select", 11) == 0) {
-                                        g_print ("p5: %s\n", p5);
                                                 regex = g_regex_new ("<select\\[[^\\]]*] ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
-                                        g_print ("p5: %s\n", p5);
                                         } else {
                                                 regex = g_regex_new ("<[^ >]*([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
