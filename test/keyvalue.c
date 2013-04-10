@@ -960,19 +960,44 @@ configure_get_var (Configure *configure, gchar *group)
 static void
 start_element (GMarkupParseContext *context, const gchar *element, const gchar **attr_names, const gchar **attr_vals, gpointer data, GError **e)
 {
-        //g_print ("start: %s\n", element);
+        ConfigurableVar *var;
+        GArray *var_array;
+
+        var_array = (GArray *)data;
+        if (g_strcmp0 (element, "var") == 0) {
+                var = (ConfigurableVar *) g_malloc (sizeof (ConfigurableVar));
+                g_array_append_val (var_array, var);
+        }
 }
 
 static void
 end_element (GMarkupParseContext *context, const gchar *element, gpointer data, GError **e)
 {
-        //g_print ("end: %s\n", element);
+        if (g_strcmp0 (element, "var") == 0) {
+                //g_print ("end: %s\n\n", element);
+        }
 }
 
 static void
 text (GMarkupParseContext *context, const char *text, gsize length, gpointer data, GError **e)
 {
-        //g_print ("text: %s\n", text);
+        gchar *element;
+        ConfigurableVar *var;
+        GArray *var_array;
+        gint index;
+
+        var_array = (GArray *)data;
+        if (var_array->len == 0) {
+                return;
+        }
+        index = var_array->len - 1;
+        var = g_array_index (var_array, gpointer, index);
+        element = (gchar *)g_markup_parse_context_get_element (context);
+        if (g_strcmp0 (element, "id") == 0) {
+                var->index = atoi (text);
+        } else if (g_strcmp0 (element, "value") == 0) {
+                var->value = g_strdup (text);
+        }
 }
 
 gint
@@ -987,12 +1012,21 @@ configure_set_var (Configure *configure, gchar *var)
         };
         GMarkupParseContext *context;
         GError *e = NULL;
+        GArray *var_array;
+        ConfigurableVar *v;
+        gint i;
 
-        context = g_markup_parse_context_new (&parser, 0, NULL, NULL);
+        var_array = g_array_new (FALSE, FALSE, sizeof (gpointer));
+        context = g_markup_parse_context_new (&parser, 0, var_array, NULL);
         if (!g_markup_parse_context_parse (context, var, -1, &e)) {
                 g_markup_parse_context_free (context);
                 g_print ("parse error\n");
                 return 1;
+        }
+
+        for (i = 0; i < var_array->len; i++) {
+                v = g_array_index (var_array, gpointer, i);
+                g_print ("id: %d value: %s\n", v->index, v->value);
         }
 
         g_markup_parse_context_free (context);
@@ -1012,7 +1046,7 @@ configure_get_param (Configure *configure, gchar *param)
         gint n, i;
 
         if (param[0] != '/') {
-                /* must bu absolute path */
+                /* must be absolute path */
                 return NULL;
         }
 
@@ -1075,7 +1109,7 @@ main (gint argc, gchar *argv[])
         //configure_get_var (configure, "server");
         var = configure_get_var (configure, "");
         configure_set_var (configure, var);
-        g_print ("%s\n", var);
+        //g_print ("%s\n", var);
 
         configure_get_param (configure, "/server/httpstreaming");
         configure_get_param (configure, "/server/httpmgmt");
