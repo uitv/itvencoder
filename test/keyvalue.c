@@ -960,13 +960,13 @@ configure_get_var (Configure *configure, gchar *group)
 static void
 start_element (GMarkupParseContext *context, const gchar *element, const gchar **attr_names, const gchar **attr_vals, gpointer data, GError **e)
 {
-        ConfigurableVar *var;
+        ConfigurableVar *conf_var;
         GArray *var_array;
 
         var_array = (GArray *)data;
         if (g_strcmp0 (element, "var") == 0) {
-                var = (ConfigurableVar *) g_malloc (sizeof (ConfigurableVar));
-                g_array_append_val (var_array, var);
+                conf_var = (ConfigurableVar *) g_malloc (sizeof (ConfigurableVar));
+                g_array_append_val (var_array, conf_var);
         }
 }
 
@@ -982,7 +982,7 @@ static void
 text (GMarkupParseContext *context, const char *text, gsize length, gpointer data, GError **e)
 {
         gchar *element;
-        ConfigurableVar *var;
+        ConfigurableVar *conf_var;
         GArray *var_array;
         gint index;
 
@@ -991,12 +991,12 @@ text (GMarkupParseContext *context, const char *text, gsize length, gpointer dat
                 return;
         }
         index = var_array->len - 1;
-        var = g_array_index (var_array, gpointer, index);
+        conf_var = g_array_index (var_array, gpointer, index);
         element = (gchar *)g_markup_parse_context_get_element (context);
         if (g_strcmp0 (element, "id") == 0) {
-                var->index = atoi (text);
+                conf_var->index = atoi (text);
         } else if (g_strcmp0 (element, "value") == 0) {
-                var->value = g_strdup (text);
+                conf_var->value = g_strdup (text);
         }
 }
 
@@ -1013,7 +1013,7 @@ configure_set_var (Configure *configure, gchar *var)
         GMarkupParseContext *context;
         GError *e = NULL;
         GArray *var_array;
-        ConfigurableVar *v;
+        ConfigurableVar *conf_var;
         gint i;
 
         var_array = g_array_new (FALSE, FALSE, sizeof (gpointer));
@@ -1025,8 +1025,8 @@ configure_set_var (Configure *configure, gchar *var)
         }
 
         for (i = 0; i < var_array->len; i++) {
-                v = g_array_index (var_array, gpointer, i);
-                g_print ("id: %d value: %s\n", v->index, v->value);
+                conf_var = g_array_index (var_array, gpointer, i);
+                g_print ("id: %d value: %s\n", conf_var->index, conf_var->value);
         }
 
         g_markup_parse_context_free (context);
