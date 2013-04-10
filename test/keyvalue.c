@@ -901,7 +901,13 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent - 1);
                         p1 = var;
-                        var = g_strdup_printf ("%s<%s>\n", p1, line->name);
+                        var = g_strdup_printf ("%s<var>\n", p1);
+                        g_free (p1);
+                        p1 = var;
+
+                        var = add_indent (p1, indent);
+                        p1 = var;
+                        var = g_strdup_printf ("%s<name>%s</name>\n", p1, line->name);
                         g_free (p1);
                         p1 = var;
 
@@ -931,7 +937,7 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent - 1);
                         p1 = var;
-                        var = g_strdup_printf ("%s</%s>\n", p1, line->name);
+                        var = g_strdup_printf ("%s</var>\n", p1);
                         g_free (p1);
                         p1 = var;
                 } 
@@ -1063,6 +1069,7 @@ main (gint argc, gchar *argv[])
         //configure_get_var (configure, "server");
         var = configure_get_var (configure, "");
         configure_set_var (configure, var);
+        g_print ("%s\n", var);
 
         configure_get_param (configure, "/server/httpstreaming");
         configure_get_param (configure, "/server/httpmgmt");
