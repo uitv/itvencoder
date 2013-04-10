@@ -40,6 +40,7 @@ configure_init (Configure *configure)
         configure->lines = g_array_new (FALSE, FALSE, sizeof (gchar *));
         configure->variables = g_array_new (FALSE, FALSE, sizeof (gpointer));
         configure->data = gst_structure_empty_new ("configure");
+        configure->raw = NULL;
 }
 
 static void
@@ -200,6 +201,8 @@ configure_caps_parse (gchar *name, gchar *data)
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
         }
+
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -478,7 +481,7 @@ prepare_for_file_parse (Configure *configure)
 static gint
 configure_file_parse (Configure *configure)
 {
-        GKeyFile *key_value_data;
+        GKeyFile *gkeyfile;
         GKeyFileFlags flags;
         GError *e = NULL;
         gsize number;
@@ -488,9 +491,9 @@ configure_file_parse (Configure *configure)
         GValue value = { 0, { { 0 } } };
 
         ini = prepare_for_file_parse (configure);
-        key_value_data = g_key_file_new ();
+        gkeyfile = g_key_file_new ();
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
-        if (!g_key_file_load_from_data (key_value_data, ini, strlen (ini), flags, &e)) {
+        if (!g_key_file_load_from_data (gkeyfile, ini, strlen (ini), flags, &e)) {
                 g_free (ini);
                 g_error (e->message);
                 g_error_free (e);
@@ -498,7 +501,7 @@ configure_file_parse (Configure *configure)
         }
         g_free (ini);
 
-        p = g_key_file_get_keys (key_value_data, "server", &number, &e);
+        p = g_key_file_get_keys (gkeyfile, "server", &number, &e);
         if (e != NULL) {
                 g_error (e->message);
                 g_error_free (e);
@@ -506,7 +509,7 @@ configure_file_parse (Configure *configure)
         }
         structure = gst_structure_empty_new ("server");
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (key_value_data, "server", p[i], &e);
+                v = g_key_file_get_value (gkeyfile, "server", p[i], &e);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -515,15 +518,17 @@ configure_file_parse (Configure *configure)
         g_strfreev (p);
         gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
 
-        p = g_key_file_get_keys (key_value_data, "channel", &number, &e);
+        p = g_key_file_get_keys (gkeyfile, "channel", &number, &e);
         structure = gst_structure_empty_new ("channel");
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (key_value_data, "channel", p[i], &e);
+                v = g_key_file_get_value (gkeyfile, "channel", p[i], &e);
                 channel = configure_channel_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
         }
         g_strfreev (p);
         gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
+
+        g_key_file_free (gkeyfile);
 
         return 0;
 }
@@ -573,14 +578,10 @@ configure_extract_lines (Configure *configure)
                         case '[':
                                 if (var_status == '\0') {
                                         if (g_ascii_strncasecmp (p3, "[server]", 8) == 0) {
-                                                if (group == NULL) {
-                                                        g_free (group);
-                                                }
+                                                g_free (group);
                                                 group = g_strdup_printf ("server");
                                         } else if (g_ascii_strncasecmp (p3, "[channel]", 9) == 0) {
-                                                if (group == NULL) {
-                                                        g_free (group);
-                                                }
+                                                g_free (group);
                                                 group = g_strdup_printf ("channel");
                                         }
                                 }
@@ -702,6 +703,7 @@ configure_extract_lines (Configure *configure)
                 p1 = p3 = p2;
         }
 
+        g_free (group);
         g_free (p);
         #if 0
         for (i = 0; i < configure->lines->len; i++) {
@@ -715,11 +717,89 @@ configure_extract_lines (Configure *configure)
         return 0;
 }
 
+/*
+ * GstStructure type configure field type is pointer or GstStructure. 
+ */
+static gint
+configure_release_data (GstStructure *structure)
+{
+        gint n, i;
+        gchar *name;
+        GValue *value;
+
+        n = gst_structure_n_fields (structure);
+        for (i = n - 1; i >= 0; i--) {
+                name = (gchar *)gst_structure_nth_field_name (structure, i);
+                g_print ("release: %s n: %d i %d\n", name, n, i);
+                value = (GValue *)gst_structure_get_value (structure, name);
+                if (GST_VALUE_HOLDS_STRUCTURE (value)) {
+                        configure_release_data ((GstStructure *)gst_value_get_structure (value));
+                } 
+                gst_structure_remove_field (structure, name);
+        }
+
+        return 0;
+}
+
+static gint
+configure_release_lines (GArray *lines)
+{
+        gint i;
+        gchar *line;
+
+        for (i = lines->len - 1; i >= 0; i--) {
+                line = g_array_index (lines, gpointer, i);
+                g_free (line);
+                g_array_remove_index (lines, i);
+        }
+
+        return 0;
+}
+
+static gint
+configure_release_variables (GArray *variables)
+{
+        ConfigurableVar *conf_var;
+        gint i;
+
+        for (i = variables->len - 1; i >= 0; i--) {
+                conf_var = g_array_index (variables, gpointer, i);
+                g_free (conf_var->group);
+                g_free (conf_var->name);
+                g_free (conf_var->type);
+                g_free (conf_var->description);
+                g_free (conf_var->value);
+                g_array_remove_index (variables, i);
+        }
+
+        return 0;
+}
+
+/*
+ * if configure_load_from_file is reload, release resources first.
+ */
+static gint
+configure_reset (Configure *configure)
+{
+        if (configure->raw != NULL) {
+                g_free (configure->raw);
+        }
+
+        configure_release_data (configure->data);
+        configure_release_lines (configure->lines);
+        configure_release_variables (configure->variables);
+}
+
+/*
+ * load configure file.
+ */
 gint
 configure_load_from_file (Configure *configure)
 {
         GError *e = NULL;
         gint ret;
+
+        configure_reset (configure);
 
         g_file_get_contents ("configure.conf", &configure->raw, &configure->size, &e);
         ret = configure_extract_lines (configure);
@@ -731,6 +811,9 @@ configure_load_from_file (Configure *configure)
         return ret;
 }
 
+/*
+ * save to configure file after variable changed.
+ */
 gint
 configure_save_to_file (Configure *configure)
 {
@@ -1049,6 +1132,10 @@ configure_set_var (Configure *configure, gchar *var)
                 set_var (configure, conf_var);
         }
 
+        for (i = var_array->len - 1; i >= 0; i--) {
+                conf_var = g_array_index (var_array, gpointer, i);
+                g_array_remove_index (var_array, i);
+        }
         g_markup_parse_context_free (context);
 
         return 0;
@@ -1127,9 +1214,11 @@ main (gint argc, gchar *argv[])
 
         //configure_get_var (configure, "channel");
         //configure_get_var (configure, "server");
+        for (;;) {
         var = configure_get_var (configure, "");
         configure_set_var (configure, var);
         configure_save_to_file (configure);
+        configure_load_from_file (configure);}
         //g_print ("%s\n", var);
 
         configure_get_param (configure, "/server/httpstreaming");
