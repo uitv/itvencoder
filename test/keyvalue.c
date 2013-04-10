@@ -478,6 +478,9 @@ prepare_for_file_parse (Configure *configure)
         return p3; 
 }
 
+/*
+ * parse configure as GstStructure type from which to construct gstreamer pipeline.
+ */
 static gint
 configure_file_parse (Configure *configure)
 {
@@ -544,7 +547,7 @@ configure_extract_lines (Configure *configure)
         GstStructure *configure_mgmt;
         GRegex *regex;
 
-        p = g_strdup_printf ("%s", configure->raw);
+        p = g_strdup (configure->raw);
         p1 = p2 = p3 = p;
         line_number = 0;
         index = 0;
@@ -579,10 +582,10 @@ configure_extract_lines (Configure *configure)
                                 if (var_status == '\0') {
                                         if (g_ascii_strncasecmp (p3, "[server]", 8) == 0) {
                                                 g_free (group);
-                                                group = g_strdup_printf ("server");
+                                                group = g_strdup ("server");
                                         } else if (g_ascii_strncasecmp (p3, "[channel]", 9) == 0) {
                                                 g_free (group);
-                                                group = g_strdup_printf ("channel");
+                                                group = g_strdup ("channel");
                                         }
                                 }
                                 break;
@@ -630,8 +633,8 @@ configure_extract_lines (Configure *configure)
                                 g_strfreev (group_array);
                                 break;
                         case '<':
+                                /* find a variable */
                                 if ((var_status == '\0') || (var_status == 'v')) {
-                                        /* find a variable */
                                         var_status = '<';
                                         variable = g_malloc (sizeof (ConfigurableVar));
                                         regex = g_regex_new ("<([^ >[]*).*", G_REGEX_DOTALL, 0, NULL);
@@ -648,7 +651,7 @@ configure_extract_lines (Configure *configure)
                                         p5 = g_regex_replace (regex, p1, -1, 0, "\\1", 0, NULL);
                                         g_regex_unref (regex);
                                         variable->name = p5;
-                                        variable->group = g_strdup_printf ("%s", group);
+                                        variable->group = g_strdup (group);
                                         if (g_ascii_strncasecmp (variable->type, "select", 6) == 0) {
                                                 regex = g_regex_new ("<select\\[[^\\]]*] *([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
@@ -770,6 +773,7 @@ configure_release_variables (GArray *variables)
                 g_free (conf_var->description);
                 g_free (conf_var->value);
                 g_array_remove_index (variables, i);
+                g_free (conf_var);
         }
 
         return 0;
@@ -785,7 +789,7 @@ configure_reset (Configure *configure)
                 g_free (configure->raw);
         }
 
-        configure_release_data (configure->data);
+        //configure_release_data (configure->data);
         configure_release_lines (configure->lines);
         configure_release_variables (configure->variables);
 }
@@ -806,7 +810,7 @@ configure_load_from_file (Configure *configure)
         if (ret != 0) {
                 return ret;
         }
-        ret = configure_file_parse (configure);
+        //ret = configure_file_parse (configure);
 
         return ret;
 }
@@ -849,9 +853,9 @@ group_alter (gchar *path, gchar *group)
         p1 = p3 = path;
         p2 = p4 = group;
 
+        /* find out identical part of path and group */
         indent = 1;
         for (;;) {
-                /* find out identical part of path and group */
                 if (((*p3 == '.') || (*p3 == '\0')) && ((*p4 == '.') || (*p4 == '\0'))) {
                         indent++;
                         p1 = p3 + 1;
@@ -964,25 +968,25 @@ configure_get_var (Configure *configure, gchar *group)
 {
         gint i, j, indent;
         gchar *var, *p1, *p2, *path, *tag;
-        ConfigurableVar *line;
+        ConfigurableVar *conf_var;
         
-        p1 = g_strdup_printf ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
+        p1 = g_strdup ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
         path = g_strdup ("");
         for (i = 0; i < configure->variables->len; i++) {
-                line = g_array_index (configure->variables, gpointer, i);
-                if (g_ascii_strncasecmp (line->group, group, strlen (group)) == 0) {
-                        if (g_strcmp0 (line->group, path) != 0) {
+                conf_var = g_array_index (configure->variables, gpointer, i);
+                if (g_ascii_strncasecmp (conf_var->group, group, strlen (group)) == 0) {
+                        if (g_strcmp0 (conf_var->group, path) != 0) {
                                 /* group alternation */
-                                tag = group_alter (path, line->group);
+                                tag = group_alter (path, conf_var->group);
                                 var = g_strdup_printf ("%s%s", p1, tag);
                                 g_free (p1);
                                 p1 = var;
                                 g_free (tag);
                                 g_free (path);
                                 indent = 1;
-                                path = g_strdup_printf ("%s", line->group);
-                                for (j = 0; j < strlen (line->group); j++) {
-                                        if (line->group[j] == '.') {
+                                path = g_strdup_printf ("%s", conf_var->group);
+                                for (j = 0; j < strlen (conf_var->group); j++) {
+                                        if (conf_var->group[j] == '.') {
                                                 indent++;
                                         }
                                 }
@@ -996,31 +1000,31 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent);
                         p1 = var;
-                        var = g_strdup_printf ("%s<name>%s</name>\n", p1, line->name);
+                        var = g_strdup_printf ("%s<name>%s</name>\n", p1, conf_var->name);
                         g_free (p1);
                         p1 = var;
 
                         var = add_indent (p1, indent);
                         p1 = var;
-                        var = g_strdup_printf ("%s<id>%d</id>\n", p1, line->index);
+                        var = g_strdup_printf ("%s<id>%d</id>\n", p1, conf_var->index);
                         g_free (p1);
                         p1 = var;
 
                         var = add_indent (p1, indent);
                         p1 = var;
-                        var = g_strdup_printf ("%s<type>%s</type>\n", p1, line->type);
+                        var = g_strdup_printf ("%s<type>%s</type>\n", p1, conf_var->type);
                         g_free (p1);
                         p1 = var;
 
                         var = add_indent (p1, indent);
                         p1 = var;
-                        var = g_strdup_printf ("%s<description>%s</description>\n", p1, line->description);
+                        var = g_strdup_printf ("%s<description>%s</description>\n", p1, conf_var->description);
                         g_free (p1);
                         p1 = var;
 
                         var = add_indent (p1, indent);
                         p1 = var;
-                        var = g_strdup_printf ("%s<value>%s</value>\n", p1, line->value);
+                        var = g_strdup_printf ("%s<value>%s</value>\n", p1, conf_var->value);
                         g_free (p1);
                         p1 = var;
 
@@ -1036,6 +1040,7 @@ configure_get_var (Configure *configure, gchar *group)
         var = g_strdup_printf ("%s%s</root>\n", var, tag);
         g_free (p1);
         g_free (tag);
+        g_free (path);
 
         return var;
 }
@@ -1086,16 +1091,14 @@ text (GMarkupParseContext *context, const char *text, gsize length, gpointer dat
 static gint
 set_var (Configure *configure, ConfigurableVar *conf_var)
 {
-        GArray *lines;
         gchar *line;
 
-        lines = configure->lines;
-        line = g_array_index (lines, gchar *, conf_var->index);
+        line = g_array_index (configure->lines, gchar *, conf_var->index);
         g_free (line);
-        g_array_remove_index (lines, conf_var->index);
-        g_array_insert_val (lines, conf_var->index, conf_var->value);
+        g_array_remove_index (configure->lines, conf_var->index);
+        g_array_insert_val (configure->lines, conf_var->index, conf_var->value);
 
-        line = g_array_index (lines, gchar *, conf_var->index);
+        line = g_array_index (configure->lines, gchar *, conf_var->index);
         g_print (", after set: %s\n", line);
 
         return 0;
@@ -1120,6 +1123,7 @@ configure_set_var (Configure *configure, gchar *var)
         var_array = g_array_new (FALSE, FALSE, sizeof (gpointer));
         context = g_markup_parse_context_new (&parser, 0, var_array, NULL);
         if (!g_markup_parse_context_parse (context, var, -1, &e)) {
+                g_array_free (var_array, FALSE);
                 g_markup_parse_context_free (context);
                 g_print ("parse error\n");
                 return 1;
@@ -1135,7 +1139,10 @@ configure_set_var (Configure *configure, gchar *var)
         for (i = var_array->len - 1; i >= 0; i--) {
                 conf_var = g_array_index (var_array, gpointer, i);
                 g_array_remove_index (var_array, i);
+                g_free (conf_var->value);
+                g_free (conf_var);
         }
+        g_array_free (var_array, FALSE);
         g_markup_parse_context_free (context);
 
         return 0;
@@ -1209,16 +1216,18 @@ main (gint argc, gchar *argv[])
         gst_init (&argc, &argv);
 
         configure = configure_new ("configure_path", "configure.conf", NULL);
-        configure_load_from_file (configure);
-        configure_save_to_file (configure);
+        //configure_load_from_file (configure);
+        //configure_save_to_file (configure);
 
         //configure_get_var (configure, "channel");
         //configure_get_var (configure, "server");
         for (;;) {
-        var = configure_get_var (configure, "");
-        configure_set_var (configure, var);
-        configure_save_to_file (configure);
-        configure_load_from_file (configure);}
+                configure_load_from_file (configure);
+                var = configure_get_var (configure, "");
+                configure_set_var (configure, var);
+                g_free (var);
+                configure_save_to_file (configure);
+        }
         //g_print ("%s\n", var);
 
         configure_get_param (configure, "/server/httpstreaming");
