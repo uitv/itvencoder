@@ -1000,6 +1000,24 @@ text (GMarkupParseContext *context, const char *text, gsize length, gpointer dat
         }
 }
 
+static gint
+set_var (Configure *configure, ConfigurableVar *conf_var)
+{
+        GArray *lines;
+        gchar *line;
+
+        lines = configure->lines;
+        line = g_array_index (lines, gchar *, conf_var->index);
+        g_free (line);
+        g_array_remove_index (lines, conf_var->index);
+        g_array_insert_val (lines, conf_var->index, conf_var->value);
+
+        line = g_array_index (lines, gchar *, conf_var->index);
+        g_print (", after set: %s\n", line);
+
+        return 0;
+}
+
 gint
 configure_set_var (Configure *configure, gchar *var)
 {
@@ -1026,7 +1044,9 @@ configure_set_var (Configure *configure, gchar *var)
 
         for (i = 0; i < var_array->len; i++) {
                 conf_var = g_array_index (var_array, gpointer, i);
-                g_print ("id: %d value: %s\n", conf_var->index, conf_var->value);
+                g_print ("id: %d value: %s", conf_var->index, conf_var->value);
+                g_strreverse (conf_var->value);
+                set_var (configure, conf_var);
         }
 
         g_markup_parse_context_free (context);
@@ -1109,6 +1129,7 @@ main (gint argc, gchar *argv[])
         //configure_get_var (configure, "server");
         var = configure_get_var (configure, "");
         configure_set_var (configure, var);
+        configure_save_to_file (configure);
         //g_print ("%s\n", var);
 
         configure_get_param (configure, "/server/httpstreaming");
