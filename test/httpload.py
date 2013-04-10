@@ -38,6 +38,7 @@ def request_segment(host, port, location):
     s.close()
 
 while True:
+    """
     request_segment("192.168.2.10", 20129, "/channel/0/encoder/0")
     request_segment("192.168.2.10", 20129, "/channel/0/encoder/1")
     request_segment("192.168.2.10", 20129, "/channel/0/encoder/2")
@@ -46,4 +47,5 @@ while True:
     request_segment("192.168.2.10", 20129, "/channel/1/encoder/1")
     request_segment("192.168.2.10", 20129, "/channel/1/encoder/2")
     request_segment("192.168.2.10", 20129, "/channel/1/encoder/3")
+    """
     request_segment("192.168.2.9", 20129, "/channel/0/encoder/0")
