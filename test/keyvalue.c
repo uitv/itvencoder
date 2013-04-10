@@ -635,7 +635,7 @@ configure_extract_lines (Configure *configure)
                                         variable = g_malloc (sizeof (ConfigurableVar));
                                         regex = g_regex_new ("<([^ >[]*).*", G_REGEX_DOTALL, 0, NULL);
                                         p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
-                                        if (g_strcmp0 (p5, "interchange") == 0) {
+                                        if (g_strcmp0 (p5, "select") == 0) {
                                                 g_regex_unref (regex);
                                                 g_free (p5);
                                                 regex = g_regex_new ("<([^\\]]*]).*", G_REGEX_DOTALL, 0, NULL);
@@ -648,9 +648,9 @@ configure_extract_lines (Configure *configure)
                                         g_regex_unref (regex);
                                         variable->name = p5;
                                         variable->group = g_strdup_printf ("%s", group);
-                                        if (g_ascii_strncasecmp (variable->type, "interchange", 11) == 0) {
+                                        if (g_ascii_strncasecmp (variable->type, "select", 11) == 0) {
                                         g_print ("p5: %s\n", p5);
-                                                regex = g_regex_new ("<interchange\\[[^\\]]*] ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
+                                                regex = g_regex_new ("<select\\[[^\\]]*] ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
