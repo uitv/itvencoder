@@ -635,6 +635,12 @@ configure_extract_lines (Configure *configure)
                                         variable = g_malloc (sizeof (ConfigurableVar));
                                         regex = g_regex_new ("<([^ >[]*).*", G_REGEX_DOTALL, 0, NULL);
                                         p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                        if (g_strcmp0 (p5, "interchange") == 0) {
+                                                g_regex_unref (regex);
+                                                g_free (p5);
+                                                regex = g_regex_new ("<([^\\]]*]).*", G_REGEX_DOTALL, 0, NULL);
+                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                        }
                                         g_regex_unref (regex);
                                         variable->type = p5;
                                         regex = g_regex_new (" *([^ =]*).*", G_REGEX_DOTALL, 0, NULL);
@@ -642,11 +648,13 @@ configure_extract_lines (Configure *configure)
                                         g_regex_unref (regex);
                                         variable->name = p5;
                                         variable->group = g_strdup_printf ("%s", group);
-                                        if (g_strcmp0 (p5, "interchange") == 0) {
-                                                regex = g_regex_new ("<interchange[^]]*] ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
+                                        if (g_ascii_strncasecmp (variable->type, "interchange", 11) == 0) {
+                                        g_print ("p5: %s\n", p5);
+                                                regex = g_regex_new ("<interchange\\[[^\\]]*] ([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                                 g_regex_unref (regex);
                                                 variable->description = p5;
+                                        g_print ("p5: %s\n", p5);
                                         } else {
                                                 regex = g_regex_new ("<[^ >]*([^>]*).*", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
@@ -954,19 +962,19 @@ configure_get_var (Configure *configure, gchar *group)
 static void
 start_element (GMarkupParseContext *context, const gchar *element, const gchar **attr_names, const gchar **attr_vals, gpointer data, GError **e)
 {
-        g_print ("start: %s\n", element);
+        //g_print ("start: %s\n", element);
 }
 
 static void
 end_element (GMarkupParseContext *context, const gchar *element, gpointer data, GError **e)
 {
-        g_print ("end: %s\n", element);
+        //g_print ("end: %s\n", element);
 }
 
 static void
 text (GMarkupParseContext *context, const char *text, gsize length, gpointer data, GError **e)
 {
-        g_print ("text: %s\n", text);
+        //g_print ("text: %s\n", text);
 }
 
 gint
