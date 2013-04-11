@@ -39,7 +39,7 @@ configure_init (Configure *configure)
 {
         configure->lines = g_array_new (FALSE, FALSE, sizeof (gchar *));
         configure->variables = g_array_new (FALSE, FALSE, sizeof (gpointer));
-        configure->data = gst_structure_empty_new ("configure");
+        configure->data = NULL;
         configure->raw = NULL;
 }
 
@@ -200,6 +200,7 @@ configure_caps_parse (gchar *name, gchar *data)
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
+                g_free (v);
         }
 
         g_key_file_free (gkeyfile);
@@ -229,6 +230,7 @@ configure_property_parse (gchar *name, gchar *data)
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
+                g_free (v);
         }
 
         return structure;
@@ -256,9 +258,11 @@ configure_element_parse (gchar *name, gchar *data)
                 if (g_strcmp0 (p[i], "property") == 0) {
                         property = configure_property_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, property, NULL);
+                        gst_structure_free (property);
                 } else if (g_strcmp0 (p[i], "caps") == 0) {
                         caps = configure_property_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, caps, NULL);
+                        gst_structure_free (caps);
                 } else if (g_strcmp0 (p[i], "option") == 0) {
                         regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
                         var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
@@ -269,6 +273,7 @@ configure_element_parse (gchar *name, gchar *data)
                         g_value_unset (&value);
                         g_free (var);
                 }
+                g_free (v);
         }
 
         g_strfreev (p);
@@ -297,6 +302,7 @@ configure_bin_parse (gchar *name, gchar *data)
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
+                g_free (v);
         }
 
         return structure;
@@ -333,6 +339,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
                         /* bin found */
                         bin = configure_bin_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bin, NULL);
+                        gst_structure_free (bin);
                 } else if (g_strcmp0 (p[i], "httpstreaming") == 0) {
                         /* whether support http output or not */
                         var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
@@ -361,10 +368,13 @@ configure_pipeline_parse (gchar *name, gchar *data)
                         /* should be a element */
                         element = configure_element_parse (p[i], v);
                         gst_structure_set (elements, p[i], GST_TYPE_STRUCTURE, element, NULL);
+                        gst_structure_free (element);
                 }
+                g_free (v);
         }
         g_regex_unref (regex);
         gst_structure_set (structure, "elements", GST_TYPE_STRUCTURE, elements, NULL);
+        gst_structure_free (elements);
         g_strfreev (p);
 
         return structure;
@@ -390,6 +400,8 @@ configure_encoder_parse (gchar *name, gchar *data)
                 //g_print ("%s : %s\n", p[i], v);
                 encoder = configure_pipeline_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
+                gst_structure_free (encoder);
+                g_free (v);
         }
         g_strfreev (p);
 
@@ -420,10 +432,13 @@ configure_channel_parse (gchar *name, gchar *data)
                 } else if (g_strcmp0 (p[i], "source") == 0) {
                         source = configure_pipeline_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, source, NULL);
+                        gst_structure_free (source);
                 } else if (g_strcmp0 (p[i], "encoder") == 0) {
                         encoder = configure_encoder_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
+                        gst_structure_free (encoder);
                 }
+                g_free (v);
         }
         g_strfreev (p);
 
@@ -518,9 +533,11 @@ configure_file_parse (Configure *configure)
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
+                g_free (v);
         }
         g_strfreev (p);
         gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
+        gst_structure_free (structure);
 
         /* parse channel group */
         p = g_key_file_get_keys (gkeyfile, "channel", &number, &e);
@@ -529,9 +546,11 @@ configure_file_parse (Configure *configure)
                 v = g_key_file_get_value (gkeyfile, "channel", p[i], &e);
                 channel = configure_channel_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
+                g_free (v);
         }
         g_strfreev (p);
         gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
+        gst_structure_free (structure);
 
         g_key_file_free (gkeyfile);
 
@@ -722,30 +741,6 @@ configure_extract_lines (Configure *configure)
         return 0;
 }
 
-/*
- * GstStructure type configure field type is pointer or GstStructure. 
- */
-static gint
-configure_release_data (GstStructure *structure)
-{
-        gint n, i;
-        gchar *name;
-        GValue *value;
-
-        n = gst_structure_n_fields (structure);
-        for (i = n - 1; i >= 0; i--) {
-                name = (gchar *)gst_structure_nth_field_name (structure, i);
-                g_print ("release: %s n: %d i %d\n", name, n, i);
-                value = (GValue *)gst_structure_get_value (structure, name);
-                if (GST_VALUE_HOLDS_STRUCTURE (value)) {
-                        configure_release_data ((GstStructure *)gst_value_get_structure (value));
-                } 
-                gst_structure_remove_field (structure, name);
-        }
-
-        return 0;
-}
-
 static gint
 configure_release_lines (GArray *lines)
 {
@@ -791,7 +786,11 @@ configure_reset (Configure *configure)
                 g_free (configure->raw);
         }
 
-        configure_release_data (configure->data);
+        if (configure->data != NULL) {
+                gst_structure_free (configure->data);
+        }
+        configure->data = gst_structure_empty_new ("configure");
+
         configure_release_lines (configure->lines);
         configure_release_variables (configure->variables);
 }
