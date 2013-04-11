@@ -1216,6 +1216,7 @@ configure_get_param (Configure *configure, gchar *param)
                 }
                 g_value_init (&result, G_TYPE_STRING);
                 g_value_set_string (&result, p1);
+                g_free (p1);
                 value = &result;
         }
 
