@@ -1189,6 +1189,9 @@ configure_get_param (Configure *configure, gchar *param)
                         p2++;
                         p1 = p2;
                         value = (GValue *)gst_structure_get_value (structure, key);
+                        if (value == NULL) {
+                                return NULL;
+                        }
                         if ((p2 - param) >= strlen (param)) {
                                 g_free (key);
                                 break;
@@ -1264,5 +1267,11 @@ main (gint argc, gchar *argv[])
                 value = configure_get_param (configure, "/channel");
                 g_print ("channel: %s\n", g_value_get_string (value));
                 g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/videoscale/caps");
+                g_print ("encoder1: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                break;
         }
 }
