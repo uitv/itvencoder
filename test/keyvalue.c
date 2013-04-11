@@ -1268,7 +1268,7 @@ main (gint argc, gchar *argv[])
                 g_print ("channel: %s\n", g_value_get_string (value));
                 g_value_unset (value);
 
-                value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/videoscale/caps");
+                value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
                 g_value_unset (value);
 
