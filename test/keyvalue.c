@@ -1017,25 +1017,7 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent - 1);
                         p1 = var;
-                        var = g_strdup_printf ("%s<var>\n", p1);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent);
-                        p1 = var;
-                        var = g_strdup_printf ("%s<name>%s</name>\n", p1, conf_var->name);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent);
-                        p1 = var;
-                        var = g_strdup_printf ("%s<id>%d</id>\n", p1, conf_var->index);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent);
-                        p1 = var;
-                        var = g_strdup_printf ("%s<type>%s</type>\n", p1, conf_var->type);
+                        var = g_strdup_printf ("%s<var name=\"%s\" id=\"%d\" type=\"%s\">\n", p1, conf_var->name, conf_var->index, conf_var->type);
                         g_free (p1);
                         p1 = var;
 
@@ -1073,10 +1055,21 @@ start_element (GMarkupParseContext *context, const gchar *element, const gchar *
 {
         ConfigurableVar *conf_var;
         GArray *var_array;
+        const gchar **names, **vals;
 
         var_array = (GArray *)data;
         if (g_strcmp0 (element, "var") == 0) {
                 conf_var = (ConfigurableVar *) g_malloc (sizeof (ConfigurableVar));
+                names = attr_names;
+                vals = attr_vals;
+                while (*names != NULL) {
+                        if (g_strcmp0 (*names, "id") == 0) {
+                                conf_var->index = atoi (*vals);
+                                break;
+                        }
+                        names++;
+                        vals++;
+                }
                 g_array_append_val (var_array, conf_var);
         }
 }
@@ -1104,9 +1097,7 @@ text (GMarkupParseContext *context, const char *text, gsize length, gpointer dat
         index = var_array->len - 1;
         conf_var = g_array_index (var_array, gpointer, index);
         element = (gchar *)g_markup_parse_context_get_element (context);
-        if (g_strcmp0 (element, "id") == 0) {
-                conf_var->index = atoi (text);
-        } else if (g_strcmp0 (element, "value") == 0) {
+        if (g_strcmp0 (element, "value") == 0) {
                 conf_var->value = g_strdup (text);
         }
 }
