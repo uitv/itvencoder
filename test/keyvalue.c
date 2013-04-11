@@ -1122,6 +1122,7 @@ configure_set_var (Configure *configure, gchar *var)
 
         var_array = g_array_new (FALSE, FALSE, sizeof (gpointer));
         context = g_markup_parse_context_new (&parser, 0, var_array, NULL);
+
         if (!g_markup_parse_context_parse (context, var, -1, &e)) {
                 g_array_free (var_array, FALSE);
                 g_markup_parse_context_free (context);
@@ -1139,10 +1140,10 @@ configure_set_var (Configure *configure, gchar *var)
         for (i = var_array->len - 1; i >= 0; i--) {
                 conf_var = g_array_index (var_array, gpointer, i);
                 g_array_remove_index (var_array, i);
-                g_free (conf_var->value);
                 g_free (conf_var);
         }
-        g_array_free (var_array, FALSE);
+
+        g_array_free (var_array, TRUE);
         g_markup_parse_context_free (context);
 
         return 0;
