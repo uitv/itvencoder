@@ -504,6 +504,7 @@ configure_file_parse (Configure *configure)
         }
         g_free (ini);
 
+        /* parse server group */
         p = g_key_file_get_keys (gkeyfile, "server", &number, &e);
         if (e != NULL) {
                 g_error (e->message);
@@ -521,6 +522,7 @@ configure_file_parse (Configure *configure)
         g_strfreev (p);
         gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
 
+        /* parse channel group */
         p = g_key_file_get_keys (gkeyfile, "channel", &number, &e);
         structure = gst_structure_empty_new ("channel");
         for (i = 0; i < number; i++) {
