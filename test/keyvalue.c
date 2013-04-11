@@ -1231,7 +1231,7 @@ configure_get_param (Configure *configure, gchar *param)
                 value = &result;
         }
 
-        return value; // FIXME: release
+        return value;
 }
 
 gint
