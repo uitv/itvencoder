@@ -547,6 +547,7 @@ configure_file_parse (Configure *configure)
                 channel = configure_channel_parse (p[i], v);
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
                 g_free (v);
+                gst_structure_free (channel);
         }
         g_strfreev (p);
         gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
