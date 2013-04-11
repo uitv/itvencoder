@@ -202,7 +202,7 @@ configure_caps_parse (gchar *name, gchar *data)
                 g_value_unset (&value);
                 g_free (v);
         }
-
+        g_strfreev (p);
         g_key_file_free (gkeyfile);
 
         return structure;
@@ -232,6 +232,8 @@ configure_property_parse (gchar *name, gchar *data)
                 g_value_unset (&value);
                 g_free (v);
         }
+        g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -275,8 +277,9 @@ configure_element_parse (gchar *name, gchar *data)
                 }
                 g_free (v);
         }
-
         g_strfreev (p);
+        g_key_file_free (gkeyfile);
+
         return structure;
 }
 
@@ -304,6 +307,8 @@ configure_bin_parse (gchar *name, gchar *data)
                 g_value_unset (&value);
                 g_free (v);
         }
+        g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -376,6 +381,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
         gst_structure_set (structure, "elements", GST_TYPE_STRUCTURE, elements, NULL);
         gst_structure_free (elements);
         g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -404,6 +410,7 @@ configure_encoder_parse (gchar *name, gchar *data)
                 g_free (v);
         }
         g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -441,6 +448,7 @@ configure_channel_parse (gchar *name, gchar *data)
                 g_free (v);
         }
         g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
