@@ -1233,28 +1233,36 @@ main (gint argc, gchar *argv[])
         gst_init (&argc, &argv);
 
         configure = configure_new ("configure_path", "configure.conf", NULL);
-        //configure_load_from_file (configure);
-        //configure_save_to_file (configure);
 
-        //configure_get_var (configure, "channel");
-        //configure_get_var (configure, "server");
         for (;;) {
                 configure_load_from_file (configure);
-                var = configure_get_var (configure, "");
+                var = configure_get_var (configure, "channel");
                 configure_set_var (configure, var);
                 g_free (var);
                 configure_save_to_file (configure);
-        }
-        //g_print ("%s\n", var);
 
-        configure_get_param (configure, "/server/httpstreaming");
-        configure_get_param (configure, "/server/httpmgmt");
-        value = configure_get_param (configure, "/channel/test/source/pipeline");
-        g_print ("pipeline: %s\n", g_value_get_string (value));
-        value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
-        g_print ("videosource: %s\n", g_value_get_string (value));
-        value = configure_get_param (configure, "/channel/test/source/bin");
-        g_print ("bin: %s\n", g_value_get_string (value));
-        value = configure_get_param (configure, "/channel");
-        g_print ("channel: %s\n", g_value_get_string (value));
+                value = configure_get_param (configure, "/server/httpstreaming");
+                g_print ("pipeline: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/server/httpmgmt");
+                g_print ("pipeline: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel/test/source/pipeline");
+                g_print ("pipeline: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
+                g_print ("videosource: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel/test/source/bin");
+                g_print ("bin: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel");
+                g_print ("channel: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+        }
 }
