@@ -744,7 +744,7 @@ configure_extract_lines (Configure *configure)
         }
         for (i = 0; i < configure->variables->len; i++) {
                 variable = g_array_index (configure->variables, gpointer, i);
-                g_print ("index %d value %s\n", variable->index, variable->value);
+                g_print ("name: %s; group: %s; index: %d; value: %s\n", variable->name, variable->group, variable->index, variable->value);
         }
         #endif
         return 0;
@@ -919,7 +919,7 @@ group_alter (gchar *path, gchar *group)
 
         /* open tag */
         tag_open = g_strdup ("");
-        if (*p2 != 0) {
+        if (*p2 != '\0') {
                 depth = indent;
                 p3 = p4 = g_strdup ("<");
                 for (;;) {
@@ -1240,6 +1240,7 @@ main (gint argc, gchar *argv[])
         for (;;) {
                 configure_load_from_file (configure);
                 var = configure_get_var (configure, "channel");
+                g_print ("channel\n%s", var);
                 configure_set_var (configure, var);
                 g_free (var);
                 configure_save_to_file (configure);
@@ -1260,8 +1261,8 @@ main (gint argc, gchar *argv[])
                 g_print ("videosource: %s\n", g_value_get_string (value));
                 g_value_unset (value);
 
-                value = configure_get_param (configure, "/channel/test/source/bin");
-                g_print ("bin: %s\n", g_value_get_string (value));
+                value = configure_get_param (configure, "/channel/test/onboot");
+                g_print ("onboot: %s\n", g_value_get_string (value));
                 g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel");
