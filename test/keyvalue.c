@@ -789,7 +789,7 @@ configure_reset (Configure *configure)
                 g_free (configure->raw);
         }
 
-        //configure_release_data (configure->data);
+        configure_release_data (configure->data);
         configure_release_lines (configure->lines);
         configure_release_variables (configure->variables);
 }
@@ -805,12 +805,17 @@ configure_load_from_file (Configure *configure)
 
         configure_reset (configure);
 
+        /* load file */
         g_file_get_contents ("configure.conf", &configure->raw, &configure->size, &e);
+
+        /* extract line for management */
         ret = configure_extract_lines (configure);
         if (ret != 0) {
                 return ret;
         }
-        //ret = configure_file_parse (configure);
+
+        /* parse file, for gstreamer pipeline creating */
+        ret = configure_file_parse (configure);
 
         return ret;
 }
