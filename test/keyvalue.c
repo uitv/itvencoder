@@ -1206,7 +1206,7 @@ configure_get_param (Configure *configure, gchar *param)
                 for (i = 0; i < n; i++) {
                         key = (gchar *)gst_structure_nth_field_name (structure, i);
                         if (p1 == NULL) {
-                                p1 = g_strdup_printf ("%s", key);
+                                p1 = g_strdup (key);
                                 p2 = p1;
                         } else {
                                 p1 = g_strdup_printf ("%s,%s", p1, key);
