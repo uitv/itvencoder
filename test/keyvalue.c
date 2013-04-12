@@ -1179,6 +1179,7 @@ configure_get_param (Configure *configure, gchar *param)
                 return NULL;
         }
 
+        /* locate param */
         p2 = p1 = param + 1;
         structure = configure->data;
         for (;;) {
@@ -1225,6 +1226,32 @@ configure_get_param (Configure *configure, gchar *param)
         return value;
 }
 
+/*************************************/
+
+/*
+ * get parameter from configure, create element.
+ */
+GstElement *
+create_element (Configure *configure, gchar *param)
+{
+        GstElement *element;
+        GValue *value;
+        gchar *var;
+
+        value = configure_get_param (configure, param);
+        if (value == NULL) {
+                g_print ("get element error\n");
+                return NULL;
+        }
+        var = (gchar *)g_value_get_string (value);
+        g_print ("element: %s\n", var);
+        g_value_unset (value);
+
+        return NULL;
+}
+
+/***************************************/
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -1235,9 +1262,11 @@ main (gint argc, gchar *argv[])
         gst_init (&argc, &argv);
 
         configure = configure_new ("configure_path", "configure.conf", NULL);
+        configure_load_from_file (configure);
 
         for (;;) {
-                configure_load_from_file (configure);
+                break;
+
                 var = configure_get_var (configure, "channel");
                 g_print ("channel\n%s", var);
                 configure_set_var (configure, var);
@@ -1254,6 +1283,10 @@ main (gint argc, gchar *argv[])
 
                 value = configure_get_param (configure, "/channel/test/source/pipeline");
                 g_print ("pipeline: %s\n", g_value_get_string (value));
+                g_value_unset (value);
+
+                value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
+                g_print ("textoverlay: %s\n", g_value_get_string (value));
                 g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
@@ -1274,4 +1307,6 @@ main (gint argc, gchar *argv[])
 
                 break;
         }
+
+        create_element (configure, "/channel/test/source/elements/textoverlay");
 }
