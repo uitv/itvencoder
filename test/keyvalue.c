@@ -14,6 +14,10 @@ enum {
 
 static void configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static void configure_dispose (GObject *obj);
+static void configure_finalize (GObject *obj);
+static gint configure_release_lines (GArray *lines);
+static gint configure_release_variables (GArray *variables);
 
 static void
 configure_class_init (ConfigureClass *configureclass)
@@ -23,6 +27,8 @@ configure_class_init (ConfigureClass *configureclass)
 
         g_object_class->set_property = configure_set_property;
         g_object_class->get_property = configure_get_property;
+        g_object_class->dispose = configure_dispose;
+        g_object_class->finalize = configure_finalize;
 
         param = g_param_spec_string (
                 "configure_path",
@@ -71,6 +77,31 @@ configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
         }
+}
+
+static void
+configure_dispose (GObject *obj)
+{
+}
+
+static void
+configure_finalize (GObject *obj)
+{
+        Configure *configure = CONFIGURE (obj);
+
+        if (configure->raw != NULL) {
+                g_free (configure->raw);
+        }
+
+        if (configure->data != NULL) {
+                gst_structure_free (configure->data);
+        }
+
+        configure_release_lines (configure->lines);
+        g_array_free (configure->lines, TRUE);
+
+        configure_release_variables (configure->variables);
+        g_array_free (configure->variables, TRUE);
 }
 
 GType
@@ -1138,7 +1169,7 @@ configure_set_var (Configure *configure, gchar *var)
         context = g_markup_parse_context_new (&parser, 0, var_array, NULL);
 
         if (!g_markup_parse_context_parse (context, var, -1, &e)) {
-                g_array_free (var_array, FALSE);
+                g_array_free (var_array, TRUE);
                 g_markup_parse_context_free (context);
                 g_print ("parse error\n");
                 return 1;
@@ -1265,11 +1296,11 @@ main (gint argc, gchar *argv[])
 
         gst_init (&argc, &argv);
 
-        configure = configure_new ("configure_path", "configure.conf", NULL);
-        configure_load_from_file (configure);
-
         for (;;) {
                 //break;
+
+                configure = configure_new ("configure_path", "configure.conf", NULL);
+                configure_load_from_file (configure);
 
                 var = configure_get_var (configure, "channel");
                 g_print ("channel\n%s", var);
@@ -1311,6 +1342,8 @@ main (gint argc, gchar *argv[])
                 structure = (GstStructure *)gst_value_get_structure (value);
                 element = create_element (configure, structure);
                 gst_object_unref (GST_OBJECT (element));
+
+                gst_object_unref (G_OBJECT (configure));
 
                 //break;
         }
