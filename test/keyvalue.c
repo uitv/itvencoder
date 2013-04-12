@@ -1169,10 +1169,9 @@ configure_set_var (Configure *configure, gchar *var)
 GValue *
 configure_get_param (Configure *configure, gchar *param)
 {
-        GValue *value, result = { 0, { { 0 } } };
+        GValue *value;
         GstStructure *structure;
-        gchar *key, *p1, *p2, **p;
-        gint n, i;
+        gchar *key, *p1, *p2;
 
         if (param[0] != '/') {
                 /* must be absolute path */
@@ -1202,50 +1201,24 @@ configure_get_param (Configure *configure, gchar *param)
                 }
         }
 
-        p1 = NULL;
-        if (GST_VALUE_HOLDS_STRUCTURE (value)) {
-                structure = (GstStructure *)gst_value_get_structure (value);
-                n = gst_structure_n_fields (structure);
-                for (i = 0; i < n; i++) {
-                        key = (gchar *)gst_structure_nth_field_name (structure, i);
-                        if (p1 == NULL) {
-                                p1 = g_strdup (key);
-                                p2 = p1;
-                        } else {
-                                p1 = g_strdup_printf ("%s,%s", p1, key);
-                                g_free (p2);
-                                p2 = p1;
-                        }
-                }
-                g_value_init (&result, G_TYPE_STRING);
-                g_value_set_string (&result, p1);
-                g_free (p1);
-                value = &result;
-        }
-
         return value;
 }
 
 /*************************************/
 
 /*
- * get parameter from configure, create element.
+ * create element, based on GstStructure type element info.
  */
 GstElement *
-create_element (Configure *configure, gchar *param)
+create_element (Configure *configure, GstStructure *structure)
 {
         GstElement *element;
         GValue *value;
-        gchar *var;
+        gchar *str;
 
-        value = configure_get_param (configure, param);
-        if (value == NULL) {
-                g_print ("get element error\n");
-                return NULL;
-        }
-        var = (gchar *)g_value_get_string (value);
-        g_print ("element: %s\n", var);
-        g_value_unset (value);
+        str = gst_structure_to_string (structure);
+        g_print ("channel: %s\n", str);
+        g_free (str);
 
         return NULL;
 }
@@ -1257,7 +1230,8 @@ main (gint argc, gchar *argv[])
 {
         Configure *configure;
         GValue *value;
-        gchar *var;
+        GstStructure *structure;
+        gchar *var, *str;
 
         gst_init (&argc, &argv);
 
@@ -1265,7 +1239,7 @@ main (gint argc, gchar *argv[])
         configure_load_from_file (configure);
 
         for (;;) {
-                break;
+                //break;
 
                 var = configure_get_var (configure, "channel");
                 g_print ("channel\n%s", var);
@@ -1275,38 +1249,38 @@ main (gint argc, gchar *argv[])
 
                 value = configure_get_param (configure, "/server/httpstreaming");
                 g_print ("pipeline: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 value = configure_get_param (configure, "/server/httpmgmt");
                 g_print ("pipeline: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel/test/source/pipeline");
                 g_print ("pipeline: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
-                g_print ("textoverlay: %s\n", g_value_get_string (value));
-                g_value_unset (value);
+                structure = (GstStructure *)gst_value_get_structure (value);
+                str = gst_structure_to_string (structure);
+                g_print ("textoverlay: %s\n", str);
+                g_free (str);
 
                 value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
                 g_print ("videosource: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel/test/onboot");
                 g_print ("onboot: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 value = configure_get_param (configure, "/channel");
-                g_print ("channel: %s\n", g_value_get_string (value));
-                g_value_unset (value);
+                structure = (GstStructure *)gst_value_get_structure (value);
+                str = gst_structure_to_string (structure);
+                g_print ("channel: %s\n", str);
+                g_free (str);
 
                 value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
-                g_value_unset (value);
 
                 break;
         }
 
-        create_element (configure, "/channel/test/source/elements/textoverlay");
+        value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        create_element (configure, structure);
 }
