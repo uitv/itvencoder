@@ -82,12 +82,16 @@ configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *
 static void
 configure_dispose (GObject *obj)
 {
+        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+
+        G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
 
 static void
 configure_finalize (GObject *obj)
 {
         Configure *configure = CONFIGURE (obj);
+        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
         if (configure->raw != NULL) {
                 g_free (configure->raw);
@@ -102,6 +106,8 @@ configure_finalize (GObject *obj)
 
         configure_release_variables (configure->variables);
         g_array_free (configure->variables, TRUE);
+
+        G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
 
 GType
@@ -1144,7 +1150,7 @@ set_var (Configure *configure, ConfigurableVar *conf_var)
         g_array_insert_val (configure->lines, conf_var->index, conf_var->value);
 
         line = g_array_index (configure->lines, gchar *, conf_var->index);
-        g_print (", after set: %s\n", line);
+        //g_print (", after set: %s\n", line);
 
         return 0;
 }
@@ -1177,7 +1183,7 @@ configure_set_var (Configure *configure, gchar *var)
 
         for (i = 0; i < var_array->len; i++) {
                 conf_var = g_array_index (var_array, gpointer, i);
-                g_print ("id: %d value: %s", conf_var->index, conf_var->value);
+                //g_print ("id: %d value: %s", conf_var->index, conf_var->value);
                 g_strreverse (conf_var->value);
                 set_var (configure, conf_var);
         }
