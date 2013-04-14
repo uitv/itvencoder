@@ -82,7 +82,13 @@ configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *
 static void
 configure_dispose (GObject *obj)
 {
+        Configure *configure = CONFIGURE (obj);
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+
+        if (configure->file_path != NULL) {
+                g_free (configure->file_path);
+                configure->file_path = NULL;
+        }
 
         G_OBJECT_CLASS (parent_class)->dispose (obj);
 }
