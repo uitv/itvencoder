@@ -1372,7 +1372,8 @@ create_pipeline (Configure *configure, gchar *param)
                 pp = pp1 = g_strsplit (p, ",", 0);
                 g_free (p);
                 while (*pp != NULL) {
-                        p1 = g_strstrip (*pp);
+                        p1 = g_strdup (*pp);
+                        p1 = g_strstrip (p1);
                         p = g_strdup_printf ("%s/%s/%s", param, name, p1);
                         g_free (p1);
                         element = create_element (configure, p);
