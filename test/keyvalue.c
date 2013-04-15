@@ -1267,10 +1267,7 @@ create_element (Configure *configure, gchar *param)
         GstStructure *structure, *property;
         GParamSpec *param_spec;
         GRegex *regex;
-        
-        regex = g_regex_new ("([^\\(]*)", 0, 0, NULL);
-        p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        g_regex_unref (regex);
+
         regex = g_regex_new ("([^\\(]*).*", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
         g_print ("param: %s, p: %s\n", param, p);
@@ -1290,8 +1287,8 @@ create_element (Configure *configure, gchar *param)
                 name = factory;
         }
         value = (GValue *)configure_get_param (configure, p);
-        g_free (p);
         element = gst_element_factory_make (factory, name);
+        g_free (p);
         g_free (factory);
         if (name != factory) {
                 g_free (name);
@@ -1317,7 +1314,6 @@ create_element (Configure *configure, gchar *param)
                         value = (GValue *)gst_structure_get_value (property, name);
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
-                                g_print ("string string\n");
                                 p = (gchar *)g_value_get_string (value);
                                 g_object_set (element, name, p, NULL);
                                 break;
@@ -1381,7 +1377,7 @@ create_pipeline (Configure *configure, gchar *param)
                                 gst_bin_add (GST_BIN (bin), element);
                         } else {
                                 g_print ("error create element %s\n", *pp);
-                                return NULL;
+                                //return NULL;
                         }
                         g_free (p);
                         pp++;
@@ -1462,6 +1458,6 @@ main (gint argc, gchar *argv[])
 
                 gst_object_unref (G_OBJECT (configure));
 
-                break;
+                //break;
         }
 }
