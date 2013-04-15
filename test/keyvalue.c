@@ -1258,19 +1258,47 @@ configure_get_param (Configure *configure, gchar *param)
  * Returns: the new created element or NULL.
  */
 GstElement *
-create_element (GstStructure *structure)
+create_element (Configure *configure, gchar *param)
 {
         GstElement *element;
         GValue *value;
         gint n, i;
-        gchar *name, *str;
-        GstStructure *property;
-        GParamSpec *param;
+        gchar *factory, *name, *p;
+        GstStructure *structure, *property;
+        GParamSpec *param_spec;
+        GRegex *regex;
+        
 
-        name = (gchar *)gst_structure_get_name (structure);
-        element = gst_element_factory_make (name, name);
+        regex = g_regex_new ("([^\\(]*)", 0, 0, NULL);
+        p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        regex = g_regex_new ("([^\\(]*).*", 0, 0, NULL);
+        p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+        g_print ("param: %s, p: %s\n", param, p);
+        g_regex_unref (regex);
+        regex = g_regex_new (".*/(.*)", 0, 0, NULL);
+        factory = g_regex_replace (regex, p, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        g_print ("param: %s, fatory: %s\n", param, factory);
+        if (g_strcmp0 (p, param) != 0) {
+                /* (name=xxx) found */
+                regex = g_regex_new (".*\\(name= *([^\\)]*)\\)", 0, 0, NULL);
+                name = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+                g_print ("param: %s, name: %s\n", param, name);
+                g_regex_unref (regex);
+        } else {
+                g_print ("===0\n");
+                name = factory;
+        }
+        value = (GValue *)configure_get_param (configure, p);
+        g_free (p);
+        element = gst_element_factory_make (factory, name);
+        if (value == NULL) {
+                return element;
+        }
 
         /* set propertys if have configured any */
+        structure = (GstStructure *)gst_value_get_structure (value);
         if (gst_structure_has_field (structure, "property")) {
                 value = (GValue *)gst_structure_get_value (structure, "property");
                 if (!GST_VALUE_HOLDS_STRUCTURE (value)) {
@@ -1282,13 +1310,13 @@ create_element (GstStructure *structure)
                 n = gst_structure_n_fields (property);
                 for (i = 0; i < n; i++) {
                         name = (gchar *)gst_structure_nth_field_name (property, i);
-                        param = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
+                        param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
                         value = (GValue *)gst_structure_get_value (property, name);
-                        switch (param->value_type) {
+                        switch (param_spec->value_type) {
                         case G_TYPE_STRING:
                                 g_print ("string string\n");
-                                str = (gchar *)g_value_get_string (value);
-                                g_object_set (element, name, str, NULL);
+                                p = (gchar *)g_value_get_string (value);
+                                g_object_set (element, name, p, NULL);
                                 break;
                         case G_TYPE_INT:
                                 g_object_set (element, name, g_value_get_int (value), NULL);
@@ -1312,7 +1340,7 @@ create_pipeline (Configure *configure, gchar *param)
         GValue *value;
         GstStructure *structure;
         GstElement *pipeline, *bin, *element;
-        gchar *factory, *name, *p, *p1, **pp, **pp1;
+        gchar *name, *p, *p1, **pp, **pp1;
         gint i, n;
 
         /* pipeline */
@@ -1341,21 +1369,10 @@ create_pipeline (Configure *configure, gchar *param)
                 pp = pp1 = g_strsplit (p, ",", 0);
                 g_free (p);
                 while (*pp != NULL) {
-                        if ((*pp)[strlen(*pp) - 1] == ')') {
-                                pp++;
-                                continue;
-                        }
                         p1 = g_strstrip (*pp);
                         p = g_strdup_printf ("%s/%s/%s", param, name, p1);
                         g_free (p1);
-                        /* get the element configure */
-                        value = configure_get_param (configure, p);
-                        if (value == NULL) {
-                                element = gst_element_factory_make (*pp, *pp);
-                        } else {
-                                structure = (GstStructure *)gst_value_get_structure (value);
-                                element = create_element (structure);
-                        }
+                        element = create_element (configure, p);
                         if (element != NULL) {
                                 gst_bin_add (GST_BIN (bin), element);
                         } else {
@@ -1428,22 +1445,19 @@ main (gint argc, gchar *argv[])
                 value = configure_get_param (configure, "/channel");
                 structure = (GstStructure *)gst_value_get_structure (value);
                 str = gst_structure_to_string (structure);
-                //g_print ("channel: %s\n", str);
                 g_free (str);
 
                 value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
 
-                value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
-                structure = (GstStructure *)gst_value_get_structure (value);
-                element = create_element (structure);
+                element = create_element (configure, "/channel/test/source/elements/textoverlay");
                 gst_object_unref (GST_OBJECT (element));
 
-                pipeline = create_pipeline (configure, "/channel/test/source");
-                gst_object_unref (G_OBJECT (pipeline));
+                //pipeline = create_pipeline (configure, "/channel/test/source");
+                //gst_object_unref (G_OBJECT (pipeline));
 
                 gst_object_unref (G_OBJECT (configure));
 
-                //break;
+                break;
         }
 }
