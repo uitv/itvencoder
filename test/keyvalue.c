@@ -1268,7 +1268,6 @@ create_element (Configure *configure, gchar *param)
         GParamSpec *param_spec;
         GRegex *regex;
         
-
         regex = g_regex_new ("([^\\(]*)", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
@@ -1293,6 +1292,10 @@ create_element (Configure *configure, gchar *param)
         value = (GValue *)configure_get_param (configure, p);
         g_free (p);
         element = gst_element_factory_make (factory, name);
+        g_free (factory);
+        if (name != factory) {
+                g_free (name);
+        }
         if (value == NULL) {
                 return element;
         }
@@ -1377,7 +1380,7 @@ create_pipeline (Configure *configure, gchar *param)
                                 gst_bin_add (GST_BIN (bin), element);
                         } else {
                                 g_print ("error create element %s\n", *pp);
-                                //return NULL;
+                                return NULL;
                         }
                         g_free (p);
                         pp++;
@@ -1453,8 +1456,8 @@ main (gint argc, gchar *argv[])
                 element = create_element (configure, "/channel/test/source/elements/textoverlay");
                 gst_object_unref (GST_OBJECT (element));
 
-                //pipeline = create_pipeline (configure, "/channel/test/source");
-                //gst_object_unref (G_OBJECT (pipeline));
+                pipeline = create_pipeline (configure, "/channel/test/source");
+                gst_object_unref (G_OBJECT (pipeline));
 
                 gst_object_unref (G_OBJECT (configure));
 
