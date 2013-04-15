@@ -1249,11 +1249,16 @@ configure_get_param (Configure *configure, gchar *param)
 
 /*************************************/
 
-/*
+/**
+ * create_element
+ * @structure: GstStructure type of parameters for element.
+ *
  * create element, based on GstStructure type element info.
+ *
+ * Returns: the new created element or NULL.
  */
 GstElement *
-create_element (Configure *configure, GstStructure *structure)
+create_element (GstStructure *structure)
 {
         GstElement *element;
         GValue *value;
@@ -1295,6 +1300,85 @@ create_element (Configure *configure, GstStructure *structure)
         return element;
 }
 
+/**
+ * create_pipeline
+ * @structure: source or encoder pipeline parameters.
+ *
+ * Returns: the cteated pipeline or NULL.
+ */
+GstElement *
+create_pipeline (Configure *configure, gchar *param)
+{
+        GValue *value;
+        GstStructure *structure;
+        GstElement *pipeline, *bin, *element;
+        gchar *factory, *name, *p, *p1, **pp, **pp1;
+        gint i, n;
+
+        /* pipeline */
+        value = configure_get_param (configure, param);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        name = (gchar *)gst_structure_get_name (structure);
+        g_print ("name: %s\n", name);
+        pipeline = gst_pipeline_new (name);
+
+        /* bin */
+        p = g_strdup_printf ("%s/bin", param);
+        value = configure_get_param (configure, p);
+        g_free (p);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (structure);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure, i);
+                bin = gst_bin_new (name);
+                p = g_strdup_printf ("%s/bin/%s", param, name);
+                value = configure_get_param (configure, p);
+                g_free (p);
+                //g_print ("%s: %s\n", name, g_value_get_string (value));
+                p = (gchar *)g_value_get_string (value);
+                p = g_strndup (p + 1, strlen (p) - 2);
+                g_print ("p: %s\n", p);
+                pp = pp1 = g_strsplit (p, ",", 0);
+                g_free (p);
+                while (*pp != NULL) {
+                        if ((*pp)[strlen(*pp) - 1] == ')') {
+                                pp++;
+                                continue;
+                        }
+                        p1 = g_strstrip (*pp);
+                        p = g_strdup_printf ("%s/%s/%s", param, name, p1);
+                        g_free (p1);
+                        /* get the element configure */
+                        value = configure_get_param (configure, p);
+                        if (value == NULL) {
+                                element = gst_element_factory_make (*pp, *pp);
+                        } else {
+                                structure = (GstStructure *)gst_value_get_structure (value);
+                                element = create_element (structure);
+                        }
+                        if (element != NULL) {
+                                gst_bin_add (GST_BIN (bin), element);
+                        } else {
+                                g_print ("error create element %s\n", *pp);
+                                //return NULL;
+                        }
+                        g_free (p);
+                        pp++;
+                }
+                g_strfreev (pp1);
+                gst_bin_add (GST_BIN (pipeline), bin);
+        }
+
+        /* link pads */
+        p = g_strdup_printf ("%s/pipeline", param);
+        value = configure_get_param (configure, p);
+        g_free (p);
+        p = (gchar *)g_value_get_string (value);
+        g_print ("pipeline: %s\n", p);
+
+        return pipeline;
+}
+
 /***************************************/
 
 gint
@@ -1304,7 +1388,7 @@ main (gint argc, gchar *argv[])
         GValue *value;
         GstStructure *structure;
         gchar *var, *str;
-        GstElement *element;
+        GstElement *element, *pipeline;
 
         gst_init (&argc, &argv);
 
@@ -1352,8 +1436,11 @@ main (gint argc, gchar *argv[])
 
                 value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
                 structure = (GstStructure *)gst_value_get_structure (value);
-                element = create_element (configure, structure);
+                element = create_element (structure);
                 gst_object_unref (GST_OBJECT (element));
+
+                pipeline = create_pipeline (configure, "/channel/test/source");
+                gst_object_unref (G_OBJECT (pipeline));
 
                 gst_object_unref (G_OBJECT (configure));
 
