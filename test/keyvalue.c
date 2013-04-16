@@ -1231,15 +1231,14 @@ configure_get_param (Configure *configure, gchar *param)
                         p2++;
                         p1 = p2;
                         value = (GValue *)gst_structure_get_value (structure, key);
+                        g_free (key);
                         if (value == NULL) {
                                 return NULL;
                         }
                         if ((p2 - param) >= strlen (param)) {
-                                g_free (key);
                                 break;
                         } else {
                                 structure = (GstStructure *)gst_value_get_structure (value);
-                                g_free (key);
                         }
                 }
         }
@@ -1251,7 +1250,8 @@ configure_get_param (Configure *configure, gchar *param)
 
 /**
  * create_element
- * @structure: GstStructure type of parameters for element.
+ * @configure: configure object.
+ * @param: like this: /server/httpstreaming
  *
  * create element, based on GstStructure type element info.
  *
@@ -1283,7 +1283,6 @@ create_element (Configure *configure, gchar *param)
                 g_print ("param: %s, name: %s\n", param, name);
                 g_regex_unref (regex);
         } else {
-                g_print ("===0\n");
                 name = factory;
         }
         value = (GValue *)configure_get_param (configure, p);
@@ -1329,7 +1328,8 @@ create_element (Configure *configure, gchar *param)
 
 /**
  * create_pipeline
- * @structure: source or encoder pipeline parameters.
+ * @configure: Configure object.
+ * @param: like this: /server/httpstreaming
  *
  * Returns: the cteated pipeline or NULL.
  */
@@ -1377,6 +1377,7 @@ create_pipeline (Configure *configure, gchar *param)
                                 gst_bin_add (GST_BIN (bin), element);
                         } else {
                                 g_print ("error create element %s\n", *pp);
+                                gst_object_unref (G_OBJECT (element));
                                 //return NULL;
                         }
                         g_free (p);
