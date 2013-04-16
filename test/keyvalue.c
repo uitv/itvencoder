@@ -1292,7 +1292,8 @@ create_element (Configure *configure, gchar *param)
         GParamSpec *param_spec;
         GRegex *regex;
 
-        regex = g_regex_new ("([^\\(]*).*", 0, 0, NULL);
+        /* extract factory */
+        regex = g_regex_new ("([^ ]*).*", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
         g_print ("param: %s, p: %s\n", param, p);
         g_regex_unref (regex);
@@ -1300,9 +1301,11 @@ create_element (Configure *configure, gchar *param)
         factory = g_regex_replace (regex, p, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
         g_print ("param: %s, fatory: %s\n", param, factory);
+
+        /* extract name if have */
         if (g_strcmp0 (p, param) != 0) {
                 /* (name=xxx) found */
-                regex = g_regex_new (".*\\(name= *([^\\)]*)\\)", 0, 0, NULL);
+                regex = g_regex_new (".* name *= *([^ ]*)", 0, 0, NULL);
                 name = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
                 g_print ("param: %s, name: %s\n", param, name);
                 g_regex_unref (regex);
