@@ -317,6 +317,8 @@ configure_element_parse (gchar *name, gchar *data)
                         gst_structure_set_value (structure, p[i], &value);
                         g_value_unset (&value);
                         g_free (var);
+                } else {
+                        g_print ("invalid element configuration\n");
                 }
                 g_free (v);
         }
@@ -1458,6 +1460,6 @@ main (gint argc, gchar *argv[])
 
                 gst_object_unref (G_OBJECT (configure));
 
-                //break;
+                break;
         }
 }
