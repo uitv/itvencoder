@@ -1428,7 +1428,7 @@ main (gint argc, gchar *argv[])
         GValue *value;
         GstStructure *structure;
         gchar *var, *str;
-        GstElement *element, *pipeline;
+        GstElement *element, *pipeline, *appsink;
         GMainLoop *loop;
 
         gst_init (&argc, &argv);
@@ -1475,6 +1475,10 @@ main (gint argc, gchar *argv[])
                 gst_object_unref (GST_OBJECT (element));
 
                 pipeline = create_pipeline (configure, "/channel/test/source");
+                appsink = gst_bin_get_by_name (GST_BIN (pipeline), "video");
+                if (appsink == NULL) {
+                        g_print ("Get encoder sink error\n");
+                }
                 gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
                 loop = g_main_loop_new (NULL, FALSE);
