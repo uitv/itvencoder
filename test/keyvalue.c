@@ -1377,7 +1377,6 @@ create_pipeline (Configure *configure, gchar *param)
                                 gst_bin_add (GST_BIN (bin), element);
                         } else {
                                 g_print ("error create element %s\n", *pp);
-                                gst_object_unref (G_OBJECT (element));
                                 //return NULL;
                         }
                         g_free (p);
