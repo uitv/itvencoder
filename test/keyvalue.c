@@ -329,6 +329,34 @@ configure_element_parse (gchar *name, gchar *data)
 }
 
 static GstStructure *
+configure_bin_parse (gchar *name, gchar *data)
+{
+        GKeyFile *gkeyfile;
+        GError *e = NULL;
+        gchar **p, *v;
+        gint i;
+        gsize number;
+        GstStructure *structure, *bin;
+        GValue value = { 0, { { 0 } } };
+
+        gkeyfile = ini_data_parse (name, data);
+        p = g_key_file_get_keys (gkeyfile, name, &number, &e);
+        g_print ("\n\n\n%s parse, number is %d\n", name, number);
+        structure = gst_structure_empty_new (name);
+        for (i = 0; i < number; i++) {
+                v = g_key_file_get_value (gkeyfile, name, p[i], &e);
+                g_print ("%s : %s\n", p[i], v);
+                g_value_init (&value, G_TYPE_STRING);
+                g_value_set_static_string (&value, v);
+                gst_structure_set_value (structure, p[i], &value);
+                g_value_unset (&value);
+                g_free (v);
+        }
+
+        return structure;
+}
+
+static GstStructure *
 configure_bins_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
@@ -336,8 +364,7 @@ configure_bins_parse (gchar *name, gchar *data)
         gchar **p, *v;
         gint i;
         gsize number;
-        GstStructure *structure;
-        GValue value = { 0, { { 0 } } };
+        GstStructure *structure, *bin;
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
@@ -346,10 +373,9 @@ configure_bins_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
-                g_value_init (&value, G_TYPE_STRING);
-                g_value_set_static_string (&value, v);
-                gst_structure_set_value (structure, p[i], &value);
-                g_value_unset (&value);
+                bin = configure_bin_parse (p[i], v);
+                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bin, NULL);
+                gst_structure_free (bin);
                 g_free (v);
         }
         g_strfreev (p);
@@ -1354,7 +1380,7 @@ create_pipeline (Configure *configure, gchar *param)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 bin = gst_bin_new (name);
-                p = g_strdup_printf ("%s/bins/%s", param, name);
+                p = g_strdup_printf ("%s/bins/%s/description", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
                 //g_print ("%s: %s\n", name, g_value_get_string (value));
@@ -1422,7 +1448,7 @@ main (gint argc, gchar *argv[])
                 g_print ("textoverlay: %s\n", str);
                 g_free (str);
 
-                value = configure_get_param (configure, "/channel/test/source/bins/videosrc");
+                value = configure_get_param (configure, "/channel/test/source/bins/videosrc/description");
                 g_print ("videosource: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/channel/test/onboot");
