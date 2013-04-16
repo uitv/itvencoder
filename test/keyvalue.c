@@ -352,6 +352,8 @@ configure_bin_parse (gchar *name, gchar *data)
                 g_value_unset (&value);
                 g_free (v);
         }
+        g_strfreev (p);
+        g_key_file_free (gkeyfile);
 
         return structure;
 }
@@ -1385,10 +1387,8 @@ create_pipeline (Configure *configure, gchar *param)
                 g_free (p);
                 //g_print ("%s: %s\n", name, g_value_get_string (value));
                 p = (gchar *)g_value_get_string (value);
-                p = g_strndup (p + 1, strlen (p) - 2);
                 g_print ("p: %s\n", p);
-                pp = pp1 = g_strsplit (p, ",", 0);
-                g_free (p);
+                pp = pp1 = g_strsplit (p, "!", 0);
                 while (*pp != NULL) {
                         p1 = g_strdup (*pp);
                         p1 = g_strstrip (p1);
