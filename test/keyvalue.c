@@ -1365,7 +1365,7 @@ create_pipeline (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *structure;
-        GstElement *pipeline, *bin, *element;
+        GstElement *pipeline, *bin, *element, *pre_element;
         gchar *name, *p, *p1, **pp, **pp1;
         gint i, n;
 
@@ -1392,6 +1392,7 @@ create_pipeline (Configure *configure, gchar *param)
                 p = (gchar *)g_value_get_string (value);
                 g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
+                pre_element = NULL;
                 while (*pp != NULL) {
                         p1 = g_strdup (*pp);
                         p1 = g_strstrip (p1);
@@ -1400,6 +1401,10 @@ create_pipeline (Configure *configure, gchar *param)
                         element = create_element (configure, p);
                         if (element != NULL) {
                                 gst_bin_add (GST_BIN (bin), element);
+                                if (pre_element != NULL) {
+                                        gst_element_link (pre_element, element);
+                                }
+                                pre_element = element;
                         } else {
                                 g_print ("error create element %s\n", *pp);
                                 //return NULL;
@@ -1424,6 +1429,7 @@ main (gint argc, gchar *argv[])
         GstStructure *structure;
         gchar *var, *str;
         GstElement *element, *pipeline;
+        GMainLoop *loop;
 
         gst_init (&argc, &argv);
 
@@ -1469,8 +1475,12 @@ main (gint argc, gchar *argv[])
                 gst_object_unref (GST_OBJECT (element));
 
                 pipeline = create_pipeline (configure, "/channel/test/source");
-                gst_object_unref (G_OBJECT (pipeline));
+                gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
+                loop = g_main_loop_new (NULL, FALSE);
+                g_main_loop_run (loop);
+
+                gst_object_unref (G_OBJECT (pipeline));
                 gst_object_unref (G_OBJECT (configure));
 
                 break;
