@@ -329,7 +329,7 @@ configure_element_parse (gchar *name, gchar *data)
 }
 
 static GstStructure *
-configure_bin_parse (gchar *name, gchar *data)
+configure_bins_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
         GError *e = NULL;
@@ -366,7 +366,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
         gchar **p, *v, *var;
         gint i;
         gsize number;
-        GstStructure *structure, *elements, *element, *bin;
+        GstStructure *structure, *elements, *element, *bins;
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
@@ -379,11 +379,11 @@ configure_pipeline_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
-                if (g_strcmp0 (p[i], "bin") == 0) {
+                if (g_strcmp0 (p[i], "bins") == 0) {
                         /* bin found */
-                        bin = configure_bin_parse (p[i], v);
-                        gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bin, NULL);
-                        gst_structure_free (bin);
+                        bins = configure_bins_parse (p[i], v);
+                        gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bins, NULL);
+                        gst_structure_free (bins);
                 } else if (g_strcmp0 (p[i], "httpstreaming") == 0) {
                         /* whether support http output or not */
                         var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
@@ -1346,7 +1346,7 @@ create_pipeline (Configure *configure, gchar *param)
         pipeline = gst_pipeline_new (name);
 
         /* bin */
-        p = g_strdup_printf ("%s/bin", param);
+        p = g_strdup_printf ("%s/bins", param);
         value = configure_get_param (configure, p);
         g_free (p);
         structure = (GstStructure *)gst_value_get_structure (value);
@@ -1354,7 +1354,7 @@ create_pipeline (Configure *configure, gchar *param)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 bin = gst_bin_new (name);
-                p = g_strdup_printf ("%s/bin/%s", param, name);
+                p = g_strdup_printf ("%s/bins/%s", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
                 //g_print ("%s: %s\n", name, g_value_get_string (value));
@@ -1422,7 +1422,7 @@ main (gint argc, gchar *argv[])
                 g_print ("textoverlay: %s\n", str);
                 g_free (str);
 
-                value = configure_get_param (configure, "/channel/test/source/bin/videosrc");
+                value = configure_get_param (configure, "/channel/test/source/bins/videosrc");
                 g_print ("videosource: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/channel/test/onboot");
