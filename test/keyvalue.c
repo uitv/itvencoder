@@ -379,13 +379,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
-                if (g_strcmp0 (p[i], "pipeline") == 0) {
-                        /* pipeline found */
-                        g_value_init (&value, G_TYPE_STRING);
-                        g_value_set_static_string (&value, v);
-                        gst_structure_set_value (structure, p[i], &value);
-                        g_value_unset (&value);
-                } else if (g_strcmp0 (p[i], "bin") == 0) {
+                if (g_strcmp0 (p[i], "bin") == 0) {
                         /* bin found */
                         bin = configure_bin_parse (p[i], v);
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bin, NULL);
@@ -1388,13 +1382,6 @@ create_pipeline (Configure *configure, gchar *param)
                 gst_bin_add (GST_BIN (pipeline), bin);
         }
 
-        /* link pads */
-        p = g_strdup_printf ("%s/pipeline", param);
-        value = configure_get_param (configure, p);
-        g_free (p);
-        p = (gchar *)g_value_get_string (value);
-        g_print ("pipeline: %s\n", p);
-
         return pipeline;
 }
 
@@ -1427,9 +1414,6 @@ main (gint argc, gchar *argv[])
                 g_print ("pipeline: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/server/httpmgmt");
-                g_print ("pipeline: %s\n", g_value_get_string (value));
-
-                value = configure_get_param (configure, "/channel/test/source/pipeline");
                 g_print ("pipeline: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/channel/test/source/elements/textoverlay");
