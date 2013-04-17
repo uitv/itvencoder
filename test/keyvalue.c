@@ -1468,13 +1468,13 @@ main (gint argc, gchar *argv[])
                 str = gst_structure_to_string (structure);
                 g_free (str);
 
-                value = configure_get_param (configure, "/channel/cctv0/encoder/encoder1/elements/x264enc/property/name");
+                value = configure_get_param (configure, "/channel/mpegtsoverip/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
 
                 element = create_element (configure, "/channel/test/source/elements/textoverlay");
                 gst_object_unref (GST_OBJECT (element));
 
-                pipeline = create_pipeline (configure, "/channel/test/source");
+                pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source");
                 appsink = gst_bin_get_by_name (GST_BIN (pipeline), "video");
                 if (appsink == NULL) {
                         g_print ("Get encoder sink error\n");
