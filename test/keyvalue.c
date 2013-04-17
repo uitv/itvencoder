@@ -1334,7 +1334,6 @@ create_element (Configure *configure, gchar *param)
                 g_free (name);
         }
         if (value == NULL) {
-                g_print ("no element %s configure.\n", factory);
                 return element;
         }
 
@@ -1356,8 +1355,7 @@ create_element (Configure *configure, gchar *param)
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
                                 p = (gchar *)gst_structure_get_string (property, name);
-                                g_print ("set property, name: %s, p: %s\n", name, p);
-                                //p = (gchar *)g_value_get_string (value);
+                                //g_print ("set property, name: %s, p: %s\n", name, p);
                                 g_object_set (element, name, p, NULL);
                                 break;
                         case G_TYPE_INT:
@@ -1374,9 +1372,15 @@ static void
 sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
 {
         gchar *name;
+        GstElement *sink;
 
         name = gst_pad_get_name (pad);
         g_print ("A new pad %s was created\n", name);
+        sink = gst_bin_get_by_name (GST_BIN (data), name);
+        if (sink != NULL) {
+                gst_element_link (element, sink);
+                g_print ("link lalala\n");
+        } else g_print ("lalalalala\n");
         g_free (name);
 }
 
@@ -1428,8 +1432,11 @@ create_pipeline (Configure *configure, gchar *param)
                                 /* should be a sometimes pad */
                                 p2 = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                 sometimes_pad = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (p2) -1);
-                                pre_element = gst_bin_get_by_name (GST_BIN (pipeline), p2);
-                                g_print ("ssssssssssssssssssssssssssssssss %s %s\n", p2, sometimes_pad);
+                                element = gst_bin_get_by_name (GST_BIN (pipeline), p2);
+                                if (g_signal_handler_find (element, G_SIGNAL_MATCH_FUNC, 0, 0, 0, G_CALLBACK (sometimes_pad_cb), NULL) == 0) {
+                                        /* attach sometimes pad created signal handler. */
+                                        g_signal_connect (element, "pad-added", G_CALLBACK (sometimes_pad_cb), pipeline);
+                                }
                                 g_free (p2);
                         } else {
                                 /* plugin name, create a element. */
@@ -1439,8 +1446,8 @@ create_pipeline (Configure *configure, gchar *param)
                                 if (element != NULL) {
                                         gst_bin_add (GST_BIN (bin), element);
                                         if (sometimes_pad != NULL) {
-                                                /* attach sometimes pad created signal handler. */
-                                                g_signal_connect (pre_element, "pad-added", G_CALLBACK (sometimes_pad_cb), NULL);
+                                                /* link to a sometimes pad */
+                                                gst_element_set_name (bin, sometimes_pad);
                                                 g_free (sometimes_pad);
                                                 sometimes_pad = NULL;
                                         } else if (pre_element != NULL) {
@@ -1449,7 +1456,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         pre_element = element;
                                 } else {
                                         g_print ("error create element %s\n", *pp);
-                                        //return NULL;
+                                        //return NULL; //FIXME
                                 }
                         }
                         g_free (p);
