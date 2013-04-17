@@ -256,11 +256,12 @@ configure_property_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
         GError *e = NULL;
-        gchar **p, *v;
+        gchar **p, *v, *p1;
         gint i;
         gsize number;
         GstStructure *structure;
         GValue value = { 0, { { 0 } } };
+        GRegex *regex;
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
@@ -268,6 +269,11 @@ configure_property_parse (gchar *name, gchar *data)
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
+                regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
+                p1 = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
+                g_regex_unref (regex);
+                g_free (v);
+                v = p1;
                 //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
