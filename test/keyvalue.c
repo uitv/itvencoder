@@ -1287,7 +1287,7 @@ create_element (Configure *configure, gchar *param)
         GstElement *element;
         GValue *value;
         gint n, i;
-        gchar *factory, *name, *p;
+        gchar *factory, *name, *p, *p1;
         GstStructure *structure, *property;
         GParamSpec *param_spec;
         GRegex *regex;
@@ -1295,31 +1295,40 @@ create_element (Configure *configure, gchar *param)
         /* extract factory */
         regex = g_regex_new ("([^ ]*).*", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        g_print ("param: %s, p: %s\n", param, p);
         g_regex_unref (regex);
         regex = g_regex_new (".*/(.*)", 0, 0, NULL);
         factory = g_regex_replace (regex, p, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
-        g_print ("param: %s, fatory: %s\n", param, factory);
 
-        /* extract name if have */
+        /* extract property if have FIXME: now only name property. */
         if (g_strcmp0 (p, param) != 0) {
                 /* (name=xxx) found */
                 regex = g_regex_new (".* name *= *([^ ]*)", 0, 0, NULL);
                 name = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-                g_print ("param: %s, name: %s\n", param, name);
                 g_regex_unref (regex);
         } else {
                 name = factory;
         }
-        value = (GValue *)configure_get_param (configure, p);
-        element = gst_element_factory_make (factory, name);
+
+        /* extract element configure. */
+        p1 = g_strdup_printf ("[^/]*/%s", factory);
+        regex = g_regex_new (p1, 0, 0, NULL);
+        g_free (p1);
+        p1 = g_regex_replace (regex, p, -1, 0, "elements", 0, NULL);
         g_free (p);
+        p = g_strdup_printf ("%s/%s", p1, factory);
+        g_free (p1);
+        g_regex_unref (regex);
+        g_print ("create element, param: %s, fatory: %s name: %s conf path: %s\n", param, factory, name, p);
+        value = (GValue *)configure_get_param (configure, p);
+        g_free (p);
+        element = gst_element_factory_make (factory, name);
         g_free (factory);
         if (name != factory) {
                 g_free (name);
         }
         if (value == NULL) {
+                g_print ("no element %s configure.\n", factory);
                 return element;
         }
 
@@ -1340,7 +1349,9 @@ create_element (Configure *configure, gchar *param)
                         value = (GValue *)gst_structure_get_value (property, name);
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
-                                p = (gchar *)g_value_get_string (value);
+                                p = (gchar *)gst_structure_get_string (property, name);
+                                g_print ("set property, name: %s, p: %s\n", name, p);
+                                //p = (gchar *)g_value_get_string (value);
                                 g_object_set (element, name, p, NULL);
                                 break;
                         case G_TYPE_INT:
@@ -1351,6 +1362,16 @@ create_element (Configure *configure, gchar *param)
         }
 
         return element;
+}
+
+static void
+sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
+{
+        gchar *name;
+
+        name = gst_pad_get_name (pad);
+        g_print ("A new pad %s was created\n", name);
+        g_free (name);
 }
 
 /**
@@ -1366,7 +1387,7 @@ create_pipeline (Configure *configure, gchar *param)
         GValue *value;
         GstStructure *structure;
         GstElement *pipeline, *bin, *element, *pre_element;
-        gchar *name, *p, *p1, **pp, **pp1;
+        gchar *name, *p, *p1, *p2, **pp, **pp1, *sometimes_pad;
         gint i, n;
 
         /* pipeline */
@@ -1393,21 +1414,37 @@ create_pipeline (Configure *configure, gchar *param)
                 g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
                 pre_element = NULL;
+                sometimes_pad = NULL;
                 while (*pp != NULL) {
                         p1 = g_strdup (*pp);
                         p1 = g_strstrip (p1);
-                        p = g_strdup_printf ("%s/%s/%s", param, name, p1);
-                        g_free (p1);
-                        element = create_element (configure, p);
-                        if (element != NULL) {
-                                gst_bin_add (GST_BIN (bin), element);
-                                if (pre_element != NULL) {
-                                        gst_element_link (pre_element, element);
-                                }
-                                pre_element = element;
+                        if (g_strrstr (p1, ".") != NULL) {
+                                /* should be a sometimes pad */
+                                p2 = g_strndup (p1, g_strrstr (p1, ".") - p1);
+                                sometimes_pad = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (p2) -1);
+                                pre_element = gst_bin_get_by_name (GST_BIN (pipeline), p2);
+                                g_print ("ssssssssssssssssssssssssssssssss %s %s\n", p2, sometimes_pad);
+                                g_free (p2);
                         } else {
-                                g_print ("error create element %s\n", *pp);
-                                //return NULL;
+                                /* plugin name, create a element. */
+                                p = g_strdup_printf ("%s/%s/%s", param, name, p1);
+                                g_free (p1);
+                                element = create_element (configure, p);
+                                if (element != NULL) {
+                                        gst_bin_add (GST_BIN (bin), element);
+                                        if (sometimes_pad != NULL) {
+                                                /* attach sometimes pad created signal handler. */
+                                                g_signal_connect (pre_element, "pad-added", G_CALLBACK (sometimes_pad_cb), NULL);
+                                                g_free (sometimes_pad);
+                                                sometimes_pad = NULL;
+                                        } else if (pre_element != NULL) {
+                                                gst_element_link (pre_element, element);
+                                        }
+                                        pre_element = element;
+                                } else {
+                                        g_print ("error create element %s\n", *pp);
+                                        //return NULL;
+                                }
                         }
                         g_free (p);
                         pp++;
@@ -1474,6 +1511,7 @@ main (gint argc, gchar *argv[])
                 element = create_element (configure, "/channel/test/source/elements/textoverlay");
                 gst_object_unref (GST_OBJECT (element));
 
+                //pipeline = create_pipeline (configure, "/channel/test/source");
                 pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source");
                 appsink = gst_bin_get_by_name (GST_BIN (pipeline), "video");
                 if (appsink == NULL) {
