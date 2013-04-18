@@ -1372,20 +1372,31 @@ create_element (Configure *configure, gchar *param)
 static void
 sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
 {
-        gchar *name;
+        gchar *source_pad_name, *sink_pad_name;
         GstElement *source, *sink;
-        GstPad *source_pad;
+        GstPad *source_pad, *sink_pad;
+        const GList *pads;
 
-        name = gst_pad_get_name (pad);
+        source_pad_name = gst_pad_get_name (pad);
+        g_print ("new added pad name: %s\n", source_pad_name);
         source = (GstElement *)gst_element_get_parent (element);
-        sink = gst_bin_get_by_name (GST_BIN (data), name);
+        sink = gst_bin_get_by_name (GST_BIN (data), source_pad_name);
         if (sink != NULL) {
-                g_print ("pad name: %s\n", name);
-                source_pad = gst_element_get_pad (source, name);
+                source_pad = gst_element_get_pad (source, source_pad_name);
                 gst_ghost_pad_set_target ((GstGhostPad *)source_pad, pad);
-                gst_element_link (source, sink);
+                pads = sink->pads;
+                while (pads) {
+                        sink_pad = GST_PAD (pads->data);
+                        pads = g_list_next (pads);
+                        sink_pad_name = gst_pad_get_name (sink_pad);
+                        if (gst_element_link_pads (source, source_pad_name, sink, sink_pad_name)) {
+                                g_free (sink_pad_name);
+                                break;
+                        }
+                        g_free (sink_pad_name);
+                }
         }
-        g_free (name);
+        g_free (source_pad_name);
 }
 
 static void
@@ -1511,7 +1522,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
 
         /* output running status */
-        g_print ("buffer size %d\n", GST_BUFFER_SIZE (buffer));
+        g_print ("buffer size %d, buffer duration %lld\n", GST_BUFFER_SIZE (buffer), GST_BUFFER_DURATION(buffer));
 }
 
 gint
