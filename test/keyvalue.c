@@ -1387,6 +1387,34 @@ sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
         g_free (name);
 }
 
+static void
+link_sometimes_pad (gchar *sometimes_pad, GstElement *sometimes_element, GstElement *element)
+{
+        const GList *pads;
+        GstPad *pad, *ghost_pad;
+        GstElement *bin;
+        gchar *ghost_pad_name;
+
+        bin = (GstElement *)gst_element_get_parent (element);
+        pads = element->pads;
+        while (pads) { 
+                pad = GST_PAD (pads->data);
+                pads = g_list_next (pads);
+                if (gst_pad_get_direction (pad) == GST_PAD_SINK) {
+                        ghost_pad_name = gst_pad_get_name (pad);
+                        ghost_pad =  gst_ghost_pad_new (ghost_pad_name, pad);
+                        gst_element_add_pad (bin, ghost_pad);
+                        //p2 = g_strdup_printf ("%s.%s", sometimes_pad, ghost_pad_name);
+                        ghost_pad = gst_ghost_pad_new_no_target (sometimes_pad, GST_PAD_SRC);
+                        g_print ("here name is %s\n", gst_element_get_name (sometimes_element));
+                        gst_element_add_pad ((GstElement *)gst_element_get_parent (sometimes_element), ghost_pad);
+                        g_free (ghost_pad_name);
+                        //g_free (p2);
+                }
+        }
+        gst_element_set_name (bin, sometimes_pad);
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -1400,10 +1428,8 @@ create_pipeline (Configure *configure, gchar *param)
         GValue *value;
         GstStructure *structure;
         GstElement *pipeline, *bin, *element, *pre_element, *sometimes_element;
-        gchar *name, *ghost_pad_name, *p, *p1, *p2, **pp, **pp1, *sometimes_pad;
+        gchar *name, *p, *p1, *p2, **pp, **pp1, *sometimes_pad;
         gint i, n;
-        const GList *pads;
-        GstPad *pad, *ghost_pad;
 
         /* pipeline */
         value = configure_get_param (configure, param);
@@ -1452,24 +1478,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         gst_bin_add (GST_BIN (bin), element);
                                         if (sometimes_pad != NULL) {
                                                 /* link to a sometimes pad */
-                                                g_print ("sometimes name is %s\n", sometimes_pad);
-                                                pads = element->pads;
-                                                while (pads) { 
-                                                        pad = GST_PAD (pads->data);
-                                                        pads = g_list_next (pads);
-                                                        if (gst_pad_get_direction (pad) == GST_PAD_SINK) {
-                                                                ghost_pad_name = gst_pad_get_name (pad);
-                                                                ghost_pad =  gst_ghost_pad_new (ghost_pad_name, pad);
-                                                                gst_element_add_pad (bin, ghost_pad);
-                                                                p2 = g_strdup_printf ("%s.%s", sometimes_pad, ghost_pad_name);
-                                                                ghost_pad = gst_ghost_pad_new_no_target (sometimes_pad, GST_PAD_SRC);
-                                                                g_print ("here name is %s\n", gst_element_get_name (sometimes_element));
-                                                                gst_element_add_pad ((GstElement *)gst_element_get_parent (sometimes_element), ghost_pad);
-                                                                g_free (ghost_pad_name);
-                                                                g_free (p2);
-                                                        }
-                                                }
-                                                gst_element_set_name (bin, sometimes_pad);
+                                                link_sometimes_pad (sometimes_pad, sometimes_element, element);
                                                 g_free (sometimes_pad);
                                                 sometimes_pad = NULL;
                                         } else if (pre_element != NULL) {
