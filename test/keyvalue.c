@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <gst/gst.h>
+#include <gst/app/gstappsink.h>
 
 #include "keyvalue.h"
 
@@ -1382,7 +1383,7 @@ sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
                 g_print ("pad name: %s\n", name);
                 source_pad = gst_element_get_pad (source, name);
                 gst_ghost_pad_set_target ((GstGhostPad *)source_pad, pad);
-                gst_element_link (element, sink);
+                gst_element_link (source, sink);
         }
         g_free (name);
 }
@@ -1406,7 +1407,7 @@ link_sometimes_pad (gchar *sometimes_pad, GstElement *sometimes_element, GstElem
                         gst_element_add_pad (bin, ghost_pad);
                         //p2 = g_strdup_printf ("%s.%s", sometimes_pad, ghost_pad_name);
                         ghost_pad = gst_ghost_pad_new_no_target (sometimes_pad, GST_PAD_SRC);
-                        g_print ("here name is %s\n", gst_element_get_name (sometimes_element));
+                        g_print ("sometimes element name is %s\n", gst_element_get_name (sometimes_element));
                         gst_element_add_pad ((GstElement *)gst_element_get_parent (sometimes_element), ghost_pad);
                         g_free (ghost_pad_name);
                         //g_free (p2);
@@ -1502,6 +1503,17 @@ create_pipeline (Configure *configure, gchar *param)
 
 /***************************************/
 
+static GstFlowReturn
+source_appsink_callback (GstAppSink *elt, gpointer user_data)
+{
+        GstBuffer *buffer;
+
+        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+
+        /* output running status */
+        g_print ("buffer size %d\n", GST_BUFFER_SIZE (buffer));
+}
+
 gint
 main (gint argc, gchar *argv[])
 {
@@ -1511,6 +1523,12 @@ main (gint argc, gchar *argv[])
         gchar *var, *str;
         GstElement *element, *pipeline, *appsink;
         GMainLoop *loop;
+        GstAppSinkCallbacks appsink_callbacks = {
+                NULL,
+                NULL,
+                source_appsink_callback,
+                NULL
+        };
 
         gst_init (&argc, &argv);
 
@@ -1561,6 +1579,7 @@ main (gint argc, gchar *argv[])
                 if (appsink == NULL) {
                         g_print ("Get encoder sink error\n");
                 }
+                gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
                 gst_element_set_state (pipeline, GST_STATE_PLAYING);
 
                 loop = g_main_loop_new (NULL, FALSE);
