@@ -1330,7 +1330,7 @@ create_element (Configure *configure, gchar *param)
                 g_free (name);
         }
         if (value == NULL) {
-                g_print ("                       =                       0\n");
+                /* no property configured. */
                 return element;
         }
 
