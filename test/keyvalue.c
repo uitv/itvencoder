@@ -1356,15 +1356,14 @@ create_element (Configure *configure, gchar *param)
                                 g_print ("Can't find property name: %s\n", name);
                                 return NULL;
                         }
-                        value = (GValue *)gst_structure_get_value (property, name);
+                        p = (gchar *)gst_structure_get_string (property, name);
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
-                                p = (gchar *)gst_structure_get_string (property, name);
                                 //g_print ("set property, name: %s, p: %s\n", name, p);
                                 g_object_set (element, name, p, NULL);
                                 break;
                         case G_TYPE_INT:
-                                g_object_set (element, name, g_value_get_int (value), NULL);
+                                g_object_set (element, name, atoi (p), NULL);
                                 break;
                         }
                 }
