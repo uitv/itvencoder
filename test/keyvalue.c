@@ -1352,6 +1352,10 @@ create_element (Configure *configure, gchar *param)
                 for (i = 0; i < n; i++) {
                         name = (gchar *)gst_structure_nth_field_name (property, i);
                         param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
+                        if (param_spec == NULL) {
+                                g_print ("Can't find property name: %s\n", name);
+                                return NULL;
+                        }
                         value = (GValue *)gst_structure_get_value (property, name);
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
@@ -1499,7 +1503,9 @@ create_pipeline (Configure *configure, gchar *param)
                                         pre_element = element;
                                 } else {
                                         g_print ("error create element %s\n", *pp);
-                                        //return NULL; //FIXME
+                                        g_free (p);
+                                        g_strfreev (pp1);
+                                        return NULL; //FIXME release pipeline
                                 }
                         }
                         g_free (p);
@@ -1586,6 +1592,9 @@ main (gint argc, gchar *argv[])
 
                 //pipeline = create_pipeline (configure, "/channel/test/source");
                 pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source");
+                if (pipeline == NULL) {
+                        return 1;
+                }
                 appsink = gst_bin_get_by_name (GST_BIN (pipeline), "video");
                 if (appsink == NULL) {
                         g_print ("Get encoder sink error\n");
