@@ -1421,7 +1421,7 @@ link_sometimes_pad (gchar *sometimes_pad, GstElement *sometimes_element, GstElem
                         gst_element_add_pad (bin, ghost_pad);
                         //p2 = g_strdup_printf ("%s.%s", sometimes_pad, ghost_pad_name);
                         ghost_pad = gst_ghost_pad_new_no_target (sometimes_pad, GST_PAD_SRC);
-                        g_print ("sometimes element name is %s\n", gst_element_get_name (sometimes_element));
+                        //g_print ("sometimes element name is %s\n", gst_element_get_name (sometimes_element));
                         gst_element_add_pad ((GstElement *)gst_element_get_parent (sometimes_element), ghost_pad);
                         g_free (ghost_pad_name);
                         //g_free (p2);
@@ -1450,7 +1450,7 @@ create_pipeline (Configure *configure, gchar *param)
         value = configure_get_param (configure, param);
         structure = (GstStructure *)gst_value_get_structure (value);
         name = (gchar *)gst_structure_get_name (structure);
-        g_print ("name: %s\n", name);
+        //g_print ("name: %s\n", name);
         pipeline = gst_pipeline_new (name);
 
         /* bin */
