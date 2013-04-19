@@ -1387,13 +1387,13 @@ sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
                 pads = sink->pads;
                 while (pads) {
                         sink_pad = GST_PAD (pads->data);
-                        pads = g_list_next (pads);
                         sink_pad_name = gst_pad_get_name (sink_pad);
                         if (gst_element_link_pads (source, source_pad_name, sink, sink_pad_name)) {
                                 g_free (sink_pad_name);
                                 break;
                         }
                         g_free (sink_pad_name);
+                        pads = g_list_next (pads);
                 }
         }
         g_free (source_pad_name);
