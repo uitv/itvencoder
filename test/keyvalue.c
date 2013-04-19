@@ -1294,7 +1294,7 @@ create_element (Configure *configure, gchar *param)
         GstElement *element;
         GValue *value;
         gint n, i;
-        gchar *factory, *name, *p, *p1;
+        gchar *factory, *name, *p;
         GstStructure *structure, *property;
         GParamSpec *param_spec;
         GRegex *regex;
@@ -1318,23 +1318,19 @@ create_element (Configure *configure, gchar *param)
         }
 
         /* extract element configure. */
-        p1 = g_strdup_printf ("[^/]*/%s$", factory);
-        regex = g_regex_new (p1, 0, 0, NULL);
-        g_free (p1);
-        p1 = g_regex_replace (regex, p, -1, 0, "elements", 0, NULL);
-        g_free (p);
-        p = g_strdup_printf ("%s/%s", p1, factory);
-        g_free (p1);
+        regex = g_regex_new (" .*", 0, 0, NULL);
+        p = g_regex_replace (regex, param, -1, 0, "", 0, NULL);
         g_regex_unref (regex);
         //g_print ("create element, param: %s, fatory: %s name: %s conf path: %s\n", param, factory, name, p);
         value = (GValue *)configure_get_param (configure, p);
-        g_free (p);
         element = gst_element_factory_make (factory, name);
+        g_free (p);
         g_free (factory);
         if (name != factory) {
                 g_free (name);
         }
         if (value == NULL) {
+                g_print ("                       =                       0\n");
                 return element;
         }
 
@@ -1486,7 +1482,7 @@ create_pipeline (Configure *configure, gchar *param)
                                 g_free (p2);
                         } else {
                                 /* plugin name, create a element. */
-                                p = g_strdup_printf ("%s/%s/%s", param, name, p1);
+                                p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 g_free (p1);
                                 element = create_element (configure, p);
                                 if (element != NULL) {
