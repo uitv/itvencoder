@@ -1575,8 +1575,8 @@ main (gint argc, gchar *argv[])
                 value = configure_get_param (configure, "/channel/test/source/bins/videosrc/description");
                 g_print ("videosource: %s\n", g_value_get_string (value));
 
-                value = configure_get_param (configure, "/channel/test/onboot");
-                g_print ("onboot: %s\n", g_value_get_string (value));
+                value = configure_get_param (configure, "/channel/mpegtsoverip/source/elements/textoverlay/option");
+                g_print ("textoverlay option: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/channel");
                 structure = (GstStructure *)gst_value_get_structure (value);
