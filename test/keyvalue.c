@@ -1277,6 +1277,26 @@ configure_get_param (Configure *configure, gchar *param)
         return value;
 }
 
+static gboolean
+selected_element (Configure *configure, gchar *param, gchar *element)
+{
+        GValue *value;
+        gchar *p;
+
+        p = g_strdup_printf ("%s/elements/%s/option", param, element);
+        value = configure_get_param (configure, p);
+        g_free (p);
+        if (value == NULL) {
+                return TRUE;
+        }
+        p = (gchar *)g_value_get_string (value);
+        if (g_strcmp0(p, "yes") == 0) {
+                return TRUE;
+        } else {
+                return FALSE;
+        }
+}
+
 /*************************************/
 
 /**
@@ -1480,7 +1500,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         g_signal_connect (sometimes_element, "pad-added", G_CALLBACK (sometimes_pad_cb), pipeline);
                                 }
                                 g_free (p2);
-                        } else {
+                        } else if (selected_element (configure, param, p1)) {
                                 /* plugin name, create a element. */
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 g_free (p1);
@@ -1502,8 +1522,10 @@ create_pipeline (Configure *configure, gchar *param)
                                         g_strfreev (pp1);
                                         return NULL; //FIXME release pipeline
                                 }
+                                g_free (p);
+                        } else {
+                                g_free (p1);
                         }
-                        g_free (p);
                         pp++;
                 }
                 g_strfreev (pp1);
