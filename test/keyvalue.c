@@ -1318,7 +1318,7 @@ create_element (Configure *configure, gchar *param)
         }
 
         /* extract element configure. */
-        p1 = g_strdup_printf ("[^/]*/%s", factory);
+        p1 = g_strdup_printf ("[^/]*/%s$", factory);
         regex = g_regex_new (p1, 0, 0, NULL);
         g_free (p1);
         p1 = g_regex_replace (regex, p, -1, 0, "elements", 0, NULL);
