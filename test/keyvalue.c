@@ -1301,11 +1301,11 @@ is_selected_element (Configure *configure, gchar *param, gchar *element)
 
 typedef struct _Link {
         GstElement *src;
-        GstElement *link;
+        GstElement *sink;
         gchar *src_name;
         gchar *sink_name;
-        GstPad *src_pads;
-        GstPad *sink_pads;
+        gchar *src_pad_name;
+        gchar *sink_pad_name;
 } Link;
 
 typedef struct _Chain {
@@ -1472,18 +1472,22 @@ create_pipeline (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *structure;
-        GstElement *pipeline, *bin, *element, *pre_element, *sometimes_element;
-        gchar *name, *p, *p1, *p2, **pp, **pp1, *sometimes_pad;
+        GstElement *pipeline, *element, *src;//, *sometimes_element;
+        gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
+        Chain chain;
+        Link *link;
+        GSList *links, *elements;
 
         /* pipeline */
         value = configure_get_param (configure, param);
         structure = (GstStructure *)gst_value_get_structure (value);
         name = (gchar *)gst_structure_get_name (structure);
         //g_print ("name: %s\n", name);
-        pipeline = gst_pipeline_new (name);
 
         /* bin */
+        chain.links = NULL;
+        chain.elements = NULL;
         p = g_strdup_printf ("%s/bins", param);
         value = configure_get_param (configure, p);
         g_free (p);
@@ -1491,7 +1495,7 @@ create_pipeline (Configure *configure, gchar *param)
         n = gst_structure_n_fields (structure);
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
-                bin = gst_bin_new (name);
+                //bin = gst_bin_new (name);
                 p = g_strdup_printf ("%s/bins/%s/description", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
@@ -1499,37 +1503,47 @@ create_pipeline (Configure *configure, gchar *param)
                 p = (gchar *)g_value_get_string (value);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
-                pre_element = NULL;
-                sometimes_pad = NULL;
+                src = NULL;
+                src_name = NULL;
+                src_pad_name = NULL;
                 while (*pp != NULL) {
                         p1 = g_strdup (*pp);
                         p1 = g_strstrip (p1);
                         if (g_strrstr (p1, ".") != NULL) {
-                                /* should be a sometimes pad */
-                                p2 = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                sometimes_pad = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (p2) -1);
-                                sometimes_element = gst_bin_get_by_name (GST_BIN (pipeline), p2);
-                                if (g_signal_handler_find (sometimes_element, G_SIGNAL_MATCH_FUNC, 0, 0, 0, G_CALLBACK (sometimes_pad_cb), NULL) == 0) {
-                                        /* attach sometimes pad created signal handler. */
-                                        g_signal_connect (sometimes_element, "pad-added", G_CALLBACK (sometimes_pad_cb), pipeline);
+                                if (src == NULL) {
+                                        /* should be a sometimes pad */
+                                        src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
+                                        src_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (src_name) -1);
+                                        g_print ("src_name: %s, src_pad_name: %s\n", src_name, src_pad_name);
+                                } else {
+                                        /* should be a request pad */
+                                        link = g_slice_new (Link);
+                                        link->src = src;
+                                        link->src_name = src_name;
+                                        link->src_pad_name = src_pad_name;
+                                        link->sink = NULL;
+                                        link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
+                                        link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
+                                        chain.links = g_slist_append (chain.links, link);
                                 }
-                                g_free (p2);
                         } else if (is_selected_element (configure, param, p1)) {
                                 /* plugin name, create a element. */
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
-                                g_free (p1);
                                 element = create_element (configure, p);
                                 if (element != NULL) {
-                                        gst_bin_add (GST_BIN (bin), element);
-                                        if (sometimes_pad != NULL) {
-                                                /* link to a sometimes pad */
-                                                link_sometimes_pad (sometimes_pad, sometimes_element, element);
-                                                g_free (sometimes_pad);
-                                                sometimes_pad = NULL;
-                                        } else if (pre_element != NULL) {
-                                                gst_element_link (pre_element, element);
-                                        }
-                                        pre_element = element;
+                                        link = g_slice_new (Link);
+                                        link->src = src;
+                                        link->src_name = src_name;
+                                        link->src_pad_name = src_pad_name;
+                                        link->sink = element;
+                                        link->sink_name = NULL;
+                                        link->sink_pad_name = NULL;
+                                        chain.links = g_slist_append (chain.links, link);
+                                        chain.elements = g_slist_append (chain.elements, element);
+                                        src = element;
+                                        src_name = p1;
+                                        g_print ("element_name: %s\n", src_name);
+                                        src_pad_name = NULL;
                                 } else {
                                         g_print ("error create element %s\n", *pp);
                                         g_free (p);
@@ -1543,7 +1557,22 @@ create_pipeline (Configure *configure, gchar *param)
                         pp++;
                 }
                 g_strfreev (pp1);
-                gst_bin_add (GST_BIN (pipeline), bin);
+        }
+
+        pipeline = gst_pipeline_new (name);
+
+        /* add element to pipeline */
+        elements = chain.elements;
+        while (elements != NULL) {
+                element = elements->data;
+                gst_bin_add (GST_BIN (pipeline), element);
+                elements = g_slist_next (elements);
+        }
+        
+        /* links element */
+        links = chain.links;
+        while (links != NULL) {
+                links = g_slist_next (links);
         }
 
         return pipeline;
