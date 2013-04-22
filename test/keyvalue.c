@@ -1277,8 +1277,10 @@ configure_get_param (Configure *configure, gchar *param)
         return value;
 }
 
+/*************************************/
+
 static gboolean
-selected_element (Configure *configure, gchar *param, gchar *element)
+is_selected_element (Configure *configure, gchar *param, gchar *element)
 {
         GValue *value;
         gchar *p;
@@ -1297,7 +1299,19 @@ selected_element (Configure *configure, gchar *param, gchar *element)
         }
 }
 
-/*************************************/
+typedef struct _Link {
+        GstElement *src;
+        GstElement *link;
+        gchar *src_name;
+        gchar *sink_name;
+        GstPad *src_pads;
+        GstPad *sink_pads;
+} Link;
+
+typedef struct _Chain {
+        GSList *elements;
+        GSList *links;
+} Chain;
 
 /**
  * create_element
@@ -1500,7 +1514,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         g_signal_connect (sometimes_element, "pad-added", G_CALLBACK (sometimes_pad_cb), pipeline);
                                 }
                                 g_free (p2);
-                        } else if (selected_element (configure, param, p1)) {
+                        } else if (is_selected_element (configure, param, p1)) {
                                 /* plugin name, create a element. */
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 g_free (p1);
