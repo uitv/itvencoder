@@ -1308,6 +1308,14 @@ typedef struct _Link {
         gchar *sink_pad_name;
 } Link;
 
+typedef struct _DelayedLink {
+        GstElement *sink;
+        gchar *src_pad_name;
+        gchar *sink_pad_name;
+        GstCaps *caps;
+        gulong signal_id;
+} DelayedLink;
+
 typedef struct _Chain {
         GSList *elements;
         GSList *links;
@@ -1403,61 +1411,26 @@ create_element (Configure *configure, gchar *param)
 }
 
 static void
-sometimes_pad_cb (GstElement *element, GstPad *pad, gpointer data)
+pad_added_cb (GstElement *element, GstPad *pad, gpointer data)
 {
-        gchar *source_pad_name, *sink_pad_name;
-        GstElement *source, *sink;
-        GstPad *source_pad, *sink_pad;
-        const GList *pads;
+        gchar *src_pad_name;
+        DelayedLink *delayedlink = (DelayedLink *)data;
 
-        source_pad_name = gst_pad_get_name (pad);
-        g_print ("new added pad name: %s\n", source_pad_name);
-        source = (GstElement *)gst_element_get_parent (element);
-        sink = gst_bin_get_by_name (GST_BIN (data), source_pad_name);
-        if (sink != NULL) {
-                source_pad = gst_element_get_pad (source, source_pad_name);
-                gst_ghost_pad_set_target ((GstGhostPad *)source_pad, pad);
-                pads = sink->pads;
-                while (pads) {
-                        sink_pad = GST_PAD (pads->data);
-                        sink_pad_name = gst_pad_get_name (sink_pad);
-                        if (gst_element_link_pads (source, source_pad_name, sink, sink_pad_name)) {
-                                g_free (sink_pad_name);
-                                break;
-                        }
-                        g_free (sink_pad_name);
-                        pads = g_list_next (pads);
-                }
+        src_pad_name = gst_pad_get_name (pad);
+        delayedlink->caps = gst_pad_get_caps (pad);
+        if (g_strcmp0 (src_pad_name, delayedlink->src_pad_name) != 0) {
+                g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, delayedlink->src_pad_name);
+                return;
         }
-        g_free (source_pad_name);
+        if (gst_element_link_pads_filtered (element, delayedlink->src_pad_name, delayedlink->sink, NULL, delayedlink->caps)) {
+                g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, delayedlink->src_pad_name);
+                g_signal_handler_disconnect (element, delayedlink->signal_id);
+        }
 }
 
 static void
-link_sometimes_pad (gchar *sometimes_pad, GstElement *sometimes_element, GstElement *element)
+free_delayed_link (Link *link)
 {
-        const GList *pads;
-        GstPad *pad, *ghost_pad;
-        GstElement *bin;
-        gchar *ghost_pad_name;
-
-        bin = (GstElement *)gst_element_get_parent (element);
-        pads = element->pads;
-        while (pads) { 
-                pad = GST_PAD (pads->data);
-                pads = g_list_next (pads);
-                if (gst_pad_get_direction (pad) == GST_PAD_SINK) {
-                        ghost_pad_name = gst_pad_get_name (pad);
-                        ghost_pad =  gst_ghost_pad_new (ghost_pad_name, pad);
-                        gst_element_add_pad (bin, ghost_pad);
-                        //p2 = g_strdup_printf ("%s.%s", sometimes_pad, ghost_pad_name);
-                        ghost_pad = gst_ghost_pad_new_no_target (sometimes_pad, GST_PAD_SRC);
-                        //g_print ("sometimes element name is %s\n", gst_element_get_name (sometimes_element));
-                        gst_element_add_pad ((GstElement *)gst_element_get_parent (sometimes_element), ghost_pad);
-                        g_free (ghost_pad_name);
-                        //g_free (p2);
-                }
-        }
-        gst_element_set_name (bin, sometimes_pad);
 }
 
 /**
@@ -1477,6 +1450,7 @@ create_pipeline (Configure *configure, gchar *param)
         gint i, n;
         Chain chain;
         Link *link;
+        DelayedLink *delayedlink;
         GSList *links, *elements;
 
         /* pipeline */
@@ -1531,14 +1505,16 @@ create_pipeline (Configure *configure, gchar *param)
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 element = create_element (configure, p);
                                 if (element != NULL) {
-                                        link = g_slice_new (Link);
-                                        link->src = src;
-                                        link->src_name = src_name;
-                                        link->src_pad_name = src_pad_name;
-                                        link->sink = element;
-                                        link->sink_name = NULL;
-                                        link->sink_pad_name = NULL;
-                                        chain.links = g_slist_append (chain.links, link);
+                                        if (src_name != NULL) {
+                                                link = g_slice_new (Link);
+                                                link->src = src;
+                                                link->src_name = src_name;
+                                                link->src_pad_name = src_pad_name;
+                                                link->sink = element;
+                                                link->sink_name = p1;
+                                                link->sink_pad_name = NULL;
+                                                chain.links = g_slist_append (chain.links, link);
+                                        }
                                         chain.elements = g_slist_append (chain.elements, element);
                                         src = element;
                                         src_name = p1;
@@ -1572,6 +1548,29 @@ create_pipeline (Configure *configure, gchar *param)
         /* links element */
         links = chain.links;
         while (links != NULL) {
+                link = links->data;
+                if (link->src_pad_name != NULL) {
+                        /* src pad is sometimes pad, delay link */
+                        g_print ("sometimes pad, delayedlink: %s\n", link->src_pad_name);
+                        delayedlink = g_slice_new (DelayedLink);
+                        /* find src */
+                        elements = chain.elements;
+                        while (elements != NULL) {
+                                element = elements->data;
+                                if (g_strcmp0(gst_element_get_name (element), link->src_name) == 0) {
+                                        break;
+                                }
+                                elements = g_slist_next (elements);
+                        }
+                        delayedlink->src_pad_name = g_strdup (link->src_pad_name);
+                        delayedlink->sink = link->sink;
+                        delayedlink->sink_pad_name = g_strdup (link->sink_pad_name);
+                        delayedlink->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), delayedlink, (GClosureNotify)free_delayed_link, (GConnectFlags) 0);
+                } else {
+                        /* link directly */
+                        g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
+                        gst_element_link (link->src, link->sink);
+                }
                 links = g_slist_next (links);
         }
 
