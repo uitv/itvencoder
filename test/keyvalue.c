@@ -288,6 +288,22 @@ configure_property_parse (gchar *name, gchar *data)
         return structure;
 }
 
+static gboolean
+is_valid_element_name (gchar *name)
+{
+        gchar *p;
+
+        p = name;
+        while (*p != '\0') {
+                if (!g_ascii_isalnum (*p)) {
+                        return FALSE;
+                }
+                p++;
+        }
+
+        return TRUE;
+}
+
 static GstStructure *
 configure_element_parse (gchar *name, gchar *data)
 {
@@ -300,6 +316,10 @@ configure_element_parse (gchar *name, gchar *data)
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
+        if (!is_valid_element_name (name)) {
+                g_print ("Invalid element configure %s\n", name);
+                return NULL;
+        }
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
@@ -348,11 +368,11 @@ configure_bin_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        g_print ("\n\n\n%s parse, number is %d\n", name, number);
+        //g_print ("\n\n\n%s parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
@@ -446,6 +466,9 @@ configure_pipeline_parse (gchar *name, gchar *data)
                 } else {
                         /* should be a element */
                         element = configure_element_parse (p[i], v);
+                        if (element == NULL) {
+                                return NULL;
+                        }
                         gst_structure_set (elements, p[i], GST_TYPE_STRUCTURE, element, NULL);
                         gst_structure_free (element);
                 }
@@ -479,6 +502,9 @@ configure_encoder_parse (gchar *name, gchar *data)
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
                 encoder = configure_pipeline_parse (p[i], v);
+                if (encoder == NULL) {
+                        return NULL;
+                }
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
                 gst_structure_free (encoder);
                 g_free (v);
@@ -512,6 +538,9 @@ configure_channel_parse (gchar *name, gchar *data)
                         g_value_unset (&value);
                 } else if (g_strcmp0 (p[i], "source") == 0) {
                         source = configure_pipeline_parse (p[i], v);
+                        if (source == NULL) {
+                                return NULL; //FIXME
+                        }
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, source, NULL);
                         gst_structure_free (source);
                 } else if (g_strcmp0 (p[i], "encoder") == 0) {
@@ -627,6 +656,9 @@ configure_file_parse (Configure *configure)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, "channel", p[i], &e);
                 channel = configure_channel_parse (p[i], v);
+                if (channel == NULL) {
+                        return 1;
+                }
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
                 g_free (v);
                 gst_structure_free (channel);
@@ -1621,7 +1653,10 @@ main (gint argc, gchar *argv[])
                 //break;
 
                 configure = configure_new ("configure_path", "configure.conf", NULL);
-                configure_load_from_file (configure);
+                if (configure_load_from_file (configure) != 0) {
+                        g_print ("exit ...\n");
+                        return 1;
+                }
 
                 var = configure_get_var (configure, "channel");
                 g_print ("channel\n%s", var);
