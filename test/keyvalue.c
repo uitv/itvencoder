@@ -288,8 +288,11 @@ configure_property_parse (gchar *name, gchar *data)
         return structure;
 }
 
+/*
+ * valid name should be alphanumeric.
+ */
 static gboolean
-is_valid_element_name (gchar *name)
+is_valid_name (gchar *name)
 {
         gchar *p;
 
@@ -316,8 +319,8 @@ configure_element_parse (gchar *name, gchar *data)
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
-        if (!is_valid_element_name (name)) {
-                g_print ("Invalid element configure %s\n", name);
+        if (!is_valid_name (name)) {
+                g_print ("Invalid element configure: %s\n", name);
                 return NULL;
         }
         gkeyfile = ini_data_parse (name, data);
@@ -366,12 +369,20 @@ configure_bin_parse (gchar *name, gchar *data)
         GstStructure *structure, *bin;
         GValue value = { 0, { { 0 } } };
 
+        if (!is_valid_name (name)) {
+                g_print ("Invalid bin configure: %s\n", name);
+                return NULL;
+        }
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
+                if (!is_valid_name (p[i])) {
+                        g_print ("Invalid bin iiiiiiiconfigure: %s\n", p[i]);
+                        return NULL;
+                }
                 //g_print ("%s : %s\n", p[i], v);
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
@@ -403,6 +414,9 @@ configure_bins_parse (gchar *name, gchar *data)
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
                 bin = configure_bin_parse (p[i], v);
+                if (bin == NULL) {
+                        return NULL;
+                }
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bin, NULL);
                 gst_structure_free (bin);
                 g_free (v);
@@ -437,6 +451,9 @@ configure_pipeline_parse (gchar *name, gchar *data)
                 if (g_strcmp0 (p[i], "bins") == 0) {
                         /* bin found */
                         bins = configure_bins_parse (p[i], v);
+                        if (bins == NULL) {
+                                return NULL;
+                        }
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, bins, NULL);
                         gst_structure_free (bins);
                 } else if (g_strcmp0 (p[i], "httpstreaming") == 0) {
@@ -545,6 +562,9 @@ configure_channel_parse (gchar *name, gchar *data)
                         gst_structure_free (source);
                 } else if (g_strcmp0 (p[i], "encoder") == 0) {
                         encoder = configure_encoder_parse (p[i], v);
+                        if (encoder == NULL) {
+                                return NULL;
+                        }
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
                         gst_structure_free (encoder);
                 }
