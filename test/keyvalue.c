@@ -1498,8 +1498,16 @@ pad_added_cb (GstElement *element, GstPad *pad, gpointer data)
 }
 
 static void
-free_delayed_link (Link *link)
+free_delayed_link (DelayedLink *link)
 {
+        if (link->caps) {
+                gst_caps_unref (link->caps);
+        }
+        g_free (link->src_pad_name);
+        if (link->sink_pad_name) {
+                g_free (link->sink_pad_name);
+        }
+        g_slice_free (DelayedLink, link);
 }
 
 /**
