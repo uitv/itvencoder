@@ -1418,6 +1418,7 @@ create_element (Configure *configure, gchar *param)
         } else {
                 name = NULL;
         }
+        g_free (p);
 
         /* extract element configure. */
         regex = g_regex_new (" .*", 0, 0, NULL);
@@ -1486,15 +1487,16 @@ pad_added_cb (GstElement *element, GstPad *pad, gpointer data)
         DelayedLink *delayedlink = (DelayedLink *)data;
 
         src_pad_name = gst_pad_get_name (pad);
-        delayedlink->caps = gst_pad_get_caps (pad);
         if (g_strcmp0 (src_pad_name, delayedlink->src_pad_name) != 0) {
                 g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, delayedlink->src_pad_name);
                 return;
         }
+        delayedlink->caps = gst_pad_get_caps (pad);
         if (gst_element_link_pads_filtered (element, delayedlink->src_pad_name, delayedlink->sink, NULL, delayedlink->caps)) {
                 g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, delayedlink->src_pad_name);
                 g_signal_handler_disconnect (element, delayedlink->signal_id);
         }
+        g_free (src_pad_name);
 }
 
 static void
@@ -1522,7 +1524,7 @@ create_pipeline (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *structure;
-        GstElement *pipeline, *element, *src;//, *sometimes_element;
+        GstElement *pipeline, *element, *src;
         gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
         Chain chain;
@@ -1665,6 +1667,8 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
 
         /* output running status */
         g_print ("buffer size %d, buffer duration %lld\n", GST_BUFFER_SIZE (buffer), GST_BUFFER_DURATION(buffer));
+
+        gst_buffer_unref (buffer);
 }
 
 gint
@@ -1739,14 +1743,17 @@ main (gint argc, gchar *argv[])
                         g_print ("Get encoder sink error\n");
                 }
                 gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
+                gst_object_unref (appsink);
                 gst_element_set_state (pipeline, GST_STATE_PLAYING);
+                sleep (5);
+                gst_element_set_state (pipeline, GST_STATE_NULL);
 
-                loop = g_main_loop_new (NULL, FALSE);
-                g_main_loop_run (loop);
+                //loop = g_main_loop_new (NULL, FALSE);
+                //g_main_loop_run (loop);
 
                 gst_object_unref (G_OBJECT (pipeline));
                 gst_object_unref (G_OBJECT (configure));
 
-                break;
+                //break;
         }
 }
