@@ -1403,6 +1403,15 @@ create_element (Configure *configure, gchar *param)
                         case G_TYPE_INT:
                                 g_object_set (element, name, atoi (p), NULL);
                                 break;
+                        case G_TYPE_BOOLEAN:
+                                if (g_strcmp0 (p, "FALSE") == 0) {
+                                        g_object_set (element, name, FALSE, NULL);
+                                } else if (g_strcmp0 (p, "TRUE") == 0) {
+                                        g_object_set (element, name, TRUE, NULL);
+                                } else {
+                                        g_print ("wrong configure %s\n", p); //FIXME
+                                }
+                                break;
                         }
                 }
         }
