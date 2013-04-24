@@ -1416,7 +1416,7 @@ create_element (Configure *configure, gchar *param)
                 name = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
                 g_regex_unref (regex);
         } else {
-                name = factory;
+                name = NULL;
         }
 
         /* extract element configure. */
