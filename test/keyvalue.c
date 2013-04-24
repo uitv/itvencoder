@@ -380,7 +380,7 @@ configure_bin_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 if (!is_valid_name (p[i])) {
-                        g_print ("Invalid bin iiiiiiiconfigure: %s\n", p[i]);
+                        g_print ("Invalid bin configure: %s\n", p[i]);
                         return NULL;
                 }
                 //g_print ("%s : %s\n", p[i], v);
@@ -663,6 +663,10 @@ configure_file_parse (Configure *configure)
                 g_value_init (&value, G_TYPE_STRING);
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
+                if (!is_valid_name (p[i])) {
+                        g_print ("Invalid server configure: %s\n", p[i]);
+                        return 1;
+                }
                 g_value_unset (&value);
                 g_free (v);
         }
@@ -675,6 +679,10 @@ configure_file_parse (Configure *configure)
         structure = gst_structure_empty_new ("channel");
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, "channel", p[i], &e);
+                if (!is_valid_name (p[i])) {
+                        g_print ("Invalid channel configure: %s\n", p[i]);
+                        return 1;
+                }
                 channel = configure_channel_parse (p[i], v);
                 if (channel == NULL) {
                         return 1;
