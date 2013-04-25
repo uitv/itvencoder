@@ -362,8 +362,9 @@ static GstStructure *
 configure_bin_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
+        GRegex *regex;
         GError *e = NULL;
-        gchar **p, *v;
+        gchar **p, *v1, *v2;
         gint i;
         gsize number;
         GstStructure *structure, *bin;
@@ -378,17 +379,22 @@ configure_bin_parse (gchar *name, gchar *data)
         //g_print ("\n\n\n%s parse, number is %d\n", name, number);
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 if (!is_valid_name (p[i])) {
                         g_print ("Invalid bin configure: %s\n", p[i]);
                         return NULL;
                 }
+                v1 = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
+                /* remove var tag */
+                regex = g_regex_new ("<[^>]*>([^<]*)</[^>]*>", 0, 0, NULL);
+                v2 = g_regex_replace (regex, v1, -1, 0, "\\1", 0, NULL);
                 g_value_init (&value, G_TYPE_STRING);
-                g_value_set_static_string (&value, v);
+                g_value_set_static_string (&value, v2);
                 gst_structure_set_value (structure, p[i], &value);
                 g_value_unset (&value);
-                g_free (v);
+                g_regex_unref (regex);
+                g_free (v1);
+                g_free (v2);
         }
         g_strfreev (p);
         g_key_file_free (gkeyfile);
@@ -710,6 +716,7 @@ configure_extract_lines (Configure *configure)
         gchar var_status;
         GstStructure *configure_mgmt;
         GRegex *regex;
+        GMatchInfo *match_info;
 
         p = g_strdup (configure->raw);
         p1 = p2 = p3 = p;
@@ -801,14 +808,24 @@ configure_extract_lines (Configure *configure)
                                 if ((var_status == '\0') || (var_status == 'v')) {
                                         var_status = '<';
                                         variable = g_malloc (sizeof (ConfigurableVar));
-                                        regex = g_regex_new ("<var[^>]*type *= *\\x22([^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
-                                        p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                        regex = g_regex_new ("^<var[^>]*type *= *\\x22(?<type>[^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
+                                        g_regex_match (regex, p3, 0, &match_info);
                                         g_regex_unref (regex);
-                                        variable->type = p5;
-                                        regex = g_regex_new ("<var[^>]*name *= *\\x22([^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
-                                        p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
+                                        if (!g_match_info_matches (match_info)) {
+                                                g_print ("parse var type error, line: %d\n", line_number);
+                                                return 1;
+                                        }
+                                        variable->type = g_match_info_fetch_named (match_info, "type");
+                                        g_match_info_free (match_info);
+                                        regex = g_regex_new ("^<var[^>]*name *= *\\x22(?<name>[^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
+                                        g_regex_match (regex, p3, 0, &match_info);
                                         g_regex_unref (regex);
-                                        variable->name = p5;
+                                        if (!g_match_info_matches (match_info)) {
+                                                g_print ("parse var name error, line: %d\n", line_number);
+                                                return 1;
+                                        }
+                                        variable->name = g_match_info_fetch_named (match_info, "name");
+                                        g_match_info_free (match_info);
                                         variable->group = g_strdup (group);
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
                                         /* variable value */
