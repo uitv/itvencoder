@@ -1549,7 +1549,7 @@ create_pipeline (Configure *configure, gchar *param)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 //bin = gst_bin_new (name);
-                p = g_strdup_printf ("%s/bins/%s/description", param, name);
+                p = g_strdup_printf ("%s/bins/%s/definition", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
                 //g_print ("%s: %s\n", name, g_value_get_string (value));
@@ -1716,7 +1716,7 @@ main (gint argc, gchar *argv[])
                 g_print ("textoverlay: %s\n", str);
                 g_free (str);
 
-                value = configure_get_param (configure, "/channel/test/source/bins/videosrc/description");
+                value = configure_get_param (configure, "/channel/test/source/bins/videosrc/definition");
                 g_print ("videosource: %s\n", g_value_get_string (value));
 
                 value = configure_get_param (configure, "/channel/mpegtsoverip/source/elements/textoverlay/option");
