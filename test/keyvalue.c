@@ -801,32 +801,15 @@ configure_extract_lines (Configure *configure)
                                 if ((var_status == '\0') || (var_status == 'v')) {
                                         var_status = '<';
                                         variable = g_malloc (sizeof (ConfigurableVar));
-                                        regex = g_regex_new ("<([^ >[]*).*", G_REGEX_DOTALL, 0, NULL);
+                                        regex = g_regex_new ("<var[^>]*type *= *\\x22([^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
                                         p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
-                                        if (g_strcmp0 (p5, "select") == 0) {
-                                                g_regex_unref (regex);
-                                                g_free (p5);
-                                                regex = g_regex_new ("<([^\\]]*]).*", G_REGEX_DOTALL, 0, NULL);
-                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
-                                        }
                                         g_regex_unref (regex);
                                         variable->type = p5;
-                                        regex = g_regex_new (" *([^ =]*).*", G_REGEX_DOTALL, 0, NULL);
-                                        p5 = g_regex_replace (regex, p1, -1, 0, "\\1", 0, NULL);
+                                        regex = g_regex_new ("<var[^>]*name *= *\\x22([^\\x22]*)\\x22.*", G_REGEX_DOTALL, 0, NULL);
+                                        p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
                                         g_regex_unref (regex);
                                         variable->name = p5;
                                         variable->group = g_strdup (group);
-                                        if (g_ascii_strncasecmp (variable->type, "select", 6) == 0) {
-                                                regex = g_regex_new ("<select\\[[^\\]]*] *([^>]*).*", G_REGEX_DOTALL, 0, NULL);
-                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
-                                                g_regex_unref (regex);
-                                                variable->description = p5;
-                                        } else {
-                                                regex = g_regex_new ("<[^ >]* *([^>]*).*", G_REGEX_DOTALL, 0, NULL);
-                                                p5 = g_regex_replace (regex, p3, -1, 0, "\\1", 0, NULL);
-                                                g_regex_unref (regex);
-                                                variable->description = p5;
-                                        }
                                 } else if ((var_status == '>') && (*(p3 + 1) == '/')) {
                                         /* variable value */
                                         var_status = '/';
@@ -910,7 +893,6 @@ configure_release_variables (GArray *variables)
                 g_free (conf_var->group);
                 g_free (conf_var->name);
                 g_free (conf_var->type);
-                g_free (conf_var->description);
                 g_free (conf_var->value);
                 g_array_remove_index (variables, i);
                 g_free (conf_var);
@@ -1151,25 +1133,7 @@ configure_get_var (Configure *configure, gchar *group)
 
                         var = add_indent (p1, indent - 1);
                         p1 = var;
-                        var = g_strdup_printf ("%s<var name=\"%s\" id=\"%d\" type=\"%s\">\n", p1, conf_var->name, conf_var->index, conf_var->type);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent);
-                        p1 = var;
-                        var = g_strdup_printf ("%s<description>%s</description>\n", p1, conf_var->description);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent);
-                        p1 = var;
-                        var = g_strdup_printf ("%s<value>%s</value>\n", p1, conf_var->value);
-                        g_free (p1);
-                        p1 = var;
-
-                        var = add_indent (p1, indent - 1);
-                        p1 = var;
-                        var = g_strdup_printf ("%s</var>\n", p1);
+                        var = g_strdup_printf ("%s<var name=\"%s\" id=\"%d\" type=\"%s\">%s</var>\n", p1, conf_var->name, conf_var->index, conf_var->type, conf_var->value);
                         g_free (p1);
                         p1 = var;
                 } 
@@ -1231,7 +1195,7 @@ text (GMarkupParseContext *context, const char *text, gsize length, gpointer dat
         index = var_array->len - 1;
         conf_var = g_array_index (var_array, gpointer, index);
         element = (gchar *)g_markup_parse_context_get_element (context);
-        if (g_strcmp0 (element, "value") == 0) {
+        if (g_strcmp0 (element, "var") == 0) {
                 conf_var->value = g_strdup (text);
         }
 }
@@ -1698,8 +1662,8 @@ main (gint argc, gchar *argv[])
                         return 1;
                 }
 
-                var = configure_get_var (configure, "channel");
-                g_print ("channel\n%s", var);
+                var = configure_get_var (configure, "");
+                g_print ("configure:\n%s", var);
                 configure_set_var (configure, var);
                 g_free (var);
                 configure_save_to_file (configure);

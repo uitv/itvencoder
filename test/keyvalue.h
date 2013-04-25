@@ -16,7 +16,6 @@ typedef struct _ConfigurableVar {
         gchar *group;
         gchar *name;
         gchar *type;
-        gchar *description;
         gchar *value;
 } ConfigurableVar;
 
