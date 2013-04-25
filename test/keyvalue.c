@@ -384,7 +384,7 @@ configure_bin_parse (gchar *name, gchar *data)
                         return NULL;
                 }
                 v1 = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                //g_print ("%s : %s\n", p[i], v);
+                //g_print ("%s : %s\n", p[i], v1);
                 /* remove var tag */
                 regex = g_regex_new ("<[^>]*>([^<]*)</[^>]*>", 0, 0, NULL);
                 v2 = g_regex_replace (regex, v1, -1, 0, "\\1", 0, NULL);
@@ -1320,29 +1320,6 @@ configure_get_param (Configure *configure, gchar *param)
 
 /*************************************/
 
-/*
- * element is optional and be selected, or it's not optional.
- */
-static gboolean
-is_selected_element (Configure *configure, gchar *param, gchar *element)
-{
-        GValue *value;
-        gchar *p;
-
-        p = g_strdup_printf ("%s/elements/%s/option", param, element);
-        value = configure_get_param (configure, p);
-        g_free (p);
-        if (value == NULL) {
-                return TRUE;
-        }
-        p = (gchar *)g_value_get_string (value);
-        if (g_strcmp0(p, "yes") == 0) {
-                return TRUE;
-        } else {
-                return FALSE;
-        }
-}
-
 typedef struct _Link {
         GstElement *src;
         GstElement *sink;
@@ -1496,6 +1473,29 @@ free_delayed_link (DelayedLink *link)
         g_slice_free (DelayedLink, link);
 }
 
+/*
+ * element is optional and be selected, or it's not optional.
+ */
+static gboolean
+is_selected (Configure *configure, gchar *param, gchar *element, gchar *type)
+{
+        GValue *value;
+        gchar *p;
+
+        p = g_strdup_printf ("%s/%ss/%s/option", param, type, element);
+        value = configure_get_param (configure, p);
+        g_free (p);
+        if (value == NULL) {
+                return TRUE;
+        }
+        p = (gchar *)g_value_get_string (value);
+        if (g_strcmp0(p, "yes") == 0) {
+                return TRUE;
+        } else {
+                return FALSE;
+        }
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -1533,6 +1533,10 @@ create_pipeline (Configure *configure, gchar *param)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 //bin = gst_bin_new (name);
+                if (!is_selected (configure, param, name, "bin")) {
+                        g_print ("skip bin %s\n", name);
+                        continue;
+                }
                 p = g_strdup_printf ("%s/bins/%s/definition", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
@@ -1563,7 +1567,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
                                         chain.links = g_slist_append (chain.links, link);
                                 }
-                        } else if (is_selected_element (configure, param, p1)) {
+                        } else if (is_selected (configure, param, p1, "element")) {
                                 /* plugin name, create a element. */
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 element = create_element (configure, p);
