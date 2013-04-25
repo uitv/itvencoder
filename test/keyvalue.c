@@ -1320,6 +1320,9 @@ configure_get_param (Configure *configure, gchar *param)
 
 /*************************************/
 
+/*
+ * element is optional and be selected, or it's not optional.
+ */
 static gboolean
 is_selected_element (Configure *configure, gchar *param, gchar *element)
 {
