@@ -1520,6 +1520,7 @@ create_pipeline (Configure *configure, gchar *param)
         value = configure_get_param (configure, param);
         structure = (GstStructure *)gst_value_get_structure (value);
         name = (gchar *)gst_structure_get_name (structure);
+        pipeline = gst_pipeline_new (name);
         //g_print ("name: %s\n", name);
 
         /* bin */
@@ -1602,7 +1603,6 @@ create_pipeline (Configure *configure, gchar *param)
                 g_strfreev (pp1);
         }
 
-        pipeline = gst_pipeline_new (name);
 
         /* add element to pipeline */
         elements = chain.elements;
@@ -1728,12 +1728,34 @@ main (gint argc, gchar *argv[])
                 }
                 appsink = gst_bin_get_by_name (GST_BIN (pipeline), "video");
                 if (appsink == NULL) {
-                        g_print ("Get encoder sink error\n");
+                        g_print ("Get video sink error\n");
+                } else {
+                        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
+                        gst_object_unref (appsink);
                 }
-                gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
-                gst_object_unref (appsink);
+                appsink = gst_bin_get_by_name (GST_BIN (pipeline), "audio1");
+                if (appsink == NULL) {
+                        g_print ("Get audio1 sink error\n");
+                } else {
+                        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
+                        gst_object_unref (appsink);
+                }
+                appsink = gst_bin_get_by_name (GST_BIN (pipeline), "audio2");
+                if (appsink == NULL) {
+                        g_print ("Get audio2 sink error\n");
+                } else {
+                        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
+                        gst_object_unref (appsink);
+                }
+                appsink = gst_bin_get_by_name (GST_BIN (pipeline), "subtitle1");
+                if (appsink == NULL) {
+                        g_print ("Get subtitle sink error\n");
+                } else {
+                        gst_app_sink_set_callbacks (GST_APP_SINK (appsink), &appsink_callbacks, NULL, NULL);
+                        gst_object_unref (appsink);
+                }
                 gst_element_set_state (pipeline, GST_STATE_PLAYING);
-                sleep (5);
+                sleep (50);
                 gst_element_set_state (pipeline, GST_STATE_NULL);
 
                 //loop = g_main_loop_new (NULL, FALSE);
