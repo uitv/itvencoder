@@ -1452,7 +1452,7 @@ pad_added_cb (GstElement *element, GstPad *pad, gpointer data)
                 g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, delayedlink->src_pad_name);
                 return;
         }
-        delayedlink->caps = gst_pad_get_caps (pad);
+        delayedlink->caps = gst_pad_get_caps (pad); // FIXME newly allocated caps
         if (gst_element_link_pads_filtered (element, delayedlink->src_pad_name, delayedlink->sink, NULL, delayedlink->caps)) {
                 g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, delayedlink->src_pad_name);
                 g_signal_handler_disconnect (element, delayedlink->signal_id);
