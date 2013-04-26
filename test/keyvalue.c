@@ -1342,18 +1342,53 @@ typedef struct _Chain {
         GSList *links;
 } Chain;
 
+static gchar**
+get_property_names (gchar *param)
+{
+        gchar *p1, *p2, **pp, **pp1;
+        GRegex *regex;
+
+        regex = g_regex_new ("[^ ]* *(.*)", 0, 0, NULL);
+        p1 = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+        //g_print ("param: %s, property: %s\n", param, p1);
+        g_regex_unref (regex);
+        regex = g_regex_new ("( *= *)", 0, 0, NULL);
+        p2 = g_regex_replace (regex, p1, -1, 0, "=", 0, NULL);
+        g_free (p1);
+        g_regex_unref (regex);
+        //g_print ("param: %s, property: %s\n", param, p2);
+        pp = g_strsplit_set (p2, " ", 0);
+        g_free (p2);
+
+        pp1 = pp;
+        while (*pp1 != NULL) {
+                g_print ("pp: %s\n", *pp1);
+                if (g_strrstr (*pp1, "=") == NULL) {
+                        g_print ("Configure error: %s\n", *pp1);
+                        g_strfreev (pp);
+                        return NULL;
+                }
+                regex = g_regex_new ("([^=]*)=.*", 0, 0, NULL);
+                p1 = g_regex_replace (regex, *pp1, -1, 0, "\\1", 0, NULL);
+                g_free (*pp1);
+                g_regex_unref (regex);
+                *pp1 = p1;
+                g_print ("pp: %s\n", *pp1);
+                pp1++;
+        }
+
+        return pp;
+}
+
 /*
  * return new allocated property value or NULL.
  */
 static gchar*
-has_property (gchar *param, gchar *property)
+get_property_value (gchar *param, gchar *property)
 {
-        gchar *p, *r, *v;
+        gchar *r, *v;
         GRegex *regex;
 
-        regex = g_regex_new ("([^ ]*).*", 0, 0, NULL);
-        p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        g_regex_unref (regex);
         r = g_strdup_printf (".* *%s *= *([^ ]*).*", property);
         regex = g_regex_new (r, 0, 0, NULL);
         v = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
@@ -1365,6 +1400,40 @@ has_property (gchar *param, gchar *property)
         }
 
         return v;
+}
+
+static gboolean
+set_element_property (GstElement *element, gchar* name, gchar* value)
+{
+        GParamSpec *param_spec;
+
+        param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
+        if (param_spec == NULL) {
+                g_print ("Can't find property name: %s\n", name);
+                return FALSE;
+        }
+
+        switch (param_spec->value_type) {
+        case G_TYPE_STRING:
+                //g_print ("set property, name: %s, p: %s\n", name, p);
+                g_object_set (element, name, value, NULL);
+                break;
+        case G_TYPE_INT:
+                g_object_set (element, name, atoi (value), NULL);
+                break;
+        case G_TYPE_BOOLEAN:
+                if (g_strcmp0 (value, "FALSE") == 0) {
+                        g_object_set (element, name, FALSE, NULL);
+                } else if (g_strcmp0 (value, "TRUE") == 0) {
+                        g_object_set (element, name, TRUE, NULL);
+                } else {
+                        g_print ("wrong configure %s\n", value);
+                        return FALSE;
+                }
+                break;
+        }
+
+        return TRUE;
 }
 
 /**
@@ -1382,9 +1451,8 @@ create_element (Configure *configure, gchar *param)
         GstElement *element;
         GValue *value;
         gint n, i;
-        gchar *factory, *name, *p;
+        gchar *factory, *name, *p, **pp, **pp1;
         GstStructure *structure, *property;
-        GParamSpec *param_spec;
         GRegex *regex;
 
         /* extract factory */
@@ -1394,20 +1462,17 @@ create_element (Configure *configure, gchar *param)
         regex = g_regex_new (".*/(.*)", 0, 0, NULL);
         factory = g_regex_replace (regex, p, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
+        g_free (p);
+        element = gst_element_factory_make (factory, NULL);
 
-        name = has_property (param, "name");
         /* extract element configure. */
         regex = g_regex_new (" .*", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "", 0, NULL);
         g_regex_unref (regex);
         //g_print ("create element, param: %s, fatory: %s name: %s conf path: %s\n", param, factory, name, p);
         value = (GValue *)configure_get_param (configure, p);
-        element = gst_element_factory_make (factory, name);
         g_free (p);
         g_free (factory);
-        if (name != NULL) {
-                g_free (name);
-        }
         if (value == NULL) {
                 /* no property configured. */
                 return element;
@@ -1426,32 +1491,38 @@ create_element (Configure *configure, gchar *param)
                 n = gst_structure_n_fields (property);
                 for (i = 0; i < n; i++) {
                         name = (gchar *)gst_structure_nth_field_name (property, i);
-                        param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
-                        if (param_spec == NULL) {
-                                g_print ("Can't find property name: %s\n", name);
-                                return NULL;
-                        }
                         p = (gchar *)gst_structure_get_string (property, name);
-                        switch (param_spec->value_type) {
-                        case G_TYPE_STRING:
-                                //g_print ("set property, name: %s, p: %s\n", name, p);
-                                g_object_set (element, name, p, NULL);
-                                break;
-                        case G_TYPE_INT:
-                                g_object_set (element, name, atoi (p), NULL);
-                                break;
-                        case G_TYPE_BOOLEAN:
-                                if (g_strcmp0 (p, "FALSE") == 0) {
-                                        g_object_set (element, name, FALSE, NULL);
-                                } else if (g_strcmp0 (p, "TRUE") == 0) {
-                                        g_object_set (element, name, TRUE, NULL);
-                                } else {
-                                        g_print ("wrong configure %s\n", p); //FIXME
-                                }
-                                break;
+                        if (!set_element_property (element, name, p)) {
+                                g_print ("Set property error %s=%s\n", name, p);
+                                return NULL;
                         }
                 }
         }
+
+        /* set element propertys configured in bin definition. */
+        pp = get_property_names (param);
+        if (pp == NULL) {
+                gst_object_unref (element);
+                g_strfreev (pp);
+                return NULL;
+        }
+        pp1 = pp;
+        while (*pp1 != NULL) {
+                p = get_property_value (param, *pp1);
+                if (p == NULL) {
+                        g_print ("Configure error: %s=%s", *pp1, p);
+                        gst_object_unref (element);
+                        g_strfreev (pp);
+                        return NULL;
+                }
+                if (!set_element_property (element, *pp1, p)) {
+                        g_print ("Set property error: %s=%s", *pp1, p);
+                        return NULL;
+                }
+                g_free (p);
+                pp1++;
+        }
+        g_strfreev (pp);
 
         return element;
 }
