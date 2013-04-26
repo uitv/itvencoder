@@ -1405,7 +1405,7 @@ create_element (Configure *configure, gchar *param)
         element = gst_element_factory_make (factory, name);
         g_free (p);
         g_free (factory);
-        if (name != factory) {
+        if (name != NULL) {
                 g_free (name);
         }
         if (value == NULL) {
@@ -1413,7 +1413,7 @@ create_element (Configure *configure, gchar *param)
                 return element;
         }
 
-        /* set propertys if have configured any */
+        /* set propertys in element property configure. */
         structure = (GstStructure *)gst_value_get_structure (value);
         if (gst_structure_has_field (structure, "property")) {
                 value = (GValue *)gst_structure_get_value (structure, "property");
@@ -1431,11 +1431,7 @@ create_element (Configure *configure, gchar *param)
                                 g_print ("Can't find property name: %s\n", name);
                                 return NULL;
                         }
-                        /* if there r name property in bin definition, use it. */
-                        p = has_property (param, name);
-                        if (p == NULL) {
-                                p = g_strdup ((gchar *)gst_structure_get_string (property, name));
-                        }
+                        p = (gchar *)gst_structure_get_string (property, name);
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
                                 //g_print ("set property, name: %s, p: %s\n", name, p);
@@ -1454,7 +1450,6 @@ create_element (Configure *configure, gchar *param)
                                 }
                                 break;
                         }
-                        g_free (p);
                 }
         }
 
