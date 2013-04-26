@@ -1342,6 +1342,31 @@ typedef struct _Chain {
         GSList *links;
 } Chain;
 
+/*
+ * return new allocated property value or NULL.
+ */
+static gchar*
+has_property (gchar *param, gchar *property)
+{
+        gchar *p, *r, *v;
+        GRegex *regex;
+
+        regex = g_regex_new ("([^ ]*).*", 0, 0, NULL);
+        p = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        r = g_strdup_printf (".* *%s *= *([^ ]*).*", property);
+        regex = g_regex_new (r, 0, 0, NULL);
+        v = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        g_free (r);
+        if (g_strcmp0 (param, v) == 0) {
+                g_free (v);
+                v = NULL;
+        }
+
+        return v;
+}
+
 /**
  * create_element
  * @configure: configure object.
@@ -1370,17 +1395,7 @@ create_element (Configure *configure, gchar *param)
         factory = g_regex_replace (regex, p, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
 
-        /* extract property if have FIXME: now only name property. */
-        if (g_strcmp0 (p, param) != 0) {
-                /* (name=xxx) found */
-                regex = g_regex_new (".* name *= *([^ ]*)", 0, 0, NULL);
-                name = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-                g_regex_unref (regex);
-        } else {
-                name = NULL;
-        }
-        g_free (p);
-
+        name = has_property (param, "name");
         /* extract element configure. */
         regex = g_regex_new (" .*", 0, 0, NULL);
         p = g_regex_replace (regex, param, -1, 0, "", 0, NULL);
@@ -1416,7 +1431,11 @@ create_element (Configure *configure, gchar *param)
                                 g_print ("Can't find property name: %s\n", name);
                                 return NULL;
                         }
-                        p = (gchar *)gst_structure_get_string (property, name);
+                        /* if there r name property in bin definition, use it. */
+                        p = has_property (param, name);
+                        if (p == NULL) {
+                                p = g_strdup ((gchar *)gst_structure_get_string (property, name));
+                        }
                         switch (param_spec->value_type) {
                         case G_TYPE_STRING:
                                 //g_print ("set property, name: %s, p: %s\n", name, p);
@@ -1435,6 +1454,7 @@ create_element (Configure *configure, gchar *param)
                                 }
                                 break;
                         }
+                        g_free (p);
                 }
         }
 
@@ -1755,7 +1775,7 @@ main (gint argc, gchar *argv[])
                         gst_object_unref (appsink);
                 }
                 gst_element_set_state (pipeline, GST_STATE_PLAYING);
-                sleep (50);
+                sleep (5);
                 gst_element_set_state (pipeline, GST_STATE_NULL);
 
                 //loop = g_main_loop_new (NULL, FALSE);
