@@ -1697,7 +1697,6 @@ create_pipeline (Configure *configure, gchar *param)
                 g_strfreev (pp1);
         }
 
-
         /* add element to pipeline */
         elements = bin.elements;
         while (elements != NULL) {
