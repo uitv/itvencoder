@@ -1628,6 +1628,19 @@ pickup_element (Graph *graph, gchar *name)
         return NULL;
 }
 
+static GstFlowReturn
+source_appsink_callback (GstAppSink *elt, gpointer user_data)
+{
+        GstBuffer *buffer;
+
+        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+
+        /* output running status */
+        g_print ("buffer size %d, buffer duration %lld\n", GST_BUFFER_SIZE (buffer), GST_BUFFER_DURATION(buffer));
+
+        gst_buffer_unref (buffer);
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -1648,6 +1661,12 @@ create_pipeline (Configure *configure, gchar *param)
         DelayedLink *delayedlink;
         GSList *bins, *links, *elements;
         Graph graph;
+        GstAppSinkCallbacks appsink_callbacks = {
+                NULL,
+                NULL,
+                source_appsink_callback,
+                NULL
+        };
 
         /* pipeline */
         value = configure_get_param (configure, param);
@@ -1737,6 +1756,7 @@ create_pipeline (Configure *configure, gchar *param)
                         }
                         pp++;
                 }
+                bin->last = element;
                 graph.bins = g_slist_append (graph.bins, bin);
                 g_strfreev (pp1);
         }
@@ -1766,7 +1786,10 @@ create_pipeline (Configure *configure, gchar *param)
                         /* delayed sometimes pad link. */
                         element = pickup_element (&graph, bin->previous->src_name);
                         bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
+                        element = bin->last;
+                        gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, NULL, NULL);
                 }
+
                 bins = bins->next;
         }
 
@@ -1774,19 +1797,6 @@ create_pipeline (Configure *configure, gchar *param)
 }
 
 /***************************************/
-
-static GstFlowReturn
-source_appsink_callback (GstAppSink *elt, gpointer user_data)
-{
-        GstBuffer *buffer;
-
-        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-
-        /* output running status */
-        g_print ("buffer size %d, buffer duration %lld\n", GST_BUFFER_SIZE (buffer), GST_BUFFER_DURATION(buffer));
-
-        gst_buffer_unref (buffer);
-}
 
 gint
 main (gint argc, gchar *argv[])
