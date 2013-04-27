@@ -1752,12 +1752,11 @@ get_pipeline_graph (Configure *configure, gchar *param)
  * Returns: the cteated pipeline or NULL.
  */
 GstElement *
-create_pipeline (Configure *configure, gchar *param, Graph *graph)
+create_pipeline (Graph *graph)
 {
         GValue *value;
         GstStructure *structure;
         GstElement *pipeline, *element;
-        gchar *name;
         Bin *bin;
         Link *link;
         GSList *bins, *links, *elements;
@@ -1768,12 +1767,7 @@ create_pipeline (Configure *configure, gchar *param, Graph *graph)
                 NULL
         };
 
-        /* pipeline */
-        value = configure_get_param (configure, param);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        name = (gchar *)gst_structure_get_name (structure);
-        pipeline = gst_pipeline_new (name);
-        //g_print ("name: %s\n", name);
+        pipeline = gst_pipeline_new (NULL);
 
         bins = graph->bins;
         while (bins != NULL) {
@@ -1870,7 +1864,7 @@ main (gint argc, gchar *argv[])
                 gst_object_unref (GST_OBJECT (element));
 
                 graph = get_pipeline_graph (configure, "/channel/mpegtsoverip/source");
-                pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source", graph);
+                pipeline = create_pipeline (graph);
                 if (pipeline == NULL) {
                         return 1;
                 }
