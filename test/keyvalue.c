@@ -1346,9 +1346,9 @@ typedef struct _Bin {
         Link *back;
 } Bin;
 
-typedef struct _Pipeline {
+typedef struct _Graph {
         GSList *bins;
-} Pipeline;
+} Graph;
 
 static gchar**
 get_property_names (gchar *param)
