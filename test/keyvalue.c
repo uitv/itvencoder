@@ -1634,38 +1634,27 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
 }
 
 /**
- * create_pipeline
+ * get_pipeline_graph
  * @configure: Configure object.
  * @param: like this: /server/httpstreaming
  *
- * Returns: the cteated pipeline or NULL.
+ * Returns: the pipeline graph.
  */
-GstElement *
-create_pipeline (Configure *configure, gchar *param)
+Graph *
+get_pipeline_graph (Configure *configure, gchar *param)
 {
         GValue *value;
         GstStructure *structure;
-        GstElement *pipeline, *element, *src;
+        GstElement *element, *src;
         gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
         Bin *bin;
         Link *link;
         GSList *bins, *links, *elements;
-        Graph graph;
-        GstAppSinkCallbacks appsink_callbacks = {
-                NULL,
-                NULL,
-                source_appsink_callback,
-                NULL
-        };
+        Graph *graph;
 
-        /* pipeline */
-        value = configure_get_param (configure, param);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        name = (gchar *)gst_structure_get_name (structure);
-        pipeline = gst_pipeline_new (name);
-        //g_print ("name: %s\n", name);
-
+        graph = g_slice_new (Graph);
+        graph->bins = NULL;
         /* bin */
         p = g_strdup_printf ("%s/bins", param);
         value = configure_get_param (configure, p);
@@ -1748,11 +1737,45 @@ create_pipeline (Configure *configure, gchar *param)
                         pp++;
                 }
                 bin->last = element;
-                graph.bins = g_slist_append (graph.bins, bin);
+                graph->bins = g_slist_append (graph->bins, bin);
                 g_strfreev (pp1);
         }
 
-        bins = graph.bins;
+        return graph;
+}
+
+/**
+ * create_pipeline
+ * @configure: Configure object.
+ * @param: like this: /server/httpstreaming
+ *
+ * Returns: the cteated pipeline or NULL.
+ */
+GstElement *
+create_pipeline (Configure *configure, gchar *param, Graph *graph)
+{
+        GValue *value;
+        GstStructure *structure;
+        GstElement *pipeline, *element;
+        gchar *name;
+        Bin *bin;
+        Link *link;
+        GSList *bins, *links, *elements;
+        GstAppSinkCallbacks appsink_callbacks = {
+                NULL,
+                NULL,
+                source_appsink_callback,
+                NULL
+        };
+
+        /* pipeline */
+        value = configure_get_param (configure, param);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        name = (gchar *)gst_structure_get_name (structure);
+        pipeline = gst_pipeline_new (name);
+        //g_print ("name: %s\n", name);
+
+        bins = graph->bins;
         while (bins != NULL) {
                 bin = bins->data;
 
@@ -1775,7 +1798,7 @@ create_pipeline (Configure *configure, gchar *param)
                         }
                 } else {
                         /* delayed sometimes pad link. */
-                        element = pickup_element (&graph, bin->previous->src_name);
+                        element = pickup_element (graph, bin->previous->src_name);
                         bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
                         element = bin->last;
                         gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, NULL, NULL);
@@ -1798,6 +1821,7 @@ main (gint argc, gchar *argv[])
         gchar *var, *str;
         GstElement *element, *pipeline, *appsink;
         GMainLoop *loop;
+        Graph *graph;
 
         gst_init (&argc, &argv);
 
@@ -1845,8 +1869,8 @@ main (gint argc, gchar *argv[])
                 element = create_element (configure, "/channel/test/source/elements/textoverlay");
                 gst_object_unref (GST_OBJECT (element));
 
-                //pipeline = create_pipeline (configure, "/channel/test/source");
-                pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source");
+                graph = get_pipeline_graph (configure, "/channel/mpegtsoverip/source");
+                pipeline = create_pipeline (configure, "/channel/mpegtsoverip/source", graph);
                 if (pipeline == NULL) {
                         return 1;
                 }
