@@ -1337,10 +1337,18 @@ typedef struct _DelayedLink {
         gulong signal_id;
 } DelayedLink;
 
-typedef struct _Chain {
+typedef struct _Bin {
         GSList *elements;
+        GstElement *first;
+        GstElement *last;
         GSList *links;
-} Chain;
+        Link *front;
+        Link *back;
+} Bin;
+
+typedef struct _Pipeline {
+        GSList *bins;
+} Pipeline;
 
 static gchar**
 get_property_names (gchar *param)
@@ -1597,7 +1605,7 @@ create_pipeline (Configure *configure, gchar *param)
         GstElement *pipeline, *element, *src;
         gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
-        Chain chain;
+        Bin bin;
         Link *link;
         DelayedLink *delayedlink;
         GSList *links, *elements;
@@ -1610,8 +1618,8 @@ create_pipeline (Configure *configure, gchar *param)
         //g_print ("name: %s\n", name);
 
         /* bin */
-        chain.links = NULL;
-        chain.elements = NULL;
+        bin.links = NULL;
+        bin.elements = NULL;
         p = g_strdup_printf ("%s/bins", param);
         value = configure_get_param (configure, p);
         g_free (p);
@@ -1652,7 +1660,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         link->sink = NULL;
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                         link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
-                                        chain.links = g_slist_append (chain.links, link);
+                                        bin.links = g_slist_append (bin.links, link);
                                 }
                         } else if (is_selected (configure, param, p1, "element")) {
                                 /* plugin name, create a element. */
@@ -1667,9 +1675,9 @@ create_pipeline (Configure *configure, gchar *param)
                                                 link->sink = element;
                                                 link->sink_name = p1;
                                                 link->sink_pad_name = NULL;
-                                                chain.links = g_slist_append (chain.links, link);
+                                                bin.links = g_slist_append (bin.links, link);
                                         }
-                                        chain.elements = g_slist_append (chain.elements, element);
+                                        bin.elements = g_slist_append (bin.elements, element);
                                         src = element;
                                         src_name = p1;
                                         g_print ("element_name: %s\n", src_name);
@@ -1691,7 +1699,7 @@ create_pipeline (Configure *configure, gchar *param)
 
 
         /* add element to pipeline */
-        elements = chain.elements;
+        elements = bin.elements;
         while (elements != NULL) {
                 element = elements->data;
                 gst_bin_add (GST_BIN (pipeline), element);
@@ -1699,7 +1707,7 @@ create_pipeline (Configure *configure, gchar *param)
         }
         
         /* links element */
-        links = chain.links;
+        links = bin.links;
         while (links != NULL) {
                 link = links->data;
                 if (link->src_pad_name != NULL) {
@@ -1707,7 +1715,7 @@ create_pipeline (Configure *configure, gchar *param)
                         g_print ("sometimes pad, delayedlink: %s\n", link->src_pad_name);
                         delayedlink = g_slice_new (DelayedLink);
                         /* find src */
-                        elements = chain.elements;
+                        elements = bin.elements;
                         while (elements != NULL) {
                                 element = elements->data;
                                 if (g_strcmp0(gst_element_get_name (element), link->src_name) == 0) {
