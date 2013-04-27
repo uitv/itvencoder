@@ -1342,8 +1342,9 @@ typedef struct _Bin {
         GstElement *first;
         GstElement *last;
         GSList *links;
-        Link *front;
-        Link *back;
+        Link *previous;
+        Link *next;
+        gulong signal_id;
 } Bin;
 
 typedef struct _Graph {
@@ -1536,35 +1537,48 @@ create_element (Configure *configure, gchar *param)
 }
 
 static void
-pad_added_cb (GstElement *element, GstPad *pad, gpointer data)
+pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
 {
         gchar *src_pad_name;
-        DelayedLink *delayedlink = (DelayedLink *)data;
+        Bin *bin = data;
+        GstCaps *caps;
+        GSList *elements, *links;
+        GstElement *element, *pipeline;
+        Link *link;
 
         src_pad_name = gst_pad_get_name (pad);
-        if (g_strcmp0 (src_pad_name, delayedlink->src_pad_name) != 0) {
-                g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, delayedlink->src_pad_name);
+        if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
+                g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
-        delayedlink->caps = gst_pad_get_caps (pad); // FIXME newly allocated caps
-        if (gst_element_link_pads_filtered (element, delayedlink->src_pad_name, delayedlink->sink, NULL, delayedlink->caps)) {
-                g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, delayedlink->src_pad_name);
-                g_signal_handler_disconnect (element, delayedlink->signal_id);
+
+        pipeline = (GstElement *)gst_element_get_parent (src);
+        elements = bin->elements;
+        while (elements != NULL) {
+                element = elements->data;
+                gst_element_set_state (element, GST_STATE_PLAYING);
+                gst_bin_add (GST_BIN (pipeline), element);
+                elements = elements->next;
+        }
+        links = bin->links;
+        while (links != NULL) {
+                link = links->data;
+                g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
+                gst_element_link (link->src, link->sink);
+                links = links->next;
+        }
+
+        caps = gst_pad_get_caps (pad);
+        if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
+                g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, bin->previous->src_pad_name);
+                g_signal_handler_disconnect (src, bin->signal_id);
         }
         g_free (src_pad_name);
 }
 
 static void
-free_delayed_link (DelayedLink *link)
+free_bin (Bin *bin)
 {
-        if (link->caps) {
-                gst_caps_unref (link->caps);
-        }
-        g_free (link->src_pad_name);
-        if (link->sink_pad_name) {
-                g_free (link->sink_pad_name);
-        }
-        g_slice_free (DelayedLink, link);
 }
 
 /*
@@ -1590,6 +1604,30 @@ is_selected (Configure *configure, gchar *param, gchar *element, gchar *type)
         }
 }
 
+static GstElement*
+pickup_element (Graph *graph, gchar *name)
+{
+        GSList *elements, *bins;
+        Bin *bin;
+        GstElement *element;
+
+        bins = graph->bins;
+        while (bins != NULL) {
+                bin = bins->data;
+                elements = bin->elements;
+                while (elements != NULL) {
+                        element = elements->data;
+                        if (g_strcmp0 (gst_element_get_name (element), name) == 0) {
+                                return element;
+                        }
+                        elements = elements->next;
+                }
+                bins = bins->next;
+        }
+
+        return NULL;
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -1605,10 +1643,11 @@ create_pipeline (Configure *configure, gchar *param)
         GstElement *pipeline, *element, *src;
         gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
-        Bin bin;
+        Bin *bin;
         Link *link;
         DelayedLink *delayedlink;
-        GSList *links, *elements;
+        GSList *bins, *links, *elements;
+        Graph graph;
 
         /* pipeline */
         value = configure_get_param (configure, param);
@@ -1618,8 +1657,6 @@ create_pipeline (Configure *configure, gchar *param)
         //g_print ("name: %s\n", name);
 
         /* bin */
-        bin.links = NULL;
-        bin.elements = NULL;
         p = g_strdup_printf ("%s/bins", param);
         value = configure_get_param (configure, p);
         g_free (p);
@@ -1627,11 +1664,13 @@ create_pipeline (Configure *configure, gchar *param)
         n = gst_structure_n_fields (structure);
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
-                //bin = gst_bin_new (name);
                 if (!is_selected (configure, param, name, "bin")) {
                         g_print ("skip bin %s\n", name);
                         continue;
                 }
+                bin = g_slice_new (Bin);
+                bin->links = NULL;
+                bin->elements = NULL;
                 p = g_strdup_printf ("%s/bins/%s/definition", param, name);
                 value = configure_get_param (configure, p);
                 g_free (p);
@@ -1660,7 +1699,7 @@ create_pipeline (Configure *configure, gchar *param)
                                         link->sink = NULL;
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                         link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
-                                        bin.links = g_slist_append (bin.links, link);
+                                        bin->links = g_slist_append (bin->links, link);
                                 }
                         } else if (is_selected (configure, param, p1, "element")) {
                                 /* plugin name, create a element. */
@@ -1675,9 +1714,13 @@ create_pipeline (Configure *configure, gchar *param)
                                                 link->sink = element;
                                                 link->sink_name = p1;
                                                 link->sink_pad_name = NULL;
-                                                bin.links = g_slist_append (bin.links, link);
+                                                if (src_pad_name == NULL) {
+                                                        bin->links = g_slist_append (bin->links, link);
+                                                } else {
+                                                        bin->previous = link;
+                                                }
                                         }
-                                        bin.elements = g_slist_append (bin.elements, element);
+                                        bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
                                         src_name = p1;
                                         g_print ("element_name: %s\n", src_name);
@@ -1694,44 +1737,37 @@ create_pipeline (Configure *configure, gchar *param)
                         }
                         pp++;
                 }
+                graph.bins = g_slist_append (graph.bins, bin);
                 g_strfreev (pp1);
         }
 
-        /* add element to pipeline */
-        elements = bin.elements;
-        while (elements != NULL) {
-                element = elements->data;
-                gst_bin_add (GST_BIN (pipeline), element);
-                elements = g_slist_next (elements);
-        }
-        
-        /* links element */
-        links = bin.links;
-        while (links != NULL) {
-                link = links->data;
-                if (link->src_pad_name != NULL) {
-                        /* src pad is sometimes pad, delay link */
-                        g_print ("sometimes pad, delayedlink: %s\n", link->src_pad_name);
-                        delayedlink = g_slice_new (DelayedLink);
-                        /* find src */
-                        elements = bin.elements;
+        bins = graph.bins;
+        while (bins != NULL) {
+                bin = bins->data;
+
+                if (bin->previous == NULL) {
+                        /* add element to pipeline */
+                        elements = bin->elements;
                         while (elements != NULL) {
                                 element = elements->data;
-                                if (g_strcmp0(gst_element_get_name (element), link->src_name) == 0) {
-                                        break;
-                                }
+                                gst_bin_add (GST_BIN (pipeline), element);
                                 elements = g_slist_next (elements);
                         }
-                        delayedlink->src_pad_name = g_strdup (link->src_pad_name);
-                        delayedlink->sink = link->sink;
-                        delayedlink->sink_pad_name = g_strdup (link->sink_pad_name);
-                        delayedlink->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), delayedlink, (GClosureNotify)free_delayed_link, (GConnectFlags) 0);
+
+                        /* links element */
+                        links = bin->links;
+                        while (links != NULL) {
+                                link = links->data;
+                                g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
+                                gst_element_link (link->src, link->sink);
+                                links = links->next;
+                        }
                 } else {
-                        /* link directly */
-                        g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
-                        gst_element_link (link->src, link->sink);
+                        /* delayed sometimes pad link. */
+                        element = pickup_element (&graph, bin->previous->src_name);
+                        bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
                 }
-                links = g_slist_next (links);
+                bins = bins->next;
         }
 
         return pipeline;
