@@ -1640,6 +1640,28 @@ is_bin_selected (GstStructure *pipeline, gchar *bin)
         }
 }
 
+/*
+ * get_bin_definition
+ *
+ * Returns:the definition of the bin. 
+ */
+static gchar*
+get_bin_definition (GstStructure *pipeline, gchar *bin)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p;
+
+        /* value of bins/name/option */
+        value = (GValue *)gst_structure_get_value (pipeline, "bins");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, bin);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "definition");
+        p = (gchar *)g_value_get_string (value);
+
+        return p;
+}
 
 static GstElement*
 pickup_element (Graph *graph, gchar *name)
@@ -1715,11 +1737,7 @@ get_pipeline_graph (Configure *configure, gchar *param)
                 bin = g_slice_new (Bin);
                 bin->links = NULL;
                 bin->elements = NULL;
-                p = g_strdup_printf ("%s/bins/%s/definition", param, name);
-                value = configure_get_param (configure, p);
-                g_free (p);
-                //g_print ("%s: %s\n", name, g_value_get_string (value));
-                p = (gchar *)g_value_get_string (value);
+                p = get_bin_definition (structure, name);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
                 src = NULL;
