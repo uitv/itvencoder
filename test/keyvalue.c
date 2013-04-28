@@ -57,7 +57,7 @@ configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParam
 
         switch (prop_id) {
         case CONFIGURE_PROP_FILE_PATH:
-                CONFIGURE(obj)->file_path = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_path?
+                CONFIGURE(obj)->file_path = (gchar *)g_value_dup_string (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
