@@ -1574,7 +1574,13 @@ free_bin (Bin *bin)
 }
 
 /*
- * element is optional and be selected, or it's not optional.
+ * is_selected
+ *
+ * @type: bin or element.
+ *
+ * is element optional and be selected, or it's not optional.
+ *
+ * Returns: TRUE if selected, otherwise FALSE.
  */
 static gboolean
 is_selected (Configure *configure, gchar *param, gchar *element, gchar *type)
@@ -1650,7 +1656,6 @@ get_pipeline_graph (Configure *configure, gchar *param)
         gint i, n;
         Bin *bin;
         Link *link;
-        GSList *bins, *links, *elements;
         Graph *graph;
 
         graph = g_slice_new (Graph);
