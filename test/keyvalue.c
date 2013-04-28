@@ -1823,6 +1823,8 @@ create_pipeline (Graph *graph)
                 source_appsink_callback,
                 NULL
         };
+        GstElementFactory *element_factory;
+        GType type;
 
         pipeline = gst_pipeline_new (NULL);
 
@@ -1851,8 +1853,14 @@ create_pipeline (Graph *graph)
                         /* delayed sometimes pad link. */
                         element = pickup_element (graph, bin->previous->src_name);
                         bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
+
+                        /* new stream, set appsink output callback. */
                         element = bin->last;
-                        gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, NULL, NULL);
+                        element_factory = gst_element_get_factory (element);
+                        type = gst_element_factory_get_element_type (element_factory);
+                        if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
+                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, NULL, NULL);
+                        }
                 }
 
                 bins = bins->next;
