@@ -1447,7 +1447,7 @@ set_element_property (GstElement *element, gchar* name, gchar* value)
  * Returns: the new created element or NULL.
  */
 GstElement *
-create_element (Configure *configure, gchar *param)
+create_element (GstStructure *pipeline, gchar *param)
 {
         GstElement *element;
         GValue *value;
@@ -1471,7 +1471,9 @@ create_element (Configure *configure, gchar *param)
         p = g_regex_replace (regex, param, -1, 0, "", 0, NULL);
         g_regex_unref (regex);
         //g_print ("create element, param: %s, fatory: %s name: %s conf path: %s\n", param, factory, name, p);
-        value = (GValue *)configure_get_param (configure, p);
+        value = (GValue *)gst_structure_get_value (pipeline, "elements");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, p);
         g_free (p);
         g_free (factory);
 
@@ -1763,8 +1765,7 @@ get_pipeline_graph (Configure *configure, gchar *param)
                                 }
                         } else if (is_element_selected (structure, p1)) {
                                 /* plugin name, create a element. */
-                                p = g_strdup_printf ("%s/elements/%s", param, p1);
-                                element = create_element (configure, p);
+                                element = create_element (structure, p1);
                                 if (element != NULL) {
                                         if (src_name != NULL) {
                                                 link = g_slice_new (Link);
@@ -1791,7 +1792,6 @@ get_pipeline_graph (Configure *configure, gchar *param)
                                         g_strfreev (pp1);
                                         return NULL; //FIXME release pipeline
                                 }
-                                g_free (p);
                         } else {
                                 g_free (p1);
                         }
@@ -1920,9 +1920,6 @@ main (gint argc, gchar *argv[])
 
                 value = configure_get_param (configure, "/channel/mpegtsoverip/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
-
-                element = create_element (configure, "/channel/test/source/elements/textoverlay");
-                gst_object_unref (GST_OBJECT (element));
 
                 graph = get_pipeline_graph (configure, "/channel/mpegtsoverip/source");
                 pipeline = create_pipeline (graph);
