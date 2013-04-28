@@ -1474,28 +1474,26 @@ create_element (Configure *configure, gchar *param)
         value = (GValue *)configure_get_param (configure, p);
         g_free (p);
         g_free (factory);
-        if (value == NULL) {
-                /* no property configured. */
-                return element;
-        }
 
-        /* set propertys in element property configure. */
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (gst_structure_has_field (structure, "property")) {
-                value = (GValue *)gst_structure_get_value (structure, "property");
-                if (!GST_VALUE_HOLDS_STRUCTURE (value)) {
-                        g_print ("elements property should be structure.\n");
-                        gst_object_unref (GST_OBJECT (element));
-                        return NULL;
-                }
-                property = (GstStructure *)gst_value_get_structure (value);
-                n = gst_structure_n_fields (property);
-                for (i = 0; i < n; i++) {
-                        name = (gchar *)gst_structure_nth_field_name (property, i);
-                        p = (gchar *)gst_structure_get_string (property, name);
-                        if (!set_element_property (element, name, p)) {
-                                g_print ("Set property error %s=%s\n", name, p);
+        if (value != NULL) {
+                /* set propertys in element property configure. */
+                structure = (GstStructure *)gst_value_get_structure (value);
+                if (gst_structure_has_field (structure, "property")) {
+                        value = (GValue *)gst_structure_get_value (structure, "property");
+                        if (!GST_VALUE_HOLDS_STRUCTURE (value)) {
+                                g_print ("elements property should be structure.\n");
+                                gst_object_unref (GST_OBJECT (element));
                                 return NULL;
+                        }
+                        property = (GstStructure *)gst_value_get_structure (value);
+                        n = gst_structure_n_fields (property);
+                        for (i = 0; i < n; i++) {
+                                name = (gchar *)gst_structure_nth_field_name (property, i);
+                                p = (gchar *)gst_structure_get_string (property, name);
+                                if (!set_element_property (element, name, p)) {
+                                        g_print ("Set property error %s=%s\n", name, p);
+                                        return NULL;
+                                }
                         }
                 }
         }
