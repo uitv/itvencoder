@@ -1574,33 +1574,72 @@ free_bin (Bin *bin)
 }
 
 /*
- * is_selected
- *
- * @type: bin or element.
+ * is_element_selected
  *
  * is element optional and be selected, or it's not optional.
  *
  * Returns: TRUE if selected, otherwise FALSE.
  */
 static gboolean
-is_selected (Configure *configure, gchar *param, gchar *element, gchar *type)
+is_element_selected (GstStructure *pipeline, gchar *element)
 {
         GValue *value;
-        gchar *p;
+        GstStructure *structure;
+        gchar *p, **pp;
 
-        p = g_strdup_printf ("%s/%ss/%s/option", param, type, element);
-        value = configure_get_param (configure, p);
-        g_free (p);
+        /* value of /elements/name/option. */
+        value = (GValue *)gst_structure_get_value (pipeline, "elements");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        pp = g_strsplit (element, " ", 0);
+        value = (GValue *)gst_structure_get_value (structure, pp[0]);
+        g_strfreev (pp);
+        if (value == NULL) {
+                return TRUE;
+        }
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "option");
         if (value == NULL) {
                 return TRUE;
         }
         p = (gchar *)g_value_get_string (value);
-        if (g_strcmp0(p, "yes") == 0) {
+        if (g_strcmp0 (p, "yes") == 0) {
                 return TRUE;
         } else {
                 return FALSE;
         }
 }
+
+/*
+ * is_bin_selected
+ *
+ * is bin optional and be selected, or it's not optional.
+ *
+ * Returns: TRUE if selected, otherwise FALSE.
+ */
+static gboolean
+is_bin_selected (GstStructure *pipeline, gchar *bin)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p;
+
+        /* value of bins/name/option */
+        value = (GValue *)gst_structure_get_value (pipeline, "bins");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, bin);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "option");
+        if (value == NULL) {
+                return TRUE;
+        }
+        p = (gchar *)g_value_get_string (value);
+        if (g_strcmp0 (p, "yes") == 0) {
+                return TRUE;
+        } else {
+                return FALSE;
+        }
+}
+
 
 static GstElement*
 pickup_element (Graph *graph, gchar *name)
@@ -1658,17 +1697,18 @@ get_pipeline_graph (Configure *configure, gchar *param)
         Link *link;
         Graph *graph;
 
+        value = (GValue *)configure_get_param (configure, param);
+        structure = (GstStructure *)gst_value_get_structure (value);
+
         graph = g_slice_new (Graph);
         graph->bins = NULL;
         /* bin */
-        p = g_strdup_printf ("%s/bins", param);
-        value = configure_get_param (configure, p);
-        g_free (p);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        n = gst_structure_n_fields (structure);
+        value = (GValue *)gst_structure_get_value (structure, "bins");
+        GstStructure *bins = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (bins);
         for (i = 0; i < n; i++) {
-                name = (gchar *)gst_structure_nth_field_name (structure, i);
-                if (!is_selected (configure, param, name, "bin")) {
+                name = (gchar *)gst_structure_nth_field_name (bins, i);
+                if (!is_bin_selected (structure, name)) {
                         g_print ("skip bin %s\n", name);
                         continue;
                 }
@@ -1705,7 +1745,7 @@ get_pipeline_graph (Configure *configure, gchar *param)
                                         link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
                                         bin->links = g_slist_append (bin->links, link);
                                 }
-                        } else if (is_selected (configure, param, p1, "element")) {
+                        } else if (is_element_selected (structure, p1)) {
                                 /* plugin name, create a element. */
                                 p = g_strdup_printf ("%s/elements/%s", param, p1);
                                 element = create_element (configure, p);
