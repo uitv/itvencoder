@@ -1708,19 +1708,15 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
  * Returns: the pipeline graph.
  */
 Graph *
-get_pipeline_graph (Configure *configure, gchar *param)
+get_pipeline_graph (GstStructure *structure)
 {
         GValue *value;
-        GstStructure *structure;
         GstElement *element, *src;
         gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
         gint i, n;
         Bin *bin;
         Link *link;
         Graph *graph;
-
-        value = (GValue *)configure_get_param (configure, param);
-        structure = (GstStructure *)gst_value_get_structure (value);
 
         graph = g_slice_new (Graph);
         graph->bins = NULL;
@@ -1921,7 +1917,9 @@ main (gint argc, gchar *argv[])
                 value = configure_get_param (configure, "/channel/mpegtsoverip/encoder/encoder1/elements/x264enc/property/name");
                 g_print ("encoder1: %s\n", g_value_get_string (value));
 
-                graph = get_pipeline_graph (configure, "/channel/mpegtsoverip/source");
+                value = (GValue *)configure_get_param (configure, "/channel/mpegtsoverip/source");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                graph = get_pipeline_graph (structure);
                 pipeline = create_pipeline (graph);
                 if (pipeline == NULL) {
                         return 1;
