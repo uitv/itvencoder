@@ -139,7 +139,7 @@ itvencoder_initialize_channels (ITVEncoder *itvencoder)
                 GST_WARNING ("channel found: %s", name);
                 value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
                 structure = (GstStructure *)gst_value_get_structure (value);
-                channel = channel_new ("name", name, NULL);
+                channel = channel_new ("configure", structure, NULL);
                 g_array_append_val (itvencoder->channel_array, channel);
         }
 

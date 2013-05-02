@@ -15,6 +15,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         CHANNEL_PROP_0,
+        CHANNEL_PROP_CONFIGURE,
         CHANNEL_PROP_NAME,
 };
 
@@ -257,6 +258,14 @@ channel_class_init (ChannelClass *channelclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, CHANNEL_PROP_NAME, param);
+
+        param = g_param_spec_pointer (
+                "configure",
+                "Configure",
+                NULL,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, CHANNEL_PROP_CONFIGURE, param);
 }
 
 static void
@@ -278,6 +287,9 @@ channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSp
         case CHANNEL_PROP_NAME:
                 CHANNEL(obj)->name = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_file_path?
                 break;
+        case CHANNEL_PROP_CONFIGURE:
+                CHANNEL(obj)->configure = (GstStructure *)g_value_get_pointer (value); //TODO: should release dup string config_file_path?
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
                 break;
@@ -292,6 +304,9 @@ channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
         switch(prop_id) {
         case CHANNEL_PROP_NAME:
                 g_value_set_string (value, channel->name);
+                break;
+        case CHANNEL_PROP_CONFIGURE:
+                g_value_set_pointer (value, channel->configure);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
