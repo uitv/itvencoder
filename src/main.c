@@ -11,6 +11,7 @@
 #include "log.h"
 #include "itvencoder.h"
 #include "configure.h"
+#include "keyvalue.h"
 #include "httpmgmt.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
@@ -93,6 +94,7 @@ int
 main (int argc, char *argv[])
 {
         Config *config;
+        Configure *configure;
         ITVEncoder *itvencoder;
         HTTPMgmt *httpmgmt;
         GMainLoop *loop;
@@ -143,6 +145,22 @@ main (int argc, char *argv[])
                 }
         }
 
+        if (config_path) {
+                /* config command line option */
+                configure = configure_new ("configure_path", config_path, NULL);
+                if (configure_load_from_file (configure) != 0) {
+                        g_print ("Load configure file %s error, exit ...\n", config_path);
+                        return 1;
+                }
+        } else {
+                /* default config path */
+                configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
+                if (configure_load_from_file (configure) != 0) {
+                        g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
+                        return 1;
+                }
+        }
+
         /* run in background? */
         if (!foreground) {
                 /* daemon */
@@ -174,12 +192,24 @@ main (int argc, char *argv[])
                                 }
                         } else if (process_id == 0) {
                                 /* children process, itvencoder server */
+                                GValue *value;
+                                gchar *log_dir;
                                 gchar *log_path;
+                                gchar *pid_file;
 
+                                value = configure_get_param (configure, "/server/logdir");
+                                log_dir = (gchar *)g_value_get_string (value);
+                                #if 0
                                 if (config->log_dir[strlen(config->log_dir) - 1] == '/') {
                                         log_path = g_strdup_printf ("%sitvencoder.log", config->log_dir);
                                 } else {
                                         log_path = g_strdup_printf ("%s/itvencoder.log", config->log_dir);
+                                }
+                                #endif
+                                if (log_dir[strlen(log_dir) - 1] == '/') {
+                                        log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
+                                } else {
+                                        log_path = g_strdup_printf ("%s/itvencoder.log", log_dir);
                                 }
                                 _log = log_new ("log_path", log_path, NULL);
                                 g_free (log_path);
@@ -191,7 +221,9 @@ main (int argc, char *argv[])
                                 /* remove gstInfo default handler. */
                                 gst_debug_remove_log_function (gst_debug_log_default);
 
-                                if (create_pid_file (config->pid_file) != 0) { //FIXME remove when process exit
+                                value = configure_get_param (configure, "/server/pidfile");
+                                pid_file = (gchar *)g_value_get_string (value);
+                                if (create_pid_file (pid_file) != 0) { //FIXME remove when process exit
                                         exit (1);
                                 }
                                 break;
