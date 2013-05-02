@@ -114,7 +114,7 @@ main (int argc, char *argv[])
                 exit (0);
         }
         g_option_context_free (ctx);
-        GST_DEBUG_CATEGORY_INIT (ITVENCODER, "ITVENCODER", 0, "itvencoder log");
+        GST_DEBUG_CATEGORY_INIT (ITVENCODER, "itvencoder", 0, "itvencoder log");
 
         if (version) {
                 g_print ("iTVEncoder version: %s\n", VERSION);
