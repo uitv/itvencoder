@@ -95,6 +95,8 @@ main (int argc, char *argv[])
 {
         Config *config;
         Configure *configure;
+        GValue *value;
+        GstStructure *channels;
         ITVEncoder *itvencoder;
         HTTPMgmt *httpmgmt;
         GMainLoop *loop;
@@ -192,7 +194,6 @@ main (int argc, char *argv[])
                                 }
                         } else if (process_id == 0) {
                                 /* children process, itvencoder server */
-                                GValue *value;
                                 gchar *log_dir;
                                 gchar *log_path;
                                 gchar *pid_file;
@@ -245,7 +246,9 @@ main (int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        itvencoder = itvencoder_new ("config", config, NULL);
+        value = configure_get_param (configure, "/channel");
+        channels = (GstStructure *)gst_value_get_structure (value);
+        itvencoder = itvencoder_new ("config", config, "configure", channels, NULL);
         itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);

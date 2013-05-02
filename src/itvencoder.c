@@ -14,6 +14,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         ITVENCODER_PROP_0,
         ITVENCODER_PROP_CONFIG,
+        ITVENCODER_PROP_CONFIGURE,
 };
 
 static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
@@ -43,6 +44,14 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONFIG, param);
+
+        param = g_param_spec_pointer (
+                "configure",
+                "Configure",
+                NULL,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONFIGURE, param);
 }
 
 static void
@@ -84,6 +93,9 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         case ITVENCODER_PROP_CONFIG:
                 ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value);
                 break;
+        case ITVENCODER_PROP_CONFIGURE:
+                ITVENCODER(obj)->configure = (GstStructure *)g_value_get_pointer (value);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
                 break;
@@ -99,6 +111,9 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         case ITVENCODER_PROP_CONFIG:
                 g_value_set_pointer (value, itvencoder->config);
                 break;
+        case ITVENCODER_PROP_CONFIGURE:
+                g_value_set_pointer (value, itvencoder->configure);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
@@ -108,11 +123,25 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
 static void
 itvencoder_initialize_channels (ITVEncoder *itvencoder)
 {
-        ChannelConfig *channel_config;
-        Channel *channel;
-        gchar *pipeline_string;
-        guint i;
+        GValue *value;
+        GstStructure *structure;
+        gint i, n;
         gchar *name;
+        Channel *channel;
+
+        ChannelConfig *channel_config;
+        gchar *pipeline_string;
+
+
+        n = gst_structure_n_fields (itvencoder->configure);
+        for ( i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (itvencoder->configure, i);
+                GST_WARNING ("channel found: %s", name);
+                value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
+                structure = (GstStructure *)gst_value_get_structure (value);
+                channel = channel_new ("name", name, NULL);
+                g_array_append_val (itvencoder->channel_array, channel);
+        }
 
         // initialize channels
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
