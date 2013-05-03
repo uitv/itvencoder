@@ -1322,8 +1322,6 @@ configure_get_param (Configure *configure, gchar *param)
         return value;
 }
 
-/*************************************/
-/***************************************/
 #if 0
 gint
 main (gint argc, gchar *argv[])
