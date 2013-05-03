@@ -133,6 +133,8 @@ itvencoder_initialize_channels (ITVEncoder *itvencoder)
         gchar *pipeline_string;
 
 
+        // initialize channels
+        itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         n = gst_structure_n_fields (itvencoder->configure);
         for ( i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (itvencoder->configure, i);
@@ -143,8 +145,7 @@ itvencoder_initialize_channels (ITVEncoder *itvencoder)
                 g_array_append_val (itvencoder->channel_array, channel);
         }
 
-        // initialize channels
-        itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
+return;
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 name = g_strdup_printf ("channel-%d", i);
