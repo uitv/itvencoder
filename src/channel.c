@@ -824,20 +824,15 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         source->channel = channel;
         channel_source_extract_streams (source);
 
-#if 0
         for (i = 0; i < channel->source->streams->len; i++) {
                 stream = g_array_index (channel->source->streams, gpointer, i);
                 stream->system_clock = channel->system_clock;
                 stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
-        }
-
-        for (i = 0; i < channel->source->streams->len; i++) {
-                stream = g_array_index (channel->source->streams, gpointer, i);
                 for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
         }
-#endif
+
         return 0;
 }
 
