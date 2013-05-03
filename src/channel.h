@@ -97,6 +97,7 @@ struct _Encoder {
         GstState state; /* state of the pipeline */
         Channel *channel;
         gchar *pipeline_string;
+        GstStructure *configure;
         GstElement *pipeline;
         gint id;
         

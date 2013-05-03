@@ -1021,7 +1021,6 @@ channel_source_extract_streams (Source *source)
                         stream->name = name;
                         GST_INFO ("stream found %s: %s", name, definition);
                         g_array_append_val (source->streams, stream);
-                        g_match_info_next (match_info, NULL);
                 }
         }
 }
@@ -1169,24 +1168,32 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
 static gint
 channel_encoder_extract_streams (Encoder *encoder)
 {
+        GstStructure *structure, *bins, *bin;
+        GValue *value;
         GRegex *regex;
         GMatchInfo *match_info;
         EncoderStream *stream;
+        gint i, n;
+        gchar *name, *definition;
 
-        regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
-        if (regex == NULL) {
-                GST_ERROR ("bad regular expression");
-                return -1;
-        }
-        g_regex_match (regex, encoder->pipeline_string, 0, &match_info);
-        g_regex_unref (regex);
-
-        while (g_match_info_matches (match_info)) {
-                stream = (EncoderStream *)g_malloc (sizeof (EncoderStream));
-                stream->name = g_match_info_fetch_named (match_info, "stream");
-                GST_INFO ("stream found %s", stream->name);
-                g_array_append_val (encoder->streams, stream);
-                g_match_info_next (match_info, NULL);
+        structure = encoder->configure;
+        value = (GValue *)gst_structure_get_value (structure, "bins");
+        bins = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (bins);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (bins, i);
+                value = (GValue *)gst_structure_get_value (bins, name);
+                bin = (GstStructure *)gst_value_get_structure (value);
+                definition = (gchar *)gst_structure_get_string (bin, "definition");
+                regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                g_regex_match (regex, definition, 0, &match_info);
+                g_regex_unref (regex);
+                if (g_match_info_matches (match_info)) {
+                        stream = (EncoderStream *)g_malloc (sizeof (EncoderStream));
+                        stream->name = g_match_info_fetch_named (match_info, "stream");
+                        GST_INFO ("stream found %s", stream->name);
+                        g_array_append_val (encoder->streams, stream);
+                }
         }
 }
 
@@ -1373,6 +1380,33 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         return 0;
 }
 
+static guint
+channel_encoder_initialize (Channel *channel, GstStructure *configure)
+{
+        gint i, j, n;
+        gchar *name;
+        GValue *value;
+        GstStructure *structure;
+        Encoder *encoder;
+
+        n = gst_structure_n_fields (configure);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (configure, i);
+                GST_INFO ("encoder found: %s", name);
+                value = (GValue *)gst_structure_get_value (configure, name);
+                structure = (GstStructure *)gst_value_get_structure (value);
+                encoder = encoder_new (0, NULL); //TODO free!
+                encoder->channel = channel;
+                encoder->id = i;
+                encoder->name = name;
+                encoder->configure = structure;
+                channel_encoder_extract_streams (encoder);
+                g_array_append_val (channel->encoder_array, encoder);
+        }
+
+        return 0;
+}
+
 /*
  * channel_initialize
  *
@@ -1391,6 +1425,10 @@ channel_initialize (Channel *channel, GstStructure *configure)
         value = (GValue *)gst_structure_get_value (configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         channel_source_initialize (channel, structure);
+
+        value = (GValue *)gst_structure_get_value (configure, "encoder");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        channel_encoder_initialize (channel, structure);
 }
 
 gboolean
