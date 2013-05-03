@@ -158,6 +158,44 @@ itvencoder_load_configure (ITVEncoder *itvencoder, GstStructure *configure)
         return TRUE;
 }
 
+/*
+ * itvencoder_channel_initialize
+ *
+ * @itvencoder: itvencoder object.
+ * @name: the name of the channel to be initialize.
+ *
+ * Returns: TRUE on success, FALSE on failure.
+ *
+ */
+gboolean
+itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
+{
+        Channel *channel;
+        GValue *value;
+        GstStructure *structure;
+        gint i;
+
+        /* find channel with the name */
+        channel = NULL;
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                if (g_strcmp0 (channel->name, name) == 0) {
+                        break;
+                }
+        }
+        if (channel == NULL) {
+                GST_ERROR ("No channel: %s\n", name);
+                return FALSE;
+        }
+
+        value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        
+        channel_initialize (channel, structure);
+
+        return TRUE;
+}
+
 static void
 itvencoder_initialize_channels (ITVEncoder *itvencoder)
 {

@@ -801,6 +801,20 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
         }
 }
 
+/*
+ * channel_initialize
+ *
+ * @channel: channel to be initialize.
+ * @structure: configure data.
+ *
+ * Returns: TRUE on success, FALSE on failure.
+ *
+ */
+gboolean
+channel_initialize (Channel *channel, GstStructure *structure)
+{
+}
+
 static gboolean
 channel_source_stop_func (gpointer *user_data)
 {

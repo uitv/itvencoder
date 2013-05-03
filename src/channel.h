@@ -126,6 +126,8 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
+gboolean channel_initialize (Channel *channel, GstStructure *structure);
+
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 gint channel_source_stop (Source *source);
