@@ -431,29 +431,6 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
         return TRUE;
 }
 
-typedef struct _Link {
-        GstElement *src;
-        GstElement *sink;
-        gchar *src_name;
-        gchar *sink_name;
-        gchar *src_pad_name;
-        gchar *sink_pad_name;
-} Link;
-
-typedef struct _Bin {
-        GSList *elements;
-        GstElement *first;
-        GstElement *last;
-        GSList *links;
-        Link *previous;
-        Link *next;
-        gulong signal_id;
-} Bin;
-
-typedef struct _Graph {
-        GSList *bins;
-} Graph;
-
 static gchar**
 get_property_names (gchar *param)
 {

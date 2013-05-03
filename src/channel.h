@@ -18,6 +18,29 @@ typedef struct _EncoderClass EncoderClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
+typedef struct _Link {
+        GstElement *src;
+        GstElement *sink;
+        gchar *src_name;
+        gchar *sink_name;
+        gchar *src_pad_name;
+        gchar *sink_pad_name;
+} Link;
+
+typedef struct _Bin {
+        GSList *elements;
+        GstElement *first;
+        GstElement *last;
+        GSList *links;
+        Link *previous;
+        Link *next;
+        gulong signal_id;
+} Bin;
+
+typedef struct _Graph {
+        GSList *bins;
+} Graph;
+
 typedef struct _SourceStream {
         gchar *name;
         GstBuffer *ring[SOURCE_RING_SIZE];
