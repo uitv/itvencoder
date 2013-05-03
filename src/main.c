@@ -250,7 +250,8 @@ main (int argc, char *argv[])
         channels = (GstStructure *)gst_value_get_structure (value);
         itvencoder = itvencoder_new ("config", config, NULL);
         itvencoder_load_configure (itvencoder, channels);
-        itvencoder_start (itvencoder);
+        itvencoder_channel_initialize (itvencoder, "mpegtsoverip");
+        //itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);
         print_itvencoder_info (itvencoder);

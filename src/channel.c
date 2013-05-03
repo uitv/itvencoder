@@ -465,21 +465,30 @@ channel_source_extract_streams (Source *source)
         GRegex *regex;
         GMatchInfo *match_info;
         SourceStream *stream;
+        GstStructure *structure, *bins, *bin;
+        GValue *value;
+        gint i, n;
+        gchar *name, *definition;
 
-        regex = g_regex_new ("appsink name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
-        if (regex == NULL) {
-                GST_ERROR ("bad regular expression");
-                return -1;
-        }
-        g_regex_match (regex, source->pipeline_string, 0, &match_info);
-        g_regex_unref (regex);
-
-        while (g_match_info_matches (match_info)) {
-                stream = (SourceStream *)g_malloc (sizeof (SourceStream));
-                stream->name = g_match_info_fetch_named (match_info, "stream");
-                GST_INFO ("stream found %s", stream->name);
-                g_array_append_val (source->streams, stream);
-                g_match_info_next (match_info, NULL);
+        structure = source->configure;
+        value = (GValue *)gst_structure_get_value (structure, "bins");
+        bins = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (bins);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (bins, i);
+                value = (GValue *)gst_structure_get_value (bins, name);
+                bin = (GstStructure *)gst_value_get_structure (value);
+                definition = (gchar *)gst_structure_get_string (bin, "definition");
+                regex = g_regex_new ("! *appsink[^!]*$", G_REGEX_OPTIMIZE, 0, NULL);
+                g_regex_match (regex, definition, 0, &match_info);
+                g_regex_unref (regex);
+                if (g_match_info_matches (match_info)) {
+                        stream = (SourceStream *)g_malloc (sizeof (SourceStream));
+                        stream->name = name;
+                        GST_INFO ("stream found %s: %s", name, definition);
+                        g_array_append_val (source->streams, stream);
+                        g_match_info_next (match_info, NULL);
+                }
         }
 }
 
@@ -806,11 +815,14 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 {
         gint i, j;
         SourceStream *stream;
+        Source *source;
 
-        channel->source->sync_error_times = 0;
-        channel->source->name = (gchar *)gst_structure_get_name (configure);
-        channel->source->channel = channel;
-        channel_source_extract_streams (channel->source);
+        source = channel->source;
+        source->configure = configure;
+        source->sync_error_times = 0;
+        source->name = (gchar *)gst_structure_get_name (configure);
+        source->channel = channel;
+        channel_source_extract_streams (source);
 
 #if 0
         for (i = 0; i < channel->source->streams->len; i++) {

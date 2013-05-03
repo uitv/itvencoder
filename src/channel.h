@@ -35,6 +35,7 @@ struct _Source {
         GstState state; /* state of the pipeline */
         Channel *channel;
         gchar *pipeline_string;
+        GstStructure *configure;
         GstElement *pipeline;
 
         /*  sync error cause sync_error_times inc, 
