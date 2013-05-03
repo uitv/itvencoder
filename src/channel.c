@@ -776,14 +776,14 @@ pickup_element (GSList *list, gchar *name)
 }
 
 /**
- * get_pipeline_graph
+ * get_source_bins
  * @configure: Configure object.
  * @param: like this: /server/httpstreaming
  *
- * Returns: the pipeline graph.
+ * Returns: the pipeline bins.
  */
 GSList *
-get_pipeline_graph (GstStructure *structure)
+get_source_bins (GstStructure *structure)
 {
         GValue *value;
         GstElement *element, *src;
@@ -1374,7 +1374,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 }
         }
 
-        source->bins = get_pipeline_graph (configure);
+        source->bins = get_source_bins (configure);
         source->pipeline = create_pipeline (source);
 
         return 0;
@@ -1388,6 +1388,8 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
         GValue *value;
         GstStructure *structure;
         Encoder *encoder;
+        EncoderStream *stream;
+        SourceStream *source;
 
         n = gst_structure_n_fields (configure);
         for (i = 0; i < n; i++) {
@@ -1401,6 +1403,27 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->name = name;
                 encoder->configure = structure;
                 channel_encoder_extract_streams (encoder);
+
+                for (i = 0; i < encoder->streams->len; i++) {
+                        stream = g_array_index (encoder->streams, gpointer, i);
+                        for (j = 0; j < channel->source->streams->len; j++) {
+                                source = g_array_index (channel->source->streams, gpointer, j);
+                                if (g_strcmp0 (source->name, stream->name) == 0) {
+                                        stream->source = source;
+                                        g_array_append_val (source->encoders, stream);
+                                        break;
+                                }
+                        }
+                        if (stream->source == NULL) {
+                                GST_ERROR ("%s: cant find source.", stream->name);
+                                return -1;
+                        }
+                }
+
+                for (i=0; i<ENCODER_RING_SIZE; i++) {
+                        encoder->output_ring[i] = NULL;
+                }
+
                 g_array_append_val (channel->encoder_array, encoder);
         }
 
