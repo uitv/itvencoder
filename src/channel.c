@@ -1331,6 +1331,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         gint i, j;
         SourceStream *stream;
         Source *source;
+        Graph *graph;
 
         source = channel->source;
         source->configure = configure;
@@ -1347,6 +1348,9 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                         stream->ring[j] = NULL;
                 }
         }
+
+        graph = get_pipeline_graph (configure);
+        source->pipeline = create_pipeline (graph);
 
         return 0;
 }
