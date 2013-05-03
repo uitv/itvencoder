@@ -249,7 +249,7 @@ main (int argc, char *argv[])
         value = configure_get_param (configure, "/channel");
         channels = (GstStructure *)gst_value_get_structure (value);
         itvencoder = itvencoder_new ("config", config, NULL);
-        g_object_set (itvencoder, "configure", channels, NULL);
+        itvencoder_load_configure (itvencoder, channels);
         itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);

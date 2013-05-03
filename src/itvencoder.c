@@ -61,6 +61,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         gsize *length;
         gint i;
 
+        itvencoder->channel_array = NULL;
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
@@ -120,8 +121,17 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         }
 }
 
-static void
-itvencoder_initialize_channels (ITVEncoder *itvencoder)
+/*
+ * itvvencoder_load_configure
+ *
+ * @itvencoder: itvencoder object
+ * @configure: GstStructure type configure data.
+ *
+ * Returns: TRUE on success, FALSE on failure.
+ *
+ */
+gboolean
+itvencoder_load_configure (ITVEncoder *itvencoder, GstStructure *configure)
 {
         GValue *value;
         GstStructure *structure;
@@ -129,23 +139,34 @@ itvencoder_initialize_channels (ITVEncoder *itvencoder)
         gchar *name;
         Channel *channel;
 
+        g_object_set (itvencoder, "configure", configure, NULL);
+
+        if (itvencoder->channel_array == NULL) {
+                // first time load configure, add channels to itvencoder.
+                itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
+                n = gst_structure_n_fields (itvencoder->configure);
+                for ( i = 0; i < n; i++) {
+                        name = (gchar *)gst_structure_nth_field_name (itvencoder->configure, i);
+                        GST_WARNING ("channel found: %s", name);
+                        value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
+                        structure = (GstStructure *)gst_value_get_structure (value);
+                        channel = channel_new ("configure", structure, NULL);
+                        g_array_append_val (itvencoder->channel_array, channel);
+                }
+        }
+
+        return TRUE;
+}
+
+static void
+itvencoder_initialize_channels (ITVEncoder *itvencoder)
+{
+        gint i;
+        gchar *name;
+        Channel *channel;
         ChannelConfig *channel_config;
         gchar *pipeline_string;
 
-
-        // initialize channels
-        itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
-        n = gst_structure_n_fields (itvencoder->configure);
-        for ( i = 0; i < n; i++) {
-                name = (gchar *)gst_structure_nth_field_name (itvencoder->configure, i);
-                GST_WARNING ("channel found: %s", name);
-                value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
-                structure = (GstStructure *)gst_value_get_structure (value);
-                channel = channel_new ("configure", structure, NULL);
-                g_array_append_val (itvencoder->channel_array, channel);
-        }
-
-return;
         for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
                 channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
                 name = g_strdup_printf ("channel-%d", i);
