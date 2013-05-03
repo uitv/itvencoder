@@ -28,6 +28,7 @@ typedef struct _Link {
 } Link;
 
 typedef struct _Bin {
+        gchar *name;
         GSList *elements;
         GstElement *first;
         GstElement *last;

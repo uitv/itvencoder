@@ -806,8 +806,10 @@ get_pipeline_graph (GstStructure *structure)
                         continue;
                 }
                 bin = g_slice_new (Bin);
+                bin->name = name;
                 bin->links = NULL;
                 bin->elements = NULL;
+                bin->previous = NULL;
                 p = get_bin_definition (structure, name);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
@@ -876,6 +878,22 @@ get_pipeline_graph (GstStructure *structure)
         return graph;
 }
 
+static SourceStream*
+source_get_stream (Source *source, gchar *name)
+{
+        SourceStream *stream;
+        gint i;
+
+        for (i = 0; i < source->streams->len; i++) {
+                stream = g_array_index (source->streams, gpointer, i);
+                if (g_strcmp0 (stream->name, name) == 0) {
+                        break;
+                }
+        }
+
+        return stream;
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -883,8 +901,8 @@ get_pipeline_graph (GstStructure *structure)
  *
  * Returns: the cteated pipeline or NULL.
  */
-GstElement *
-create_pipeline (Graph *graph)
+static GstElement *
+create_pipeline (Source *source, Graph *graph)
 {
         GValue *value;
         GstStructure *structure;
@@ -900,6 +918,7 @@ create_pipeline (Graph *graph)
         };
         GstElementFactory *element_factory;
         GType type;
+        SourceStream *stream;
 
         pipeline = gst_pipeline_new (NULL);
 
@@ -934,7 +953,8 @@ create_pipeline (Graph *graph)
                         element_factory = gst_element_get_factory (element);
                         type = gst_element_factory_get_element_type (element_factory);
                         if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
-                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, NULL, NULL);
+                                stream = source_get_stream (source, bin->name);
+                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
                         }
                 }
 
@@ -1350,7 +1370,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         }
 
         graph = get_pipeline_graph (configure);
-        source->pipeline = create_pipeline (graph);
+        source->pipeline = create_pipeline (source, graph);
 
         return 0;
 }
