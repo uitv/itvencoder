@@ -1375,6 +1375,12 @@ channel_initialize (Channel *channel, GstStructure *configure)
         channel_source_initialize (channel, structure);
 }
 
+gboolean
+channel_start (Channel *channel)
+{
+        gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
+}
+
 static gboolean
 channel_source_stop_func (gpointer *user_data)
 {

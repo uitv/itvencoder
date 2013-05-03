@@ -158,21 +158,10 @@ itvencoder_load_configure (ITVEncoder *itvencoder, GstStructure *configure)
         return TRUE;
 }
 
-/*
- * itvencoder_channel_initialize
- *
- * @itvencoder: itvencoder object.
- * @name: the name of the channel to be initialize.
- *
- * Returns: TRUE on success, FALSE on failure.
- *
- */
-gboolean
-itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
+static Channel*
+find_channel (ITVEncoder *itvencoder, gchar *name)
 {
         Channel *channel;
-        GValue *value;
-        GstStructure *structure;
         gint i;
 
         /* find channel with the name */
@@ -188,10 +177,42 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
                 return FALSE;
         }
 
+        return channel;
+}
+
+/*
+ * itvencoder_channel_initialize
+ *
+ * @itvencoder: itvencoder object.
+ * @name: the name of the channel to be initialize.
+ *
+ * Returns: TRUE on success, FALSE on failure.
+ *
+ */
+gboolean
+itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
+{
+        Channel *channel;
+        GValue *value;
+        GstStructure *structure;
+
+        channel = find_channel (itvencoder, name);
+
         value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
         structure = (GstStructure *)gst_value_get_structure (value);
         
         channel_initialize (channel, structure);
+
+        return TRUE;
+}
+
+gboolean
+itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
+{
+        Channel *channel;
+
+        channel = find_channel (itvencoder, name);
+        channel_start (channel);
 
         return TRUE;
 }
