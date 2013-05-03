@@ -801,6 +801,35 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
         }
 }
 
+static guint
+channel_source_initialize (Channel *channel, GstStructure *configure)
+{
+        gint i, j;
+        SourceStream *stream;
+
+        channel->source->sync_error_times = 0;
+        channel->source->name = (gchar *)gst_structure_get_name (configure);
+        channel->source->channel = channel;
+        channel_source_extract_streams (channel->source);
+
+#if 0
+        for (i = 0; i < channel->source->streams->len; i++) {
+                stream = g_array_index (channel->source->streams, gpointer, i);
+                stream->system_clock = channel->system_clock;
+                stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
+        }
+
+        for (i = 0; i < channel->source->streams->len; i++) {
+                stream = g_array_index (channel->source->streams, gpointer, i);
+                for (j = 0; j < SOURCE_RING_SIZE; j++) {
+                        stream->ring[j] = NULL;
+                }
+        }
+#endif
+        return 0;
+}
+
+
 /*
  * channel_initialize
  *
@@ -811,8 +840,14 @@ channel_encoder_appsrc_set_caps (Encoder *encoder)
  *
  */
 gboolean
-channel_initialize (Channel *channel, GstStructure *structure)
+channel_initialize (Channel *channel, GstStructure *configure)
 {
+        GValue *value;
+        GstStructure *structure;
+
+        value = (GValue *)gst_structure_get_value (configure, "source");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        channel_source_initialize (channel, structure);
 }
 
 static gboolean
