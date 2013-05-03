@@ -752,13 +752,13 @@ get_bin_definition (GstStructure *pipeline, gchar *bin)
 }
 
 static GstElement*
-pickup_element (Graph *graph, gchar *name)
+pickup_element (GSList *list, gchar *name)
 {
         GSList *elements, *bins;
         Bin *bin;
         GstElement *element;
 
-        bins = graph->bins;
+        bins = list;
         while (bins != NULL) {
                 bin = bins->data;
                 elements = bin->elements;
@@ -782,7 +782,7 @@ pickup_element (Graph *graph, gchar *name)
  *
  * Returns: the pipeline graph.
  */
-Graph *
+GSList *
 get_pipeline_graph (GstStructure *structure)
 {
         GValue *value;
@@ -791,10 +791,9 @@ get_pipeline_graph (GstStructure *structure)
         gint i, n;
         Bin *bin;
         Link *link;
-        Graph *graph;
+        GSList *list;
 
-        graph = g_slice_new (Graph);
-        graph->bins = NULL;
+        list = NULL;
         /* bin */
         value = (GValue *)gst_structure_get_value (structure, "bins");
         GstStructure *bins = (GstStructure *)gst_value_get_structure (value);
@@ -871,11 +870,11 @@ get_pipeline_graph (GstStructure *structure)
                         pp++;
                 }
                 bin->last = element;
-                graph->bins = g_slist_append (graph->bins, bin);
+                list = g_slist_append (list, bin);
                 g_strfreev (pp1);
         }
 
-        return graph;
+        return list;
 }
 
 static SourceStream*
@@ -902,7 +901,7 @@ source_get_stream (Source *source, gchar *name)
  * Returns: the cteated pipeline or NULL.
  */
 static GstElement *
-create_pipeline (Source *source, Graph *graph)
+create_pipeline (Source *source)
 {
         GValue *value;
         GstStructure *structure;
@@ -922,7 +921,7 @@ create_pipeline (Source *source, Graph *graph)
 
         pipeline = gst_pipeline_new (NULL);
 
-        bins = graph->bins;
+        bins = source->bins;
         while (bins != NULL) {
                 bin = bins->data;
 
@@ -945,7 +944,7 @@ create_pipeline (Source *source, Graph *graph)
                         }
                 } else {
                         /* delayed sometimes pad link. */
-                        element = pickup_element (graph, bin->previous->src_name);
+                        element = pickup_element (source->bins, bin->previous->src_name);
                         bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
 
                         /* new stream, set appsink output callback. */
@@ -1351,7 +1350,6 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         gint i, j;
         SourceStream *stream;
         Source *source;
-        Graph *graph;
 
         source = channel->source;
         source->configure = configure;
@@ -1369,8 +1367,8 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 }
         }
 
-        graph = get_pipeline_graph (configure);
-        source->pipeline = create_pipeline (source, graph);
+        source->bins = get_pipeline_graph (configure);
+        source->pipeline = create_pipeline (source);
 
         return 0;
 }

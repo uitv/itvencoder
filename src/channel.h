@@ -38,10 +38,6 @@ typedef struct _Bin {
         gulong signal_id;
 } Bin;
 
-typedef struct _Graph {
-        GSList *bins;
-} Graph;
-
 typedef struct _SourceStream {
         gchar *name;
         GstBuffer *ring[SOURCE_RING_SIZE];
@@ -60,6 +56,7 @@ struct _Source {
         Channel *channel;
         gchar *pipeline_string;
         GstStructure *configure;
+        GSList *bins;
         GstElement *pipeline;
 
         /*  sync error cause sync_error_times inc, 
