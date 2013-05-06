@@ -498,7 +498,7 @@ set_element_property (GstElement *element, gchar* name, gchar* value)
 
         param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
         if (param_spec == NULL) {
-                g_print ("Can't find property name: %s\n", name);
+                GST_ERROR ("Can't find property name: %s", name);
                 return FALSE;
         }
 
@@ -516,7 +516,7 @@ set_element_property (GstElement *element, gchar* name, gchar* value)
                 } else if (g_strcmp0 (value, "TRUE") == 0) {
                         g_object_set (element, name, TRUE, NULL);
                 } else {
-                        g_print ("wrong configure %s\n", value);
+                        GST_ERROR ("wrong configure %s=%s", name, value);
                         return FALSE;
                 }
                 break;
@@ -581,7 +581,7 @@ create_element (GstStructure *pipeline, gchar *param)
                                 name = (gchar *)gst_structure_nth_field_name (property, i);
                                 p = (gchar *)gst_structure_get_string (property, name);
                                 if (!set_element_property (element, name, p)) {
-                                        g_print ("Set property error %s=%s\n", name, p);
+                                        GST_ERROR ("Set property error %s=%s", name, p);
                                         return NULL;
                                 }
                         }
@@ -605,7 +605,7 @@ create_element (GstStructure *pipeline, gchar *param)
                         return NULL;
                 }
                 if (!set_element_property (element, *pp1, p)) {
-                        g_print ("Set property error: %s=%s", *pp1, p);
+                        GST_ERROR ("Set property error: %s=%s", *pp1, p);
                         return NULL;
                 }
                 g_free (p);
@@ -859,7 +859,7 @@ get_source_bins (GstStructure *structure)
                                         g_print ("element_name: %s\n", src_name);
                                         src_pad_name = NULL;
                                 } else {
-                                        g_print ("error create element %s\n", *pp);
+                                        GST_ERROR ("error create element %s", *pp);
                                         g_free (p);
                                         g_strfreev (pp1);
                                         return NULL; //FIXME release pipeline
@@ -989,7 +989,7 @@ get_encoder_bins (GstStructure *structure)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
                 if (!is_bin_selected (structure, name)) {
-                        g_print ("skip bin %s\n", name);
+                        GST_INFO ("skip bin %s\n", name);
                         continue;
                 }
                 bin = g_slice_new (Bin);
@@ -998,6 +998,67 @@ get_encoder_bins (GstStructure *structure)
                 bin->elements = NULL;
                 bin->previous = NULL;
                 p = get_bin_definition (structure, name);
+                pp = pp1 = g_strsplit (p, "!", 0);
+                src = NULL;
+                src_name = NULL;
+                src_pad_name = NULL;
+                while (*pp != NULL) {
+                        p1 = g_strdup (*pp);
+                        p1 = g_strstrip (p1);
+                        if (g_strrstr (p1, ".") != NULL) {
+                                if (src == NULL) {
+                                        /* should be a request pad */
+                                        src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
+                                        src_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (src_name) -1);
+                                        GST_INFO ("src_name: %s, src_pad_name: %s\n", src_name, src_pad_name);
+                                } else {
+                                        /* should be a request pad */
+                                        link = g_slice_new (Link);
+                                        link->src = src;
+                                        link->src_name = src_name;
+                                        link->src_pad_name = src_pad_name;
+                                        link->sink = NULL;
+                                        link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
+                                        link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
+                                        bin->links = g_slist_append (bin->links, link);
+                                }
+                        } else if (is_element_selected (structure, p1)) {
+                                /* plugin name, create a element. */
+                                element = create_element (structure, p1);
+                                if (element != NULL) {
+                                        if (src_name != NULL) {
+                                                link = g_slice_new (Link);
+                                                link->src = src;
+                                                link->src_name = src_name;
+                                                link->src_pad_name = src_pad_name;
+                                                link->sink = element;
+                                                link->sink_name = p1;
+                                                link->sink_pad_name = NULL;
+                                                if (src_pad_name == NULL) {
+                                                        bin->links = g_slist_append (bin->links, link);
+                                                } else {
+                                                        bin->previous = link;
+                                                }
+                                        }
+                                        bin->elements = g_slist_append (bin->elements, element);
+                                        src = element;
+                                        src_name = p1;
+                                        g_print ("element_name: %s\n", src_name);
+                                        src_pad_name = NULL;
+                                } else {
+                                        GST_ERROR ("error create element %s", *pp);
+                                        g_free (p);
+                                        g_strfreev (pp1);
+                                        return NULL; //FIXME release pipeline
+                                }
+                        } else {
+                                g_free (p1);
+                        }
+                        pp++;
+                }
+                bin->last = element;
+                list = g_slist_append (list, bin);
+                g_strfreev (pp1);
         }
 
         return list;
@@ -1415,6 +1476,9 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         }
 
         source->bins = get_source_bins (configure);
+        if (source->bins == NULL) {
+                return 1;
+        }
         source->pipeline = create_pipeline (source);
 
         return 0;
@@ -1466,6 +1530,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 }
 
                 encoder->bins = get_encoder_bins (structure);
+                if (encoder->bins == NULL) {
+                        return 1;
+                }
 
                 g_array_append_val (channel->encoder_array, encoder);
         }
@@ -1494,7 +1561,9 @@ channel_initialize (Channel *channel, GstStructure *configure)
 
         value = (GValue *)gst_structure_get_value (configure, "encoder");
         structure = (GstStructure *)gst_value_get_structure (value);
-        channel_encoder_initialize (channel, structure);
+        if (channel_encoder_initialize (channel, structure) != 0) {
+                return FALSE;
+        }
 }
 
 gboolean
