@@ -98,6 +98,7 @@ struct _Encoder {
         Channel *channel;
         gchar *pipeline_string;
         GstStructure *configure;
+        GSList *bins;
         GstElement *pipeline;
         gint id;
         

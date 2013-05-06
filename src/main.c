@@ -133,6 +133,7 @@ main (int argc, char *argv[])
         signal (SIGPIPE, SIG_IGN);
 
         /* config command line option */
+        #if 0
         if (config_path) {
                 config = config_new ("config_path", config_path, NULL);
                 if (config_load_config_file (config) != 0) {
@@ -140,12 +141,13 @@ main (int argc, char *argv[])
                         exit (0);
                 }
         } else {
+        #endif
                 config = config_new ("config_path", "/etc/itvencoder/itvencoder.conf");
                 if (config_load_config_file (config) != 0) {
                         GST_ERROR ("config files load error: /etc/itvencoder/itvencoder.conf");
                         exit (0);
                 }
-        }
+        //}
 
         if (config_path) {
                 /* config command line option */

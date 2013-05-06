@@ -963,6 +963,45 @@ create_pipeline (Source *source)
         return pipeline;
 }
 
+/**
+ * get_source_bins
+ * @configure: Configure object.
+ * @param: like this: /server/httpstreaming
+ *
+ * Returns: the pipeline bins.
+ */
+GSList *
+get_encoder_bins (GstStructure *structure)
+{
+        GValue *value;
+        GstElement *element, *src;
+        gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
+        gint i, n;
+        Bin *bin;
+        Link *link;
+        GSList *list;
+
+        list = NULL;
+        /* bin */
+        value = (GValue *)gst_structure_get_value (structure, "bins");
+        GstStructure *bins = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (bins);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (bins, i);
+                if (!is_bin_selected (structure, name)) {
+                        g_print ("skip bin %s\n", name);
+                        continue;
+                }
+                bin = g_slice_new (Bin);
+                bin->name = name;
+                bin->links = NULL;
+                bin->elements = NULL;
+                bin->previous = NULL;
+                p = get_bin_definition (structure, name);
+        }
+
+        return list;
+}
 
 static GstFlowReturn
 source_appsink_callback (GstAppSink *elt, gpointer user_data)
@@ -1030,7 +1069,7 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
 {
         gint i, j;
         SourceStream *stream;
-
+#if 0
         channel->source->sync_error_times = 0;
         channel->source->name = channel->name;
         channel->source->pipeline_string = pipeline_string;
@@ -1049,10 +1088,11 @@ channel_set_source (Channel *channel, gchar *pipeline_string)
                         stream->ring[j] = NULL;
                 }
         }
-
+#endif
         return 0;
 }
 
+#if 0
 gint
 channel_source_pipeline_initialize (Source *source)
 {
@@ -1119,7 +1159,7 @@ channel_source_pipeline_release (Source *source)
         gst_object_unref (source->pipeline);
         source->pipeline = NULL;
 }
-
+#endif
 static
 GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
@@ -1408,6 +1448,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         stream = g_array_index (encoder->streams, gpointer, i);
                         for (j = 0; j < channel->source->streams->len; j++) {
                                 source = g_array_index (channel->source->streams, gpointer, j);
+                                GST_ERROR ("source: %s encoder: %s", source->name, stream->name);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {
                                         stream->source = source;
                                         g_array_append_val (source->encoders, stream);
@@ -1415,7 +1456,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 }
                         }
                         if (stream->source == NULL) {
-                                GST_ERROR ("%s: cant find source.", stream->name);
+                                GST_ERROR ("cant find source %s.", stream->name);
                                 return -1;
                         }
                 }
@@ -1423,6 +1464,8 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 for (i=0; i<ENCODER_RING_SIZE; i++) {
                         encoder->output_ring[i] = NULL;
                 }
+
+                encoder->bins = get_encoder_bins (structure);
 
                 g_array_append_val (channel->encoder_array, encoder);
         }
@@ -1468,6 +1511,7 @@ channel_source_stop_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
+#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
                 return TRUE;
@@ -1485,7 +1529,7 @@ channel_source_stop_func (gpointer *user_data)
         channel_source_pipeline_release (source);
 
         g_mutex_unlock (channel->operate_mutex);
-
+#endif
         return FALSE;
 }
 
@@ -1504,6 +1548,7 @@ channel_source_start_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
+#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("start source %s, try lock channel %s failure!", source->name, channel->name);
                 g_usleep (1000000);
@@ -1517,7 +1562,7 @@ channel_source_start_func (gpointer *user_data)
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
 
         g_mutex_unlock (channel->operate_mutex);
-
+#endif
         return FALSE;
 }
 
@@ -1535,6 +1580,7 @@ channel_restart_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
+#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
                 return TRUE;
@@ -1566,7 +1612,7 @@ channel_restart_func (gpointer *user_data)
         }
 
         g_mutex_unlock (channel->operate_mutex);
-
+#endif
         return FALSE;
 }
 
