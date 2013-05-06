@@ -451,7 +451,6 @@ get_property_names (gchar *param)
 
         pp1 = pp;
         while (*pp1 != NULL) {
-                g_print ("pp: %s\n", *pp1);
                 if (g_strrstr (*pp1, "=") == NULL) {
                         g_print ("Configure error: %s\n", *pp1);
                         g_strfreev (pp);
@@ -462,7 +461,6 @@ get_property_names (gchar *param)
                 g_free (*pp1);
                 g_regex_unref (regex);
                 *pp1 = p1;
-                g_print ("pp: %s\n", *pp1);
                 pp1++;
         }
 
@@ -643,7 +641,6 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         links = bin->links;
         while (links != NULL) {
                 link = links->data;
-                g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
                 gst_element_link (link->src, link->sink);
                 links = links->next;
         }
@@ -823,7 +820,6 @@ get_source_bins (GstStructure *structure)
                                         /* should be a sometimes pad */
                                         src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                         src_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (src_name) -1);
-                                        g_print ("src_name: %s, src_pad_name: %s\n", src_name, src_pad_name);
                                 } else {
                                         /* should be a request pad */
                                         link = g_slice_new (Link);
@@ -856,7 +852,7 @@ get_source_bins (GstStructure *structure)
                                         bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
                                         src_name = p1;
-                                        g_print ("element_name: %s\n", src_name);
+                                        GST_INFO ("element_name: %s", src_name);
                                         src_pad_name = NULL;
                                 } else {
                                         GST_ERROR ("error create element %s", *pp);
@@ -938,7 +934,6 @@ create_pipeline (Source *source)
                         links = bin->links;
                         while (links != NULL) {
                                 link = links->data;
-                                g_print ("link %s and %s directly\n", link->src_name, link->sink_name);
                                 gst_element_link (link->src, link->sink);
                                 links = links->next;
                         }
@@ -1043,7 +1038,7 @@ get_encoder_bins (GstStructure *structure)
                                         bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
                                         src_name = p1;
-                                        g_print ("element_name: %s\n", src_name);
+                                        GST_INFO ("element_name: %s", src_name);
                                         src_pad_name = NULL;
                                 } else {
                                         GST_ERROR ("error create element %s", *pp);
@@ -1557,13 +1552,19 @@ channel_initialize (Channel *channel, GstStructure *configure)
 
         value = (GValue *)gst_structure_get_value (configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
-        channel_source_initialize (channel, structure);
+        if (channel_source_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel source error.");
+                return FALSE;
+        }
 
         value = (GValue *)gst_structure_get_value (configure, "encoder");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel encoder error.");
                 return FALSE;
         }
+
+        return TRUE;
 }
 
 gboolean

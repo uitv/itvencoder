@@ -201,7 +201,10 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
         value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
         structure = (GstStructure *)gst_value_get_structure (value);
         
-        channel_initialize (channel, structure);
+        if (!channel_initialize (channel, structure)) {
+                GST_ERROR ("Initialize channel error.");
+                return FALSE;
+        }
 
         return TRUE;
 }

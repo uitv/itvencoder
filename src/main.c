@@ -252,7 +252,8 @@ main (int argc, char *argv[])
         channels = (GstStructure *)gst_value_get_structure (value);
         itvencoder = itvencoder_new ("config", config, NULL);
         itvencoder_load_configure (itvencoder, channels);
-        if (itvencoder_channel_initialize (itvencoder, "mpegtsoverip") != 0) {
+        if (!itvencoder_channel_initialize (itvencoder, "mpegtsoverip")) {
+                GST_ERROR ("exit ...");
                 return 1;
         }
         itvencoder_channel_start (itvencoder, "mpegtsoverip");
