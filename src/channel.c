@@ -849,6 +849,8 @@ get_source_bins (GstStructure *structure)
                                                 } else {
                                                         bin->previous = link;
                                                 }
+                                        } else {
+                                                bin->first = element;
                                         }
                                         bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
@@ -1002,6 +1004,22 @@ complete_request_element (GSList *bins)
         }
 }
 
+static EncoderStream*
+encoder_get_stream (Encoder *encoder, gchar *name)
+{
+        EncoderStream *stream;
+        gint i;
+
+        for (i = 0; i < encoder->streams->len; i++) {
+                stream = g_array_index (encoder->streams, gpointer, i);
+                if (g_strcmp0 (stream->name, name) == 0) {
+                        break;
+                }
+        }
+
+        return stream;
+}
+
 /**
  * create_encoder_pipeline
  * @configure: Configure object.
@@ -1017,19 +1035,18 @@ create_encoder_pipeline (Encoder *encoder)
         Bin *bin;
         Link *link;
         GSList *bins, *links, *elements;
-        GstAppSinkCallbacks appsink_callbacks = {
-                NULL,
-                NULL,
-                source_appsink_callback,
-                NULL
-        };
         GstElementFactory *element_factory;
         GType type;
-        SourceStream *stream;
+        EncoderStream *stream;
+        GstAppSrcCallbacks callbacks = {
+                encoder_appsrc_need_data_callback,
+                NULL,
+                NULL
+        };
 
         pipeline = gst_pipeline_new (NULL);
 
-        /* add element to pipeline */
+        /* add element to pipeline first. */
         bins = encoder->bins;
         while (bins != NULL) {
                 bin = bins->data;
@@ -1042,14 +1059,21 @@ create_encoder_pipeline (Encoder *encoder)
                 bins = g_slist_next (bins);
         }
 
-        /* links element */
+        /* then links element. */
         bins = encoder->bins;
         while (bins != NULL) {
                 bin = bins->data;
+                element = bin->first;
+                element_factory = gst_element_get_factory (element);
+                type = gst_element_factory_get_element_type (element_factory);
+                if (g_strcmp0 ("GstAppSrc", g_type_name (type)) == 0) {
+                        stream = encoder_get_stream (encoder, bin->name);
+                        gst_app_src_set_callbacks (GST_APP_SRC (element), &callbacks, stream, NULL);
+                }
                 links = bin->links;
                 while (links != NULL) {
                         link = links->data;
-                        GST_ERROR ("link element: %s -> %s", link->src_name, link->sink_name);
+                        GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         gst_element_link (link->src, link->sink);
                         links = g_slist_next (links);
                 }
