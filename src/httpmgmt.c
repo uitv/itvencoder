@@ -144,6 +144,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
         Encoder *encoder;
         Channel *channel;
 
+#if 0
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
@@ -272,5 +273,6 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                 g_free (buf);
                 return 0;
         }
+#endif
 }
 

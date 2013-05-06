@@ -1608,6 +1608,7 @@ channel_start (Channel *channel)
         }
 }
 
+#if 0
 static gboolean
 channel_source_stop_func (gpointer *user_data)
 {
@@ -1616,7 +1617,6 @@ channel_source_stop_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
-#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
                 return TRUE;
@@ -1634,7 +1634,6 @@ channel_source_stop_func (gpointer *user_data)
         channel_source_pipeline_release (source);
 
         g_mutex_unlock (channel->operate_mutex);
-#endif
         return FALSE;
 }
 
@@ -1653,7 +1652,6 @@ channel_source_start_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
-#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("start source %s, try lock channel %s failure!", source->name, channel->name);
                 g_usleep (1000000);
@@ -1667,7 +1665,6 @@ channel_source_start_func (gpointer *user_data)
         gst_element_set_state (source->pipeline, GST_STATE_PLAYING);
 
         g_mutex_unlock (channel->operate_mutex);
-#endif
         return FALSE;
 }
 
@@ -1685,7 +1682,6 @@ channel_restart_func (gpointer *user_data)
         Encoder *encoder;
         gint i;
 
-#if 0
         if (!g_mutex_trylock (channel->operate_mutex)) {
                 GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
                 return TRUE;
@@ -1717,7 +1713,6 @@ channel_restart_func (gpointer *user_data)
         }
 
         g_mutex_unlock (channel->operate_mutex);
-#endif
         return FALSE;
 }
 
@@ -1812,7 +1807,7 @@ channel_encoder_restart (Encoder *encoder)
         g_idle_add_full (G_PRIORITY_HIGH_IDLE, (GSourceFunc)channel_encoder_restart_func, (gpointer) encoder, NULL);
         return 0;
 }
-
+#endif
 Channel *
 channel_get_channel (gchar *uri, GArray *channels)
 {

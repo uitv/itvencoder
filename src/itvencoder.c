@@ -464,7 +464,7 @@ itvencoder_get_start_time (ITVEncoder *itvencoder)
 {
         return itvencoder->start_time;
 }
-
+#if 0
 gint
 itvencoder_start (ITVEncoder *itvencoder)
 {
@@ -513,7 +513,7 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         return 0;
 }
-
+#endif
 static void
 stat_report (ITVEncoder *itvencoder)
 {
