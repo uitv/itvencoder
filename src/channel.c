@@ -989,7 +989,6 @@ complete_request_element (GSList *bins)
                                                 element = l4->data;
                                                 l4 = g_slist_next (l4);
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
-                                                        GST_INFO ("Request element complete");
                                                         link->sink = element;
                                                 }
                                         }
@@ -1132,46 +1131,30 @@ create_encoder_pipeline (Encoder *encoder)
 
         pipeline = gst_pipeline_new (NULL);
 
+        /* add element to pipeline */
         bins = encoder->bins;
         while (bins != NULL) {
                 bin = bins->data;
-
-                if (bin->previous == NULL) {
-                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s", bin->name);
-                        /* add element to pipeline */
-                        elements = bin->elements;
-                        while (elements != NULL) {
-                                element = elements->data;
-                                gst_bin_add (GST_BIN (pipeline), element);
-                                elements = g_slist_next (elements);
-                        }
-
-                        /* links element */
-                        links = bin->links;
-                        while (links != NULL) {
-                                link = links->data;
-                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s -> %s", link->src_name, link->sink_name);
-                                gst_element_link (link->src, link->sink);
-                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s", link->src_name);
-                                links = g_slist_next (links);
-                        }
-                } else {
-                        #if 0
-                        /* delayed sometimes pad link. */
-                        element = pickup_element (encoder->bins, bin->previous->src_name);
-                        bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
-
-                        /* new stream, set appsink output callback. */
-                        element = bin->last;
-                        element_factory = gst_element_get_factory (element);
-                        type = gst_element_factory_get_element_type (element_factory);
-                        if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
-                                stream = encoder_get_stream (encoder, bin->name);
-                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
-                        }
-                        #endif
+                elements = bin->elements;
+                while (elements != NULL) {
+                        element = elements->data;
+                        gst_bin_add (GST_BIN (pipeline), element);
+                        elements = g_slist_next (elements);
                 }
+                bins = g_slist_next (bins);
+        }
 
+        /* links element */
+        bins = encoder->bins;
+        while (bins != NULL) {
+                bin = bins->data;
+                links = bin->links;
+                while (links != NULL) {
+                        link = links->data;
+                        GST_ERROR ("link element: %s -> %s", link->src_name, link->sink_name);
+                        gst_element_link (link->src, link->sink);
+                        links = g_slist_next (links);
+                }
                 bins = g_slist_next (bins);
         }
 
