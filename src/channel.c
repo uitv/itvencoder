@@ -1534,6 +1534,8 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 GST_ERROR ("source: %s encoder: %s", source->name, stream->name);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {
                                         stream->source = source;
+                                        stream->current_position = -1;
+                                        stream->system_clock = encoder->channel->system_clock;
                                         g_array_append_val (source->encoders, stream);
                                         break;
                                 }
@@ -1596,7 +1598,14 @@ channel_initialize (Channel *channel, GstStructure *configure)
 gboolean
 channel_start (Channel *channel)
 {
+        Encoder *encoder;
+        gint i;
+
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
+        for (i = 0; i < channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+        }
 }
 
 static gboolean
