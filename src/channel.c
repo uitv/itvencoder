@@ -789,11 +789,12 @@ get_source_bins (GstStructure *structure)
         Bin *bin;
         Link *link;
         GSList *list;
+        GstStructure *bins;
 
         list = NULL;
         /* bin */
         value = (GValue *)gst_structure_get_value (structure, "bins");
-        GstStructure *bins = (GstStructure *)gst_value_get_structure (value);
+        bins = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (bins);
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
@@ -999,109 +1000,6 @@ complete_request_element (GSList *bins)
                 }
                 l1 = g_slist_next (l1);
         }
-}
-
-/**
- * get_source_bins
- * @configure: Configure object.
- * @param: like this: /server/httpstreaming
- *
- * Returns: the pipeline bins.
- */
-GSList *
-get_encoder_bins (GstStructure *structure)
-{
-        GValue *value;
-        GstElement *element, *src;
-        gchar *name, *p, *p1, **pp, **pp1, *src_name, *src_pad_name;
-        gint i, n;
-        Bin *bin;
-        Link *link;
-        GSList *list;
-        GstStructure *bins;
-
-        list = NULL;
-        /* bin */
-        value = (GValue *)gst_structure_get_value (structure, "bins");
-        bins = (GstStructure *)gst_value_get_structure (value);
-        n = gst_structure_n_fields (bins);
-        for (i = 0; i < n; i++) {
-                name = (gchar *)gst_structure_nth_field_name (bins, i);
-                if (!is_bin_selected (structure, name)) {
-                        GST_INFO ("skip bin %s\n", name);
-                        continue;
-                }
-                bin = g_slice_new (Bin);
-                bin->name = name;
-                bin->links = NULL;
-                bin->elements = NULL;
-                bin->previous = NULL;
-                p = get_bin_definition (structure, name);
-                pp = pp1 = g_strsplit (p, "!", 0);
-                src = NULL;
-                src_name = NULL;
-                src_pad_name = NULL;
-                while (*pp != NULL) {
-                        p1 = g_strdup (*pp);
-                        p1 = g_strstrip (p1);
-                        if (g_strrstr (p1, ".") != NULL) {
-                                if (src == NULL) {
-                                        /* should be a sometimes pad */
-                                        src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                        src_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (src_name) -1);
-                                } else {
-                                        /* should be a request pad */
-                                        link = g_slice_new (Link);
-                                        link->src = src;
-                                        link->src_name = src_name;
-                                        link->src_pad_name = src_pad_name;
-                                        link->sink = NULL;
-                                        link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                        link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
-                                        bin->links = g_slist_append (bin->links, link);
-                                        GST_INFO ("src_name: %s, sink_name: %s", src_name, link->sink_name);
-                                }
-                        } else if (is_element_selected (structure, p1)) {
-                                /* plugin name, create a element. */
-                                element = create_element (structure, p1);
-                                if (element != NULL) {
-                                        if (src_name != NULL) {
-                                                link = g_slice_new (Link);
-                                                link->src = src;
-                                                link->src_name = src_name;
-                                                link->src_pad_name = src_pad_name;
-                                                link->sink = element;
-                                                link->sink_name = p1;
-                                                link->sink_pad_name = NULL;
-                                                if (src_pad_name == NULL) {
-                                                        bin->links = g_slist_append (bin->links, link);
-                                                } else {
-                                                        bin->previous = link;
-                                                }
-                                        }
-                                        bin->elements = g_slist_append (bin->elements, element);
-                                        src = element;
-                                        src_name = p1;
-                                        GST_INFO ("element_name: %s", src_name);
-                                        src_pad_name = NULL;
-                                } else {
-                                        GST_ERROR ("error create element %s", *pp);
-                                        g_free (p);
-                                        g_strfreev (pp1);
-                                        return NULL; //FIXME release pipeline
-                                }
-                        } else {
-                                g_free (p1);
-                        }
-                        pp++;
-                }
-                bin->last = element;
-                list = g_slist_append (list, bin);
-                g_strfreev (pp1);
-        }
-        complete_request_element (list);
-
-        return list;
 }
 
 /**
@@ -1626,10 +1524,11 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         encoder->output_ring[i] = NULL;
                 }
 
-                encoder->bins = get_encoder_bins (structure);
+                encoder->bins = get_source_bins (structure);
                 if (encoder->bins == NULL) {
                         return 1;
                 }
+                complete_request_element (encoder->bins);
                 create_encoder_pipeline (encoder);
 
                 g_array_append_val (channel->encoder_array, encoder);
