@@ -935,7 +935,7 @@ create_pipeline (Source *source)
                         while (links != NULL) {
                                 link = links->data;
                                 gst_element_link (link->src, link->sink);
-                                links = links->next;
+                                links = g_slist_next (links);
                         }
                 } else {
                         /* delayed sometimes pad link. */
@@ -952,10 +952,54 @@ create_pipeline (Source *source)
                         }
                 }
 
-                bins = bins->next;
+                bins = g_slist_next (bins);
         }
 
         return pipeline;
+}
+
+/*
+ * complete_request_element
+ *
+ * request element link.
+ * 
+ */
+static gboolean
+complete_request_element (GSList *bins)
+{
+        GSList *l1, *l2, *l3, *l4;
+        Bin *bin, *bin2;
+        Link *link;
+        GstElement *element;
+
+        l1 = bins;
+        while (l1 != NULL) {
+                bin = l1->data;
+                GST_ERROR ("bin is %s", bin->name);
+                l2 = bin->links;
+                while (l2 != NULL) {
+                        link = l2->data;
+                        if (link->sink == NULL) {
+                                GST_INFO ("Request element found: %s -> %s", link->src_name, link->sink_name);
+                                l3 = bins;
+                                while (l3 != NULL) {
+                                        bin2 = l3->data;
+                                        l4 = bin2->elements;
+                                        while (l4 != NULL) {
+                                                element = l4->data;
+                                                l4 = g_slist_next (l4);
+                                                if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
+                                                        GST_INFO ("Request element complete");
+                                                        link->sink = element;
+                                                }
+                                        }
+                                        l3 = g_slist_next (l3);
+                                }
+                        }
+                        l2 = g_slist_next (l2);
+                }
+                l1 = g_slist_next (l1);
+        }
 }
 
 /**
@@ -975,11 +1019,12 @@ get_encoder_bins (GstStructure *structure)
         Bin *bin;
         Link *link;
         GSList *list;
+        GstStructure *bins;
 
         list = NULL;
         /* bin */
         value = (GValue *)gst_structure_get_value (structure, "bins");
-        GstStructure *bins = (GstStructure *)gst_value_get_structure (value);
+        bins = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (bins);
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
@@ -1002,10 +1047,9 @@ get_encoder_bins (GstStructure *structure)
                         p1 = g_strstrip (p1);
                         if (g_strrstr (p1, ".") != NULL) {
                                 if (src == NULL) {
-                                        /* should be a request pad */
+                                        /* should be a sometimes pad */
                                         src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                         src_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (src_name) -1);
-                                        GST_INFO ("src_name: %s, src_pad_name: %s\n", src_name, src_pad_name);
                                 } else {
                                         /* should be a request pad */
                                         link = g_slice_new (Link);
@@ -1016,6 +1060,7 @@ get_encoder_bins (GstStructure *structure)
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
                                         link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
                                         bin->links = g_slist_append (bin->links, link);
+                                        GST_INFO ("src_name: %s, sink_name: %s", src_name, link->sink_name);
                                 }
                         } else if (is_element_selected (structure, p1)) {
                                 /* plugin name, create a element. */
@@ -1055,8 +1100,82 @@ get_encoder_bins (GstStructure *structure)
                 list = g_slist_append (list, bin);
                 g_strfreev (pp1);
         }
+        complete_request_element (list);
 
         return list;
+}
+
+/**
+ * create_encoder_pipeline
+ * @configure: Configure object.
+ * @param: like this: /server/httpstreaming
+ *
+ */
+static void
+create_encoder_pipeline (Encoder *encoder)
+{
+        GValue *value;
+        GstStructure *structure;
+        GstElement *pipeline, *element;
+        Bin *bin;
+        Link *link;
+        GSList *bins, *links, *elements;
+        GstAppSinkCallbacks appsink_callbacks = {
+                NULL,
+                NULL,
+                source_appsink_callback,
+                NULL
+        };
+        GstElementFactory *element_factory;
+        GType type;
+        SourceStream *stream;
+
+        pipeline = gst_pipeline_new (NULL);
+
+        bins = encoder->bins;
+        while (bins != NULL) {
+                bin = bins->data;
+
+                if (bin->previous == NULL) {
+                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s", bin->name);
+                        /* add element to pipeline */
+                        elements = bin->elements;
+                        while (elements != NULL) {
+                                element = elements->data;
+                                gst_bin_add (GST_BIN (pipeline), element);
+                                elements = g_slist_next (elements);
+                        }
+
+                        /* links element */
+                        links = bin->links;
+                        while (links != NULL) {
+                                link = links->data;
+                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s -> %s", link->src_name, link->sink_name);
+                                gst_element_link (link->src, link->sink);
+                        GST_ERROR (">>>>>>>>>>>>>>>>>>>>>>: %s", link->src_name);
+                                links = g_slist_next (links);
+                        }
+                } else {
+                        #if 0
+                        /* delayed sometimes pad link. */
+                        element = pickup_element (encoder->bins, bin->previous->src_name);
+                        bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
+
+                        /* new stream, set appsink output callback. */
+                        element = bin->last;
+                        element_factory = gst_element_get_factory (element);
+                        type = gst_element_factory_get_element_type (element_factory);
+                        if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
+                                stream = encoder_get_stream (encoder, bin->name);
+                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
+                        }
+                        #endif
+                }
+
+                bins = g_slist_next (bins);
+        }
+
+        encoder->pipeline = pipeline;
 }
 
 static GstFlowReturn
@@ -1528,6 +1647,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 if (encoder->bins == NULL) {
                         return 1;
                 }
+                create_encoder_pipeline (encoder);
 
                 g_array_append_val (channel->encoder_array, encoder);
         }
