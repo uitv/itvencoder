@@ -773,14 +773,14 @@ pickup_element (GSList *list, gchar *name)
 }
 
 /**
- * get_source_bins
+ * get_bins
  * @configure: Configure object.
  * @param: like this: /server/httpstreaming
  *
  * Returns: the pipeline bins.
  */
 GSList *
-get_source_bins (GstStructure *structure)
+get_bins (GstStructure *structure)
 {
         GValue *value;
         GstElement *element, *src;
@@ -1521,7 +1521,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 }
         }
 
-        source->bins = get_source_bins (configure);
+        source->bins = get_bins (configure);
         if (source->bins == NULL) {
                 return 1;
         }
@@ -1577,7 +1577,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         encoder->output_ring[i] = NULL;
                 }
 
-                encoder->bins = get_source_bins (structure);
+                encoder->bins = get_bins (structure);
                 if (encoder->bins == NULL) {
                         return 1;
                 }
