@@ -142,9 +142,9 @@ main (int argc, char *argv[])
                 }
         } else {
         #endif
-                config = config_new ("config_path", "/etc/itvencoder/itvencoder.conf");
+                config = config_new ("config_path", "/home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
                 if (config_load_config_file (config) != 0) {
-                        GST_ERROR ("config files load error: /etc/itvencoder/itvencoder.conf");
+                        GST_ERROR ("config files load error: /home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
                         exit (0);
                 }
         //}
