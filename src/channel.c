@@ -626,7 +626,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
 
         src_pad_name = gst_pad_get_name (pad);
         if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
-                g_print ("new added pad name: %s, delayed src pad name %s.\n", src_pad_name, bin->previous->src_pad_name);
+                GST_INFO ("new added pad name: %s, delayed src pad name %s.", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
 
@@ -647,7 +647,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
 
         caps = gst_pad_get_caps (pad);
         if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
-                g_print ("new added pad name: %s, delayed src pad name %s. ok!\n", src_pad_name, bin->previous->src_pad_name);
+                GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
         }
         g_free (src_pad_name);
