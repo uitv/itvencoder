@@ -1029,7 +1029,6 @@ static void
 create_encoder_pipeline (Encoder *encoder)
 {
         GValue *value;
-        GstStructure *structure;
         GstElement *pipeline, *element;
         Bin *bin;
         Link *link;
@@ -1042,6 +1041,13 @@ create_encoder_pipeline (Encoder *encoder)
                 NULL,
                 NULL
         };
+        GstAppSinkCallbacks encoder_appsink_callbacks = {
+                NULL,
+                NULL,
+                encoder_appsink_callback,
+                NULL
+        };
+ 
 
         pipeline = gst_pipeline_new (NULL);
 
@@ -1066,8 +1072,16 @@ create_encoder_pipeline (Encoder *encoder)
                 element_factory = gst_element_get_factory (element);
                 type = gst_element_factory_get_element_type (element_factory);
                 if (g_strcmp0 ("GstAppSrc", g_type_name (type)) == 0) {
+                        GST_INFO ("Encoder appsrc found.");
                         stream = encoder_get_stream (encoder, bin->name);
                         gst_app_src_set_callbacks (GST_APP_SRC (element), &callbacks, stream, NULL);
+                }
+                element = bin->last;
+                element_factory = gst_element_get_factory (element);
+                type = gst_element_factory_get_element_type (element_factory);
+                if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
+                        GST_INFO ("Encoder appsink found.");
+                        gst_app_sink_set_callbacks (GST_APP_SINK(element), &encoder_appsink_callbacks, encoder, NULL);
                 }
                 links = bin->links;
                 while (links != NULL) {
@@ -1247,6 +1261,7 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        GST_INFO ("%s current position %d, buffer duration: %d", encoder->name, encoder->current_output_position, GST_BUFFER_DURATION(buffer));
         i = encoder->current_output_position + 1;
         i = i % ENCODER_RING_SIZE;
         encoder->current_output_position = i;
