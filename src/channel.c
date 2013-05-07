@@ -626,7 +626,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
 
         src_pad_name = gst_pad_get_name (pad);
         if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
-                GST_INFO ("new added pad name: %s, delayed src pad name %s.", src_pad_name, bin->previous->src_pad_name);
+                GST_INFO ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
 
