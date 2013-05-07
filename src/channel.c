@@ -978,12 +978,11 @@ complete_request_element (GSList *bins)
         l1 = bins;
         while (l1 != NULL) {
                 bin = l1->data;
-                GST_ERROR ("bin is %s", bin->name);
                 l2 = bin->links;
                 while (l2 != NULL) {
                         link = l2->data;
                         if (link->sink == NULL) {
-                                GST_INFO ("Request element found: %s -> %s", link->src_name, link->sink_name);
+                                GST_INFO ("Request element link: %s -> %s", link->src_name, link->sink_name);
                                 l3 = bins;
                                 while (l3 != NULL) {
                                         bin2 = l3->data;
@@ -1262,27 +1261,39 @@ static void
 encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data)
 {
         EncoderStream *stream = (EncoderStream *)user_data;
+        gint current_position;
+        GstCaps *caps;
 
-        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
+        current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
         for (;;) {
                 stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
                 /* insure next buffer isn't current buffer */
-                if (stream->current_position == stream->source->current_position ||
+                if (current_position == stream->source->current_position ||
                         stream->source->current_position == -1) { /*FIXME: condition variable*/
                         GST_DEBUG ("waiting %s source ready", stream->name);
                         g_usleep (50000); /* wiating 50ms */
                         continue;
                 }
+
+                /* first buffer, set caps. */
+                if (stream->current_position == -1) {
+                        GST_INFO ("set stream %s caps!", stream->name);
+                        caps = GST_BUFFER_CAPS (stream->source->ring[0]);
+                        gst_app_src_set_caps (src, caps);
+                }
+
                 GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                         stream->name,   
                         stream->current_position,
                         GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (stream->source->ring[stream->current_position])),
                         stream->source->current_position);
-                if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[stream->current_position])) != GST_FLOW_OK) {
+
+                if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[current_position])) != GST_FLOW_OK) {
                         GST_ERROR ("%s, gst_app_src_push_buffer failure.", stream->name);
                 }
                 break;
         }
+        stream->current_position = current_position;
 }
 
 static gint
