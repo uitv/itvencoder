@@ -631,6 +631,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         }
 
         pipeline = (GstElement *)gst_element_get_parent (src);
+
         elements = bin->elements;
         while (elements != NULL) {
                 element = elements->data;
@@ -638,6 +639,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
                 gst_bin_add (GST_BIN (pipeline), element);
                 elements = elements->next;
         }
+
         links = bin->links;
         while (links != NULL) {
                 link = links->data;
@@ -647,10 +649,14 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         }
 
         caps = gst_pad_get_caps (pad);
+        GST_INFO ("caps: %s", gst_caps_to_string (caps));
         if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
+        } else {
+                GST_WARNING ("new added pad name: %s, delayed src pad name %s. failure!", src_pad_name, bin->previous->src_pad_name);
         }
+
         g_free (src_pad_name);
 }
 
