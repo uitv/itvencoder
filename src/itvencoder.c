@@ -464,7 +464,7 @@ itvencoder_get_start_time (ITVEncoder *itvencoder)
 {
         return itvencoder->start_time;
 }
-#if 0
+
 gint
 itvencoder_start (ITVEncoder *itvencoder)
 {
@@ -473,7 +473,7 @@ itvencoder_start (ITVEncoder *itvencoder)
         GstClockID id;
         GstClockTime t;
         GstClockReturn ret;
-
+#if 0
         itvencoder_initialize_channels (itvencoder);
 
         /* start encoder */
@@ -496,11 +496,11 @@ itvencoder_start (ITVEncoder *itvencoder)
                         }
                 }
         }
-
+#endif
         /* start http streaming */
         itvencoder->httpstreaming = httpstreaming_new ("channels", itvencoder->channel_array, "system_clock", itvencoder->system_clock, NULL);
         httpstreaming_start (itvencoder->httpstreaming, 10, itvencoder->config->http_streaming_port);
-
+#if 0
         /* regist itvencoder monitor */
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
         id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
@@ -510,10 +510,10 @@ itvencoder_start (ITVEncoder *itvencoder)
                 GST_WARNING ("Regist itvencoder monitor failure");
                 exit (0);
         }
-
+#endif
         return 0;
 }
-#endif
+
 static void
 stat_report (ITVEncoder *itvencoder)
 {

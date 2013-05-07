@@ -1261,7 +1261,7 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_INFO ("%s current position %d, buffer duration: %d", encoder->name, encoder->current_output_position, GST_BUFFER_DURATION(buffer));
+        GST_DEBUG ("%s current position %d, buffer duration: %d", encoder->name, encoder->current_output_position, GST_BUFFER_DURATION(buffer));
         i = encoder->current_output_position + 1;
         i = i % ENCODER_RING_SIZE;
         encoder->current_output_position = i;
@@ -1878,11 +1878,15 @@ channel_get_encoder (gchar *uri, GArray *channels)
                         channel = g_array_index (channels, gpointer, atoi (c));
                         e = g_match_info_fetch_named (match_info, "encoder");
                         if (atoi (e) < channel->encoder_array->len) {
-                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
+                                GST_INFO ("http get request, channel is %s, encoder is %s", c, e);
                                 encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
-                        } 
+                        } else {
+                                GST_ERROR ("Out range encoder %s, len is %d.", e, channel->encoder_array->len);
+                        }
                         g_free (e);
-                } 
+                } else {
+                        GST_ERROR ("Out range channel %s.", c);
+                }
                 g_free (c);
         }
 

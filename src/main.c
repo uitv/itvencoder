@@ -257,7 +257,7 @@ main (int argc, char *argv[])
                 return 1;
         }
         itvencoder_channel_start (itvencoder, "mpegtsoverip");
-        //itvencoder_start (itvencoder);
+        itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);
         print_itvencoder_info (itvencoder);
