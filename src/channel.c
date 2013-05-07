@@ -1487,6 +1487,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 
         for (i = 0; i < channel->source->streams->len; i++) {
                 stream = g_array_index (channel->source->streams, gpointer, i);
+                stream->current_position = -1;
                 stream->system_clock = channel->system_clock;
                 stream->encoders = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
                 for (j = 0; j < SOURCE_RING_SIZE; j++) {
@@ -1531,8 +1532,8 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         stream = g_array_index (encoder->streams, gpointer, i);
                         for (j = 0; j < channel->source->streams->len; j++) {
                                 source = g_array_index (channel->source->streams, gpointer, j);
-                                GST_ERROR ("source: %s encoder: %s", source->name, stream->name);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {
+                                        GST_INFO ("source: %s encoder: %s", source->name, stream->name);
                                         stream->source = source;
                                         stream->current_position = -1;
                                         stream->system_clock = encoder->channel->system_clock;
