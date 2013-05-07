@@ -1632,6 +1632,7 @@ channel_start (Channel *channel)
         for (i = 0; i < channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
                 gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+                encoder->state = GST_STATE_PLAYING;
         }
 }
 
