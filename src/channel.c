@@ -641,6 +641,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         links = bin->links;
         while (links != NULL) {
                 link = links->data;
+                GST_INFO ("Link %s -> %s", link->src_name, link->sink_name);
                 gst_element_link (link->src, link->sink);
                 links = links->next;
         }
@@ -937,6 +938,7 @@ create_pipeline (Source *source)
                         links = bin->links;
                         while (links != NULL) {
                                 link = links->data;
+                                GST_INFO ("link %s -> %s", link->src_name, link->sink_name);
                                 gst_element_link (link->src, link->sink);
                                 links = g_slist_next (links);
                         }
@@ -952,6 +954,7 @@ create_pipeline (Source *source)
                         if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
                                 stream = source_get_stream (source, bin->name);
                                 gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
+                                GST_INFO ("Delayed link %s ->", bin->previous->src_name);
                         }
                 }
 
