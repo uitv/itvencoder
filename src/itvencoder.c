@@ -52,7 +52,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         gsize *length;
         gint i;
 
-        itvencoder->channel_array = NULL;
+        itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
@@ -106,43 +106,6 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         }
 }
 
-/*
- * itvvencoder_load_configure
- *
- * @itvencoder: itvencoder object
- * @configure: GstStructure type configure data.
- *
- * Returns: TRUE on success, FALSE on failure.
- *
- */
-gboolean
-itvencoder_load_configure (ITVEncoder *itvencoder, GstStructure *configure)
-{
-        GValue *value;
-        GstStructure *structure;
-        gint i, n;
-        gchar *name;
-        Channel *channel;
-
-        g_object_set (itvencoder, "configure", configure, NULL);
-
-        if (itvencoder->channel_array == NULL) {
-                // first time load configure, add channels to itvencoder.
-                itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
-                n = gst_structure_n_fields (itvencoder->configure);
-                for ( i = 0; i < n; i++) {
-                        name = (gchar *)gst_structure_nth_field_name (itvencoder->configure, i);
-                        GST_WARNING ("channel found: %s", name);
-                        value = (GValue *)gst_structure_get_value (itvencoder->configure, name);
-                        structure = (GstStructure *)gst_value_get_structure (value);
-                        channel = channel_new ("configure", structure, NULL);
-                        g_array_append_val (itvencoder->channel_array, channel);
-                }
-        }
-
-        return TRUE;
-}
-
 static Channel*
 find_channel (ITVEncoder *itvencoder, gchar *name)
 {
@@ -175,22 +138,30 @@ find_channel (ITVEncoder *itvencoder, gchar *name)
  *
  */
 gboolean
-itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name)
+itvencoder_channel_initialize (ITVEncoder *itvencoder)
 {
-        Channel *channel;
         GValue *value;
-        GstStructure *structure;
-
-        channel = find_channel (itvencoder, name);
+        GstStructure *structure1, *structure2;
+        gint i, n;
+        gchar *name;
+        Channel *channel;
 
         value = (GValue *)gst_structure_get_value (itvencoder->configure, "channel");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, name);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        
-        if (!channel_initialize (channel, structure)) {
-                GST_ERROR ("Initialize channel error.");
-                return FALSE;
+        structure1 = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (structure1);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure1, i);
+                GST_INFO ("Channel found: %s.", name);
+                channel = channel_new ("name", name, NULL);
+                channel->id = i;
+                value = (GValue *)gst_structure_get_value (structure1, name);
+                structure2 = (GstStructure *)gst_value_get_structure (value);
+                if (!channel_initialize (channel, structure2)) {
+                        GST_ERROR ("Initialize channel error.");
+                        return FALSE;
+                }
+                g_array_append_val (itvencoder->channel_array, channel);
+                GST_INFO ("Channel %s added.", name);
         }
 
         return TRUE;
@@ -205,100 +176,6 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
         channel_start (channel);
 
         return TRUE;
-}
-
-static void
-itvencoder_initialize_channels (ITVEncoder *itvencoder)
-{
-        GValue *value;
-        GstStructure *structure1, *structure2;
-        gint i, n1, n2;
-        gchar *name;
-        Channel *channel;
-
-        value = (GValue *)gst_structure_get_value (itvencoder->configure, "channel");
-        structure1 = (GstStructure *)gst_value_get_structure (value);
-        n1 = gst_structure_n_fields (structure1);
-        for (i = 0; i < n1; i++) {
-                name = (gchar *)gst_structure_nth_field_name (structure1, i);
-                channel = channel_new ("name", name, NULL);
-                channel->id = i;
-                value = (GValue *)gst_structure_get_value (structure1, name);
-                structure2 = (GstStructure *)gst_value_get_structure (value);
-                n2 = gst_structure_n_fields (structure2);
-                g_array_append_val (itvencoder->channel_array, channel);
-        }
-#if 0
-        gint i;
-        gchar *name;
-        Channel *channel;
-        ChannelConfig *channel_config;
-        gchar *pipeline_string;
-
-        for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
-                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                name = g_strdup_printf ("channel-%d", i);
-                channel = channel_new ("name", name, NULL);
-                channel->id = i;
-                g_free (name);
-                pipeline_string = config_get_pipeline_string (channel_config, "decoder-pipeline");
-                if (pipeline_string == NULL) {
-                        GST_ERROR ("no source pipeline string error");
-                        exit (0); //TODO : exit or return?
-                }
-                if (channel_set_source (channel, pipeline_string) != 0) {
-                        GST_ERROR ("Set source pipeline error.");
-                        exit (0);
-                }
-                for (;;) {
-                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-1");
-                        if (pipeline_string == NULL) {
-                                GST_ERROR ("One encoder pipeline is must");
-                                exit (0); //TODO : exit or return?
-                        }
-                        if (channel_add_encoder (channel, pipeline_string) != 0) {
-                                GST_ERROR ("Add encoder pipeline 1 error");
-                                exit (0);
-                        }
-
-                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-2");
-                        if (pipeline_string == NULL) {
-                                GST_INFO ("One encoder pipelines found.");
-                                break; //TODO : exit or return?
-                        }
-                        if (channel_add_encoder (channel, pipeline_string) != 0) {
-                                GST_ERROR ("Add encoder pipeline 2 error");
-                                exit (0);
-                        }
-
-                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-3");
-                        if (pipeline_string == NULL) {
-                                GST_INFO ("Two encoder pipelines found.");
-                                break; //TODO : exit or return?
-                        }
-                        if (channel_add_encoder (channel, pipeline_string) != 0) {
-                                GST_ERROR ("Add encoder pipeline 3 error");
-                                exit (0);
-                        }
-
-                        pipeline_string = config_get_pipeline_string (channel_config, "encoder-pipeline-4");
-                        if (pipeline_string == NULL) {
-                                GST_INFO ("Three encoder pipelines found.");
-                                break; //TODO : exit or return?
-                        }
-                        if (channel_add_encoder (channel, pipeline_string) != 0) {
-                                GST_ERROR ("Add encoder pipeline 4 error");
-                                exit (0);
-                        }
-
-                        GST_INFO ("Four encoder pipelines found.");
-                        break;
-                }
-                GST_INFO ("parse channel %s, encoder channel number %d.",
-                           channel_config->config_path,
-                           channel->encoder_array->len);
-        }
-#endif
 }
 
 GType
@@ -484,30 +361,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         gchar *p, **pp;
         gint port;
 
-#if 0
-        itvencoder_initialize_channels (itvencoder);
-
-        /* start encoder */
-        for (i=0; i<itvencoder->channel_array->len; i++) {
-                channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                GST_INFO ("channel %s has %d encoder pipeline. channel source pipeline string is %s",
-                        channel->name,
-                        channel->encoder_array->len,
-                        channel->source->pipeline_string);
-                if (channel_source_start (channel->source) !=0 ) {
-                        GST_ERROR ("Fatal error! exit");
-                        exit (0);
-                }
-                for (j=0; j<channel->encoder_array->len; j++) {
-                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        GST_INFO ("channel encoder pipeline string is %s", encoder->pipeline_string);
-                        if (channel_encoder_start (encoder) != 0) {
-                                GST_ERROR ("Fatal error! exit");
-                                exit (0);
-                        }
-                }
-        }
-#endif
         /* start http streaming */
         value = (GValue *)gst_structure_get_value (itvencoder->configure, "server");
         structure = (GstStructure *)gst_value_get_structure (value);
@@ -518,17 +371,7 @@ itvencoder_start (ITVEncoder *itvencoder)
         g_strfreev (pp);
         itvencoder->httpstreaming = httpstreaming_new ("channels", itvencoder->channel_array, "system_clock", itvencoder->system_clock, NULL);
         httpstreaming_start (itvencoder->httpstreaming, 10, port);
-#if 0
-        /* regist itvencoder monitor */
-        t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
-        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
-        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
-        gst_clock_id_unref (id);
-        if (ret != GST_CLOCK_OK) {
-                GST_WARNING ("Regist itvencoder monitor failure");
-                exit (0);
-        }
-#endif
+
         return 0;
 }
 

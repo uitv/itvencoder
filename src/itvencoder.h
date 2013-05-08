@@ -49,7 +49,7 @@ struct _ITVEncoderClass {
 GType itvencoder_get_type (void);
 GstClockTime itvencoder_get_start_time (ITVEncoder *itvencoder);
 gboolean itvencoder_load_configure (ITVEncoder *itvencoder, GstStructure *configure);
-gboolean itvencoder_channel_initialize (ITVEncoder *itvencoder, gchar *name);
+gboolean itvencoder_channel_initialize (ITVEncoder *itvencoder);
 gboolean itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name);
 gint itvencoder_start (ITVEncoder *itvencoder);
 

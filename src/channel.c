@@ -1036,7 +1036,7 @@ encoder_get_stream (Encoder *encoder, gchar *name)
  *
  */
 static void
-create_encoder_pipeline (Encoder *encoder)
+create_encoder_pipeline (Encoder *encoder) //FIXME return failure
 {
         GValue *value;
         GstElement *pipeline, *element;
@@ -1058,7 +1058,6 @@ create_encoder_pipeline (Encoder *encoder)
                 NULL
         };
  
-
         pipeline = gst_pipeline_new (NULL);
 
         /* add element to pipeline first. */
@@ -1068,7 +1067,9 @@ create_encoder_pipeline (Encoder *encoder)
                 elements = bin->elements;
                 while (elements != NULL) {
                         element = elements->data;
-                        gst_bin_add (GST_BIN (pipeline), element);
+                        if (!gst_bin_add (GST_BIN (pipeline), element)) {
+                                GST_ERROR ("add element %s to bin %s error.", gst_element_get_name (element), bin->name);
+                        }
                         elements = g_slist_next (elements);
                 }
                 bins = g_slist_next (bins);
@@ -1578,7 +1579,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 }
                         }
                         if (stream->source == NULL) {
-                                GST_ERROR ("cant find source %s.", stream->name);
+                                GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
                                 return -1;
                         }
                 }

@@ -250,8 +250,7 @@ main (int argc, char *argv[])
 
         loop = g_main_loop_new (NULL, FALSE);
         itvencoder = itvencoder_new ("configure", configure->data, NULL);
-        //itvencoder_load_configure (itvencoder, configure->data);
-        if (!itvencoder_channel_initialize (itvencoder, "mpegtsoverip")) {
+        if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");
                 return 1;
         }
