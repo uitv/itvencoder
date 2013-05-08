@@ -152,9 +152,6 @@ struct _ChannelClass {
 GType channel_get_type (void);
 gboolean channel_initialize (Channel *channel, GstStructure *configure);
 gboolean channel_start (Channel *channel);
-
-guint channel_set_source (Channel *channel, gchar *pipeline_string);
-guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 Channel * channel_get_channel (gchar *uri, GArray *channel);
 
