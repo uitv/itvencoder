@@ -946,16 +946,16 @@ create_pipeline (Source *source)
                         element = pickup_element (source->bins, bin->previous->src_name);
                         bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
                         GST_INFO ("Delayed link %s -> %s", bin->previous->src_name, bin->name);
-
-                        /* new stream, set appsink output callback. */
-                        element = bin->last;
-                        element_factory = gst_element_get_factory (element);
-                        type = gst_element_factory_get_element_type (element_factory);
-                        if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
-                                stream = source_get_stream (source, bin->name);
-                                gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
-                                GST_INFO ("Set callbacks for bin %s -> %s", bin->name);
-                        }
+                }
+                        
+                /* new stream, set appsink output callback. */
+                element = bin->last;
+                element_factory = gst_element_get_factory (element);
+                type = gst_element_factory_get_element_type (element_factory);
+                if (g_strcmp0 ("GstAppSink", g_type_name (type)) == 0) {
+                        stream = source_get_stream (source, bin->name);
+                        gst_app_sink_set_callbacks (GST_APP_SINK (element), &appsink_callbacks, stream, NULL);
+                        GST_INFO ("Set callbacks for bin %s -> %s", bin->name);
                 }
 
                 bins = g_slist_next (bins);
