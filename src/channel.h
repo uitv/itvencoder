@@ -155,12 +155,6 @@ gboolean channel_start (Channel *channel);
 
 guint channel_set_source (Channel *channel, gchar *pipeline_string);
 guint channel_add_encoder (Channel *channel, gchar *pipeline_string);
-gint channel_source_stop (Source *source);
-gint channel_source_start (Source *source);
-gint channel_restart (Channel *channel);
-gint channel_encoder_stop (Encoder *encoder);
-gint channel_encoder_start (Encoder *encoder);
-gint channel_encoder_restart (Encoder *encoder);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 Channel * channel_get_channel (gchar *uri, GArray *channel);
 
