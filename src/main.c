@@ -10,7 +10,7 @@
 
 #include "log.h"
 #include "itvencoder.h"
-#include "keyvalue.h"
+#include "configure.h"
 #include "httpmgmt.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);

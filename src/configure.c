@@ -3,7 +3,7 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 
-#include "keyvalue.h"
+#include "configure.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
