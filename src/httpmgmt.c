@@ -117,7 +117,19 @@ httpmgmt_get_type (void)
 gint
 httpmgmt_start (HTTPMgmt *httpmgmt)
 {
-        httpmgmt->httpserver = httpserver_new ("maxthreads", 1, "port", httpmgmt->itvencoder->config->http_mgmt_port, NULL);
+        GValue *value;
+        GstStructure *structure;
+        gchar *p, **pp;
+        gint port;
+
+        value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure, "server");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
+        p = (gchar *)g_value_get_string (value);
+        pp = g_strsplit (p, ":", 0);
+        port = atoi (pp[1]);
+        g_strfreev (pp);
+        httpmgmt->httpserver = httpserver_new ("maxthreads", 1, "port", port, NULL);
         if (httpserver_start (httpmgmt->httpserver, mgmtserver_dispatcher, httpmgmt) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
                 exit (0);
