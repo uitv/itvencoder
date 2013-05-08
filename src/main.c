@@ -248,10 +248,8 @@ main (int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        value = configure_get_param (configure, "/channel");
-        channels = (GstStructure *)gst_value_get_structure (value);
         itvencoder = itvencoder_new ("config", config, NULL);
-        itvencoder_load_configure (itvencoder, channels);
+        itvencoder_load_configure (itvencoder, configure->data);
         if (!itvencoder_channel_initialize (itvencoder, "mpegtsoverip")) {
                 GST_ERROR ("exit ...");
                 return 1;
