@@ -577,11 +577,6 @@ create_element (GstStructure *pipeline, gchar *param)
                                 }
                         }
                 }
-                if (gst_structure_has_field (structure, "caps")) {
-                        value = (GValue *)gst_structure_get_value (structure, "caps");
-                        p = (gchar *)g_value_get_string (value);
-                        GST_INFO (">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>%s caps found: %s", param, p);
-                }
         }
 
         /* set element propertys configured in bin definition. */
@@ -897,6 +892,29 @@ source_get_stream (Source *source, gchar *name)
         return stream;
 }
 
+static gchar *
+get_caps (GstStructure *configure, gchar *name)
+{
+        GstStructure *structure;
+        GValue *value;
+        gchar *p;
+
+        p = NULL;
+        value = (GValue *)gst_structure_get_value (configure, "elements");
+	structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, name);
+        if (value == NULL) {
+                return NULL;
+        }
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (gst_structure_has_field (structure, "caps")) {
+                p = (gchar *)gst_structure_get_string (structure, "caps");
+                GST_INFO ("%s caps found: %s", name, p);
+        }
+
+        return p;
+}
+
 /**
  * create_pipeline
  * @configure: Configure object.
@@ -922,6 +940,8 @@ create_pipeline (Source *source)
         GstElementFactory *element_factory;
         GType type;
         SourceStream *stream;
+        gchar *p;
+        GstCaps *caps;
 
         pipeline = gst_pipeline_new (NULL);
 
@@ -943,7 +963,14 @@ create_pipeline (Source *source)
                         while (links != NULL) {
                                 link = links->data;
                                 GST_INFO ("link %s -> %s", link->src_name, link->sink_name);
-                                gst_element_link (link->src, link->sink);
+                                p = get_caps (source->configure, link->src_name);
+                                if (p != NULL) {
+                                        caps = gst_caps_from_string (p);
+                                        gst_element_link_filtered (link->src, link->sink, caps);
+                                        gst_caps_unref (caps);
+                                } else {
+                                        gst_element_link (link->src, link->sink);
+                                }
                                 links = g_slist_next (links);
                         }
                 } else {
@@ -1205,9 +1232,9 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
 
                 /* first buffer, set caps. */
                 if (stream->current_position == -1) {
-                        GST_INFO ("set stream %s caps!", stream->name);
                         caps = GST_BUFFER_CAPS (stream->source->ring[0]);
                         gst_app_src_set_caps (src, caps);
+                        GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (caps));
                 }
 
                 GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
