@@ -29,7 +29,6 @@ struct _ITVEncoder {
         guint64 last_ctime; // last process cpu time.
         guint64 start_ctime; // cpu time at process start.
 
-//        Config *config;
         GstStructure *configure;
         GArray *channel_array;
         HTTPStreaming *httpstreaming; /* streaming via http */

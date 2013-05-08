@@ -13,7 +13,6 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         ITVENCODER_PROP_0,
-        //ITVENCODER_PROP_CONFIG,
         ITVENCODER_PROP_CONFIGURE,
 };
 
@@ -36,14 +35,6 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
         g_object_class->constructor = itvencoder_constructor;
         g_object_class->set_property = itvencoder_set_property;
         g_object_class->get_property = itvencoder_get_property;
-
-//        param = g_param_spec_pointer (
-  //              "config",
-    //            "Config",
-      //          NULL,
-        //        G_PARAM_WRITABLE | G_PARAM_READABLE
-       // );
-       // g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONFIG, param);
 
         param = g_param_spec_pointer (
                 "configure",
@@ -91,9 +82,6 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         g_return_if_fail(IS_ITVENCODER(obj));
 
         switch(prop_id) {
-        //case ITVENCODER_PROP_CONFIG:
-          //      ITVENCODER(obj)->config = (Config *)g_value_get_pointer (value);
-            //    break;
         case ITVENCODER_PROP_CONFIGURE:
                 ITVENCODER(obj)->configure = (GstStructure *)g_value_get_pointer (value);
                 break;
@@ -109,9 +97,6 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         ITVEncoder  *itvencoder = ITVENCODER(obj);
 
         switch(prop_id) {
-        //case ITVENCODER_PROP_CONFIG:
-          //      g_value_set_pointer (value, itvencoder->config);
-            //    break;
         case ITVENCODER_PROP_CONFIGURE:
                 g_value_set_pointer (value, itvencoder->configure);
                 break;
