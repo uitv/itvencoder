@@ -225,6 +225,24 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
 static void
 itvencoder_initialize_channels (ITVEncoder *itvencoder)
 {
+        GValue *value;
+        GstStructure *structure1, *structure2;
+        gint i, n1, n2;
+        gchar *name;
+        Channel *channel;
+
+        value = (GValue *)gst_structure_get_value (itvencoder->configure, "channel");
+        structure1 = (GstStructure *)gst_value_get_structure (value);
+        n1 = gst_structure_n_fields (structure1);
+        for (i = 0; i < n1; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure1, i);
+                channel = channel_new ("name", name, NULL);
+                channel->id = i;
+                value = (GValue *)gst_structure_get_value (structure1, name);
+                structure2 = (GstStructure *)gst_value_get_structure (value);
+                n2 = gst_structure_n_fields (structure2);
+                g_array_append_val (itvencoder->channel_array, channel);
+        }
 #if 0
         gint i;
         gchar *name;
@@ -294,7 +312,6 @@ itvencoder_initialize_channels (ITVEncoder *itvencoder)
                 GST_INFO ("parse channel %s, encoder channel number %d.",
                            channel_config->config_path,
                            channel->encoder_array->len);
-                g_array_append_val (itvencoder->channel_array, channel);
         }
 #endif
 }
