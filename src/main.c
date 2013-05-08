@@ -236,9 +236,7 @@ main (int argc, char *argv[])
                 GST_ERROR ("exit ...");
                 return 1;
         }
-        itvencoder_channel_start (itvencoder, "test");
-        itvencoder_channel_start (itvencoder, "cctvnews");
-        itvencoder_channel_start (itvencoder, "mpegtsoverip");
+        itvencoder_channel_start (itvencoder);
         itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);

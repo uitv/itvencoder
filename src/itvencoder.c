@@ -106,28 +106,6 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         }
 }
 
-static Channel*
-find_channel (ITVEncoder *itvencoder, gchar *name)
-{
-        Channel *channel;
-        gint i;
-
-        /* find channel with the name */
-        channel = NULL;
-        for (i = 0; i < itvencoder->channel_array->len; i++) {
-                channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                if (g_strcmp0 (channel->name, name) == 0) {
-                        break;
-                }
-        }
-        if (channel == NULL) {
-                GST_ERROR ("No channel: %s\n", name);
-                return FALSE;
-        }
-
-        return channel;
-}
-
 /*
  * itvencoder_channel_initialize
  *
@@ -168,12 +146,16 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
 }
 
 gboolean
-itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
+itvencoder_channel_start (ITVEncoder *itvencoder)
 {
         Channel *channel;
+        gint i;
 
-        channel = find_channel (itvencoder, name);
-        channel_start (channel);
+        /* find channel with the name */
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                channel_start (channel);
+        }
 
         return TRUE;
 }
