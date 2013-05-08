@@ -577,6 +577,11 @@ create_element (GstStructure *pipeline, gchar *param)
                                 }
                         }
                 }
+                if (gst_structure_has_field (structure, "caps")) {
+                        value = (GValue *)gst_structure_get_value (structure, "caps");
+                        p = (gchar *)g_value_get_string (value);
+                        GST_INFO (">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>%s caps found: %s", param, p);
+                }
         }
 
         /* set element propertys configured in bin definition. */
