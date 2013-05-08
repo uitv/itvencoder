@@ -10,7 +10,6 @@
 
 #include "config.h"
 
-#include "configure.h"
 #include "channel.h"
 #include "httpstreaming.h"
 

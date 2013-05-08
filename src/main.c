@@ -10,7 +10,6 @@
 
 #include "log.h"
 #include "itvencoder.h"
-#include "configure.h"
 #include "keyvalue.h"
 #include "httpmgmt.h"
 
@@ -95,7 +94,7 @@ static GOptionEntry options[] = {
 int
 main (int argc, char *argv[])
 {
-        Config *config;
+        //Config *config;
         Configure *configure;
         GValue *value;
         GstStructure *channels;
@@ -144,11 +143,11 @@ main (int argc, char *argv[])
                 }
         } else {
         #endif
-                config = config_new ("config_path", "/home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
-                if (config_load_config_file (config) != 0) {
-                        GST_ERROR ("config files load error: /home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
-                        exit (0);
-                }
+          //      config = config_new ("config_path", "/home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
+            //    if (config_load_config_file (config) != 0) {
+              //          GST_ERROR ("config files load error: /home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
+                //        exit (0);
+               // }
         //}
 
         if (config_path) {
