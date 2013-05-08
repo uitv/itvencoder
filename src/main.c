@@ -94,7 +94,6 @@ static GOptionEntry options[] = {
 int
 main (int argc, char *argv[])
 {
-        //Config *config;
         Configure *configure;
         GValue *value;
         GstStructure *channels;
@@ -132,23 +131,6 @@ main (int argc, char *argv[])
         }
 
         signal (SIGPIPE, SIG_IGN);
-
-        /* config command line option */
-        #if 0
-        if (config_path) {
-                config = config_new ("config_path", config_path, NULL);
-                if (config_load_config_file (config) != 0) {
-                        GST_ERROR ("config files load error: %s", config_path);
-                        exit (0);
-                }
-        } else {
-        #endif
-          //      config = config_new ("config_path", "/home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
-            //    if (config_load_config_file (config) != 0) {
-              //          GST_ERROR ("config files load error: /home/zhangping/workdir/itvencoder/conf/itvencoder.conf.sample");
-                //        exit (0);
-               // }
-        //}
 
         if (config_path) {
                 /* config command line option */
@@ -254,6 +236,8 @@ main (int argc, char *argv[])
                 GST_ERROR ("exit ...");
                 return 1;
         }
+        itvencoder_channel_start (itvencoder, "test");
+        itvencoder_channel_start (itvencoder, "cctvnews");
         itvencoder_channel_start (itvencoder, "mpegtsoverip");
         itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
