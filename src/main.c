@@ -64,6 +64,7 @@ print_version_info ()
         GST_WARNING ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 }
 
+#if 0
 static void
 print_itvencoder_info (ITVEncoder *itvencoder)
 {
@@ -79,6 +80,7 @@ print_itvencoder_info (ITVEncoder *itvencoder)
                 GST_WARNING ("config file %d - %s", i, channel_config->config_path);
         }
 }
+#endif
 
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
@@ -248,8 +250,8 @@ main (int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        itvencoder = itvencoder_new ("config", config, NULL);
-        itvencoder_load_configure (itvencoder, configure->data);
+        itvencoder = itvencoder_new ("configure", configure->data, NULL);
+        //itvencoder_load_configure (itvencoder, configure->data);
         if (!itvencoder_channel_initialize (itvencoder, "mpegtsoverip")) {
                 GST_ERROR ("exit ...");
                 return 1;
@@ -258,7 +260,7 @@ main (int argc, char *argv[])
         itvencoder_start (itvencoder);
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
         httpmgmt_start (httpmgmt);
-        print_itvencoder_info (itvencoder);
+        //print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);
 
         return 0;
