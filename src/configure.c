@@ -576,6 +576,9 @@ configure_channel_parse (gchar *name, gchar *data)
                         }
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
                         gst_structure_free (encoder);
+                } else {
+                        GST_ERROR ("Unknown channel configure entrance: %s.", p[i]);
+                        return NULL;
                 }
                 g_free (v);
         }
