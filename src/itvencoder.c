@@ -148,16 +148,6 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
 gboolean
 itvencoder_channel_start (ITVEncoder *itvencoder)
 {
-        Channel *channel;
-        gint i;
-
-        /* find channel with the name */
-        for (i = 0; i < itvencoder->channel_array->len; i++) {
-                channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                channel_start (channel);
-        }
-
-        return TRUE;
 }
 
 GType
@@ -333,7 +323,7 @@ itvencoder_get_start_time (ITVEncoder *itvencoder)
 gint
 itvencoder_start (ITVEncoder *itvencoder)
 {
-        gint i, j;
+        gint i;
         Channel *channel;
         GstClockID id;
         GstClockTime t;
@@ -342,6 +332,11 @@ itvencoder_start (ITVEncoder *itvencoder)
         GstStructure *structure;
         gchar *p, **pp;
         gint port;
+
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                channel_start (channel);
+        }
 
         /* start http streaming */
         value = (GValue *)gst_structure_get_value (itvencoder->configure, "server");
