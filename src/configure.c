@@ -529,7 +529,7 @@ configure_channel_parse (gchar *name, gchar *data)
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
-                if (g_strcmp0 (p[i], "onboot") == 0) {
+                if (g_strcmp0 (p[i], "enable") == 0) {
                         g_value_init (&value, G_TYPE_STRING);
                         g_value_set_static_string (&value, v);
                         gst_structure_set_value (structure, p[i], &value);
