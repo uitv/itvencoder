@@ -128,6 +128,7 @@ struct _Channel {
 
         gint id;
         gchar *name; // same as the name in channel config file
+        gboolean enable;
         GstStructure *configure;
         Source *source; 
         GArray *encoder_array;

@@ -121,7 +121,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         GValue *value;
         GstStructure *structure1, *structure2;
         gint i, n;
-        gchar *name;
+        gchar *name, *enable;
         Channel *channel;
 
         value = (GValue *)gst_structure_get_value (itvencoder->configure, "channel");
@@ -134,9 +134,18 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 channel->id = i;
                 value = (GValue *)gst_structure_get_value (structure1, name);
                 structure2 = (GstStructure *)gst_value_get_structure (value);
-                if (!channel_initialize (channel, structure2)) {
-                        GST_ERROR ("Initialize channel error.");
-                        return FALSE;
+                enable = (gchar *)gst_structure_get_string (structure2, "enable");
+                /* The channel is enabled? */
+                if (g_strcmp0 (enable, "no") == 0) {
+                        GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
+                        channel->enable = FALSE;
+                } else {
+                        GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
+                        channel->enable = TRUE;
+                        if (!channel_initialize (channel, structure2)) {
+                                GST_ERROR ("Initialize channel error.");
+                                return FALSE;
+                        }
                 }
                 g_array_append_val (itvencoder->channel_array, channel);
                 GST_INFO ("Channel %s added.", name);
@@ -173,7 +182,9 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
         Channel *channel;
 
         channel = find_channel (itvencoder, name);
-        channel_start (channel);
+        if (channel->enable) {
+                channel_start (channel);
+        }
 
         return TRUE;
 }
@@ -363,7 +374,9 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                channel_start (channel);
+                if (channel->enable) {
+                        channel_start (channel);
+                }
         }
 
         /* start http streaming */

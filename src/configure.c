@@ -517,8 +517,9 @@ static GstStructure *
 configure_channel_parse (gchar *name, gchar *data)
 {
         GKeyFile *gkeyfile;
+        GRegex *regex;
         GError *e = NULL;
-        gchar **p, *v;
+        gchar **p, *v, *v1;
         gint i;
         gsize number;
         GstStructure *structure, *source, *encoder;
@@ -530,10 +531,19 @@ configure_channel_parse (gchar *name, gchar *data)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 if (g_strcmp0 (p[i], "enable") == 0) {
+                        /* remove var tag */
+                        regex = g_regex_new ("<[^>]*>([^<]*)</[^>]*>", 0, 0, NULL);
+                        v1 = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
+                        if ((g_strcmp0 (v1, "no") != 0) && (g_strcmp0 (v1, "yes") != 0)) {
+                                g_print ("Configure error: %s.\n", v);
+                                return NULL;
+                        }
                         g_value_init (&value, G_TYPE_STRING);
-                        g_value_set_static_string (&value, v);
+                        g_value_set_static_string (&value, v1);
                         gst_structure_set_value (structure, p[i], &value);
                         g_value_unset (&value);
+                        g_regex_unref (regex);
+                        g_free (v1);
                 } else if (g_strcmp0 (p[i], "source") == 0) {
                         source = configure_pipeline_parse (p[i], v);
                         if (source == NULL) {
