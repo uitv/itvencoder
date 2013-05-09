@@ -486,6 +486,7 @@ static gboolean
 set_element_property (GstElement *element, gchar* name, gchar* value)
 {
         GParamSpec *param_spec;
+        GValue v = { 0, };
 
         param_spec = g_object_class_find_property (G_OBJECT_GET_CLASS (element), name);
         if (param_spec == NULL) {
@@ -501,6 +502,9 @@ set_element_property (GstElement *element, gchar* name, gchar* value)
         case G_TYPE_INT:
                 g_object_set (element, name, atoi (value), NULL);
                 break;
+        case G_TYPE_UINT:
+                g_object_set (element, name, atoi (value), NULL);
+                break;
         case G_TYPE_BOOLEAN:
                 if (g_strcmp0 (value, "FALSE") == 0) {
                         g_object_set (element, name, FALSE, NULL);
@@ -511,6 +515,10 @@ set_element_property (GstElement *element, gchar* name, gchar* value)
                         return FALSE;
                 }
                 break;
+        default:
+                g_value_init (&v, param_spec->value_type);
+                gst_value_deserialize (&v, value);
+                g_object_set_property (G_OBJECT (element), param_spec->name, &v);
         }
 
         return TRUE;
