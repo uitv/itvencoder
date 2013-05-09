@@ -575,6 +575,7 @@ create_element (GstStructure *pipeline, gchar *param)
                                         GST_ERROR ("Set property error %s=%s", name, p);
                                         return NULL;
                                 }
+                                GST_INFO ("Set property: %s = %s.", name, p);
                         }
                 }
         }
