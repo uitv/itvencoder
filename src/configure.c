@@ -1,3 +1,8 @@
+/*
+ *  Copyright (c) 2012 iTV.cn
+ *  Author Zhang Ping <zhangping@itv.cn>
+ */
+
 #include <unistd.h>
 #include <string.h>
 #include <gst/gst.h>
