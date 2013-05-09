@@ -562,7 +562,7 @@ create_element (GstStructure *pipeline, gchar *param)
                 if (gst_structure_has_field (structure, "property")) {
                         value = (GValue *)gst_structure_get_value (structure, "property");
                         if (!GST_VALUE_HOLDS_STRUCTURE (value)) {
-                                g_print ("elements property should be structure.\n");
+                                GST_ERROR ("elements property should be structure.\n");
                                 gst_object_unref (GST_OBJECT (element));
                                 return NULL;
                         }
@@ -590,7 +590,7 @@ create_element (GstStructure *pipeline, gchar *param)
         while (*pp1 != NULL) {
                 p = get_property_value (param, *pp1);
                 if (p == NULL) {
-                        g_print ("Configure error: %s=%s", *pp1, p);
+                        GST_ERROR ("Configure error: %s=%s", *pp1, p);
                         gst_object_unref (element);
                         g_strfreev (pp);
                         return NULL;

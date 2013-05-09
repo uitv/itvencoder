@@ -413,7 +413,7 @@ configure_pipeline_parse (gchar *name, gchar *data)
         gchar **p, *v, *var;
         gint i;
         gsize number;
-        GstStructure *structure, *elements, *element, *variables, *bins;
+        GstStructure *structure, *elements, *element, *bins;
         GValue value = { 0, { { 0 } } };
         GRegex *regex;
 
@@ -422,7 +422,6 @@ configure_pipeline_parse (gchar *name, gchar *data)
         //g_print ("number is %d\n", number);
         structure = gst_structure_empty_new (name);
         elements = gst_structure_empty_new ("elements");
-        variables = gst_structure_empty_new ("variables");
         regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
@@ -451,14 +450,6 @@ configure_pipeline_parse (gchar *name, gchar *data)
                         gst_structure_set_value (structure, p[i], &value);
                         g_value_unset (&value);
                         g_free (var);
-                } else if (v[0] == '<') {
-                        /* variable found */
-                        var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
-                        g_value_init (&value, G_TYPE_STRING);
-                        g_value_set_static_string (&value, var);
-                        gst_structure_set_value (variables, p[i], &value);
-                        g_value_unset (&value);
-                        g_free (var);
                 } else {
                         /* should be a element */
                         element = configure_element_parse (p[i], v);
@@ -473,8 +464,6 @@ configure_pipeline_parse (gchar *name, gchar *data)
         g_regex_unref (regex);
         gst_structure_set (structure, "elements", GST_TYPE_STRUCTURE, elements, NULL);
         gst_structure_free (elements);
-        gst_structure_set (structure, "variables", GST_TYPE_STRUCTURE, variables, NULL);
-        gst_structure_free (variables);
         g_strfreev (p);
         g_key_file_free (gkeyfile);
 
