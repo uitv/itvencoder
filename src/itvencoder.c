@@ -234,6 +234,9 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 /* source heartbeat check */
                 for (i = 0; i < channel->source->streams->len; i++) {
                         source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        if (source_stream->ring[0] == NULL) {
+                                continue;
+                        }
                         if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
                                 /* don't check subtitle */
                                 continue;
@@ -301,6 +304,9 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 max = 0;
                 for (i = 0; i < channel->source->streams->len; i++) {
                         source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        if (source_stream->ring[0] == NULL) {
+                                continue;
+                        }
                         if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
                                 /* don't check subtitle */
                                 continue;
