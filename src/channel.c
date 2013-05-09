@@ -1422,6 +1422,20 @@ channel_start (Channel *channel)
         }
 }
 
+gboolean
+channel_stop (Channel *channel)
+{
+        Encoder *encoder;
+        gint i;
+
+        gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
+        for (i = 0; i < channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
+                encoder->state = GST_STATE_NULL;
+        }
+}
+
 Channel *
 channel_get_channel (gchar *uri, GArray *channels)
 {

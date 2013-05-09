@@ -247,7 +247,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         time_diff,
                                         channel->name);
                                 if (g_mutex_trylock (channel->operate_mutex)) {
-                                        channel_restart (channel);
+                                        channel_stop (channel);
+                                        channel_start (channel);
                                         g_mutex_unlock (channel->operate_mutex);
                                 } else {
                                         GST_WARNING ("Try lock channel %s to restart failure!", channel->name);
@@ -276,7 +277,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 encoder->name,
                                                 encoder_stream->name,
                                                 time_diff);
-                                        channel_encoder_restart (encoder);
+                                        //channel_encoder_restart (encoder);
                                 } else {
                                         GST_INFO ("channel %s encoder stream %s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -318,7 +319,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         if (channel->source->sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
                                 if (g_mutex_trylock (channel->operate_mutex)) {
-                                        channel_restart (channel);
+                                        channel_stop (channel);
+                                        channel_start (channel);
                                         channel->source->sync_error_times = 0;
                                         g_mutex_unlock (channel->operate_mutex);
                                 } else {
@@ -372,6 +374,7 @@ itvencoder_start (ITVEncoder *itvencoder)
         gchar *p, **pp;
         gint port;
 
+        /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->enable) {
@@ -389,6 +392,16 @@ itvencoder_start (ITVEncoder *itvencoder)
         g_strfreev (pp);
         itvencoder->httpstreaming = httpstreaming_new ("channels", itvencoder->channel_array, "system_clock", itvencoder->system_clock, NULL);
         httpstreaming_start (itvencoder->httpstreaming, 10, port);
+
+        /* regist itvencoder monitor */
+        t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
+        id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
+        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
+        gst_clock_id_unref (id);
+        if (ret != GST_CLOCK_OK) {
+                GST_WARNING ("Regist itvencoder monitor failure");
+                exit (0);
+        }
 
         return 0;
 }
