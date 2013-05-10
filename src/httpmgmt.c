@@ -187,6 +187,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 path += 1;
                                         }
                                         buf = configure_get_var (httpmgmt->configure, path);
+                                        if (buf == NULL) {
+                                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                        }
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;

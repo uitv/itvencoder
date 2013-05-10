@@ -1109,11 +1109,12 @@ gchar*
 configure_get_var (Configure *configure, gchar *group)
 {
         gint i, j, indent;
-        gchar *var, *p1, *p2, *path, *tag;
+        gchar *var, *p1, *path, *tag;
         ConfigurableVar *conf_var;
         
         p1 = g_strdup ("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<root>\n");
         path = g_strdup ("");
+        var = NULL;
         for (i = 0; i < configure->variables->len; i++) {
                 conf_var = g_array_index (configure->variables, gpointer, i);
                 if (g_ascii_strncasecmp (conf_var->group, group, strlen (group)) == 0) {
@@ -1143,7 +1144,9 @@ configure_get_var (Configure *configure, gchar *group)
         }
 
         tag = group_alter (path, "");
-        var = g_strdup_printf ("%s%s</root>\n", var, tag);
+        if (var != NULL) {
+                var = g_strdup_printf ("%s%s</root>\n", var, tag);
+        }
         g_free (p1);
         g_free (tag);
         g_free (path);
