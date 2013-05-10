@@ -223,17 +223,17 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         Channel *channel;
         SourceStream *source_stream;
         EncoderStream *encoder_stream;
-        gint i, j;
+        gint i, j, k;
 
-        for (i=0; i<itvencoder->channel_array->len; i++) {
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->source->state != GST_STATE_PLAYING) {
                         continue;
                 }
 
                 /* source heartbeat check */
-                for (i = 0; i < channel->source->streams->len; i++) {
-                        source_stream = g_array_index (channel->source->streams, gpointer, i);
+                for (j = 0; j < channel->source->streams->len; j++) {
+                        source_stream = g_array_index (channel->source->streams, gpointer, j);
                         if (source_stream->ring[0] == NULL) {
                                 continue;
                         }
@@ -265,14 +265,14 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
 
                 /* encoder heartbeat check */
-                for (i = 0; i < channel->encoder_array->len; i++) {
-                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, i);
+                for (j = 0; j < channel->encoder_array->len; j++) {
+                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
                         if (encoder->state != GST_STATE_PLAYING) {
                                 continue;
                         }
 
-                        for (j = 0; j < encoder->streams->len; j++) {
-                                encoder_stream = g_array_index (encoder->streams, gpointer, j);
+                        for (k = 0; k < encoder->streams->len; k++) {
+                                encoder_stream = g_array_index (encoder->streams, gpointer, k);
                                 now = gst_clock_get_time (itvencoder->system_clock);
                                 time_diff = GST_CLOCK_DIFF (encoder_stream->last_heartbeat, now);
                                 if (time_diff > HEARTBEAT_THRESHHOLD) {
@@ -302,8 +302,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 /* sync check */
                 min = GST_CLOCK_TIME_NONE;
                 max = 0;
-                for (i = 0; i < channel->source->streams->len; i++) {
-                        source_stream = g_array_index (channel->source->streams, gpointer, i);
+                for (j = 0; j < channel->source->streams->len; j++) {
+                        source_stream = g_array_index (channel->source->streams, gpointer, j);
                         if (source_stream->ring[0] == NULL) {
                                 continue;
                         }
@@ -335,8 +335,8 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                 } else {
                         channel->source->sync_error_times = 0;
-                        for (i = 0; i < channel->source->streams->len; i++) {
-                                source_stream = g_array_index (channel->source->streams, gpointer, i);
+                        for (j = 0; j < channel->source->streams->len; j++) {
+                                source_stream = g_array_index (channel->source->streams, gpointer, j);
                                 GST_INFO ("channel %s stream %s timestamp %" GST_TIME_FORMAT,
                                         channel->name,
                                         source_stream->name,
@@ -381,6 +381,7 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
+g_print ("iiiiiiiiiiii %d\n", i);
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->enable) {
                         channel_start (channel);
