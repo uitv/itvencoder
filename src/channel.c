@@ -645,6 +645,28 @@ free_bin (Bin *bin)
 }
 
 /*
+ * muser. or demuxer.video_0024 style return TRUE, else return FALSE.
+ */
+static gboolean
+is_pad (gchar *element)
+{
+        gchar *p;
+
+        p = element;
+        while (*p != '\0') {
+                if (*p == '.') {
+                        return TRUE;
+                }
+                if (*p == ' ') {
+                        return FALSE;
+                }
+                p++;
+        }
+
+        return FALSE;
+}
+
+/*
  * is_element_selected
  *
  * is element optional and be selected, or it's not optional.
@@ -802,7 +824,7 @@ get_bins (GstStructure *structure)
                 while (*pp != NULL) {
                         p1 = g_strdup (*pp);
                         p1 = g_strstrip (p1);
-                        if (g_strrstr (p1, ".") != NULL) {
+                        if (is_pad (p1)) {
                                 if (src == NULL) {
                                         /* should be a sometimes pad */
                                         src_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
