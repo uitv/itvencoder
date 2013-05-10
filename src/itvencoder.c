@@ -346,7 +346,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         }
 
         httpserver_report_request_data (itvencoder->httpstreaming->httpserver);
-
         stat_report (itvencoder);
 
         now = gst_clock_get_time (itvencoder->system_clock);
