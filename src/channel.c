@@ -1178,7 +1178,7 @@ channel_source_extract_streams (Source *source)
         GstStructure *structure, *bins, *bin;
         GValue *value;
         gint i, n;
-        gchar *name, *definition;
+        gchar *name, *definition, *option;
 
         structure = source->configure;
         value = (GValue *)gst_structure_get_value (structure, "bins");
@@ -1188,6 +1188,11 @@ channel_source_extract_streams (Source *source)
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
                 value = (GValue *)gst_structure_get_value (bins, name);
                 bin = (GstStructure *)gst_value_get_structure (value);
+                option = (gchar *)gst_structure_get_string (bin, "option");
+                if ((option != NULL) && (g_strcmp0 (option, "no") == 0)) {
+                        GST_WARNING ("Source %s's %s option set to no.", source->name, name);
+                        continue;
+                }
                 definition = (gchar *)gst_structure_get_string (bin, "definition");
                 regex = g_regex_new ("! *appsink[^!]*$", G_REGEX_OPTIMIZE, 0, NULL);
                 g_regex_match (regex, definition, 0, &match_info);
@@ -1268,7 +1273,7 @@ channel_encoder_extract_streams (Encoder *encoder)
         GMatchInfo *match_info;
         EncoderStream *stream;
         gint i, n;
-        gchar *name, *definition;
+        gchar *name, *definition, *option;
 
         structure = encoder->configure;
         value = (GValue *)gst_structure_get_value (structure, "bins");
@@ -1278,6 +1283,11 @@ channel_encoder_extract_streams (Encoder *encoder)
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
                 value = (GValue *)gst_structure_get_value (bins, name);
                 bin = (GstStructure *)gst_value_get_structure (value);
+                option = (gchar *)gst_structure_get_string (bin, "option");
+                if ((option != NULL) && (g_strcmp0 (option, "no") == 0)) {
+                        GST_WARNING ("Encoder %s's %s option set to no.", name);
+                        continue;
+                }
                 definition = (gchar *)gst_structure_get_string (bin, "definition");
                 regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
                 g_regex_match (regex, definition, 0, &match_info);
