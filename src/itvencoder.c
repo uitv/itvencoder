@@ -381,7 +381,6 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
-g_print ("iiiiiiiiiiii %d\n", i);
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
                 if (channel->enable) {
                         channel_start (channel);
