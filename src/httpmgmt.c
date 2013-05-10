@@ -8,6 +8,7 @@
 #include <string.h>
 #include "httpmgmt.h"
 #include "itvencoder.h"
+#include "configure.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -15,6 +16,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         HTTPMGMT_PROP_0,
         HTTPMGMT_PROP_ITVENCODER,
+        HTTPMGMT_PROP_CONFIGURE,
 };
 
 static void httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass);
@@ -41,6 +43,14 @@ httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, HTTPMGMT_PROP_ITVENCODER, param);
+
+        param = g_param_spec_pointer (
+                "configure",
+                "configure",
+                NULL,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, HTTPMGMT_PROP_CONFIGURE, param);
 }
 
 static void
@@ -70,6 +80,9 @@ httpmgmt_set_property (GObject *obj, guint prop_id, const GValue *value, GParamS
         case HTTPMGMT_PROP_ITVENCODER:
                 HTTPMGMT(obj)->itvencoder = (ITVEncoder *)g_value_get_pointer (value);
                 break;
+        case HTTPMGMT_PROP_CONFIGURE:
+                HTTPMGMT(obj)->configure = (Configure *)g_value_get_pointer (value);
+                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
                 break;
@@ -84,6 +97,9 @@ httpmgmt_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *p
         switch(prop_id) {
         case HTTPMGMT_PROP_ITVENCODER:
                 g_value_set_pointer (value, httpmgmt->itvencoder);
+                break;
+        case HTTPMGMT_PROP_CONFIGURE:
+                g_value_set_pointer (value, httpmgmt->configure);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -151,17 +167,32 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
-        gchar *buf;
+        gchar *buf, *path;
         gint i;
         Encoder *encoder;
         Channel *channel;
 
-#if 0
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
-                case 'c': /* uri is /channel..., maybe request for encoder streaming */
+                case 'c':
+                        /* get or post configure data. */
+                        if (g_str_has_prefix (request_data->uri, "/configure")) {
+                                if (request_data->method == HTTP_GET) {
+                                        path = request_data->uri + 10;
+                                        if ((*path == '\0') || (*(path + 1) == '\0')) {
+                                                path = "";
+                                        } else {
+                                                path += 1;
+                                        }
+                                        buf = configure_get_var (httpmgmt->configure, path);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                }
+                        }
+                #if 0
                         encoder = channel_get_encoder (request_data->uri, httpmgmt->itvencoder->channel_array);
                         if (encoder == NULL) {
                                 channel = channel_get_channel (request_data->uri, httpmgmt->itvencoder->channel_array);
@@ -261,6 +292,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
+                #endif
                 case 'i': /* uri is /httpmgmt/..... */
                         buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (PACKAGE_NAME) + strlen (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
                         write (request_data->sock, buf, strlen (buf));
@@ -285,6 +317,5 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                 g_free (buf);
                 return 0;
         }
-#endif
 }
 

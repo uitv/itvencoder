@@ -237,7 +237,7 @@ main (int argc, char *argv[])
                 return 1;
         }
         itvencoder_start (itvencoder);
-        httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
+        httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", configure, NULL);
         httpmgmt_start (httpmgmt);
         //print_itvencoder_info (itvencoder);
         g_main_loop_run (loop);

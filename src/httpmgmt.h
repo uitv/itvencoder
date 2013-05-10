@@ -9,6 +9,7 @@
 #include <gst/gst.h>
 
 #include "config.h"
+#include "configure.h"
 #include "itvencoder.h"
 #include "httpserver.h"
 
@@ -19,6 +20,7 @@ struct _HTTPMgmt {
         GObject parent;
     
         GstClock *system_clock;
+        Configure *configure;
         ITVEncoder *itvencoder;
         HTTPServer *httpserver; /* management via http */
 };

@@ -744,13 +744,13 @@ configure_extract_lines (Configure *configure)
                                 break;
                         case '{':
                                 bracket_depth++;
-                                group_array = g_strsplit (group, ".", 5);
+                                group_array = g_strsplit (group, "/", 5);
                                 if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
                                         if ((bracket_depth <= 2) || ((bracket_depth == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
                                                 g_regex_unref (regex);
-                                                p6 = g_strdup_printf ("%s.%s", group, p5);
+                                                p6 = g_strdup_printf ("%s/%s", group, p5);
                                                 g_free (group);
                                                 g_free (p5);
                                                 group = p6;
@@ -760,7 +760,7 @@ configure_extract_lines (Configure *configure)
                                 break;
                         case '}':
                                 bracket_depth--;
-                                group_array = g_strsplit (group, ".", 5);
+                                group_array = g_strsplit (group, "/", 5);
                                 if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
                                         if ((bracket_depth == 1) || ((bracket_depth == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 i = 0;
@@ -771,7 +771,7 @@ configure_extract_lines (Configure *configure)
                                                 p5 = g_strdup (group_array[i]);
                                                 p6 = p5;
                                                 while (i != 0) {
-                                                        p5 = g_strdup_printf ("%s.%s", group_array[i - 1], p6);
+                                                        p5 = g_strdup_printf ("%s/%s", group_array[i - 1], p6);
                                                         g_free (p6);
                                                         p6 = p5;
                                                         i--;
@@ -990,7 +990,7 @@ group_alter (gchar *path, gchar *group)
         /* find out identical part of path and group */
         indent = 1;
         for (;;) {
-                if (((*p3 == '.') || (*p3 == '\0')) && ((*p4 == '.') || (*p4 == '\0'))) {
+                if (((*p3 == '/') || (*p3 == '\0')) && ((*p4 == '/') || (*p4 == '\0'))) {
                         indent++;
                         if (*p3 == '\0') {
                                 p1 = p3;
@@ -1017,7 +1017,7 @@ group_alter (gchar *path, gchar *group)
                 depth = indent;
                 p3 = p4 = g_strdup ("</");
                 for (;;) {
-                        if ((*p1 == '.') || (*p1 == '\0')) {
+                        if ((*p1 == '/') || (*p1 == '\0')) {
                                 for (i = 0; i < depth; i++) {
                                         p4 = g_strdup_printf ("    %s", p3);
                                         g_free (p3);
@@ -1050,7 +1050,7 @@ group_alter (gchar *path, gchar *group)
                 depth = indent;
                 p3 = p4 = g_strdup ("<");
                 for (;;) {
-                        if ((*p2 == '.') || (*p2 == '\0')) {
+                        if ((*p2 == '/') || (*p2 == '\0')) {
                                 for (i = 0; i < depth; i++) {
                                         p4 = g_strdup_printf ("    %s", p3);
                                         g_free (p3);
@@ -1128,7 +1128,7 @@ configure_get_var (Configure *configure, gchar *group)
                                 indent = 1;
                                 path = g_strdup_printf ("%s", conf_var->group);
                                 for (j = 0; j < strlen (conf_var->group); j++) {
-                                        if (conf_var->group[j] == '.') {
+                                        if (conf_var->group[j] == '/') {
                                                 indent++;
                                         }
                                 }
