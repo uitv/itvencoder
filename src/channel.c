@@ -1337,7 +1337,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 static guint
 channel_encoder_initialize (Channel *channel, GstStructure *configure)
 {
-        gint i, j, n;
+        gint i, j, k, n;
         gchar *name;
         GValue *value;
         GstStructure *structure;
@@ -1358,10 +1358,10 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->configure = structure;
                 channel_encoder_extract_streams (encoder);
 
-                for (i = 0; i < encoder->streams->len; i++) {
-                        stream = g_array_index (encoder->streams, gpointer, i);
-                        for (j = 0; j < channel->source->streams->len; j++) {
-                                source = g_array_index (channel->source->streams, gpointer, j);
+                for (j = 0; j < encoder->streams->len; j++) {
+                        stream = g_array_index (encoder->streams, gpointer, j);
+                        for (k = 0; k < channel->source->streams->len; k++) {
+                                source = g_array_index (channel->source->streams, gpointer, k);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {
                                         GST_INFO ("source: %s encoder: %s", source->name, stream->name);
                                         stream->source = source;
@@ -1377,8 +1377,8 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         }
                 }
 
-                for (i=0; i<ENCODER_RING_SIZE; i++) {
-                        encoder->output_ring[i] = NULL;
+                for (j = 0; j < ENCODER_RING_SIZE; j++) {
+                        encoder->output_ring[j] = NULL;
                 }
 
                 encoder->bins = get_bins (structure);
