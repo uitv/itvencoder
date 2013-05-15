@@ -10,7 +10,7 @@
 #include "httpmgmt.h"
 #include "itvencoder.h"
 #include "configure.h"
-#include "index.html"
+#include "mgmt_html.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -202,6 +202,12 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                         /* get mgmt, index.html */
                         if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                                 write (request_data->sock, index_html, strlen (index_html));
+                                return 0;
+                        }
+                case 'g':
+                        /* get gui.css */
+                        if (g_str_has_prefix (request_data->uri, "/gui.css")) {
+                                write (request_data->sock, gui_css, strlen (gui_css));
                                 return 0;
                         }
                 #if 0
