@@ -1090,6 +1090,8 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
                 encoder_appsink_callback,
                 NULL
         };
+        gchar *p;
+        GstCaps *caps;
  
         pipeline = gst_pipeline_new (NULL);
 
@@ -1131,7 +1133,14 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
                 while (links != NULL) {
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
-                        gst_element_link (link->src, link->sink);
+                        p = get_caps (encoder->configure, link->src_name);
+                        if (p != NULL) {
+                                caps = gst_caps_from_string (p);
+                                gst_element_link_filtered (link->src, link->sink, caps);
+                                gst_caps_unref (caps);
+                        } else {
+                                gst_element_link (link->src, link->sink);
+                        }
                         links = g_slist_next (links);
                 }
                 bins = g_slist_next (bins);

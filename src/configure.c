@@ -310,8 +310,11 @@ configure_element_parse (gchar *name, gchar *data)
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, property, NULL);
                         gst_structure_free (property);
                 } else if (g_strcmp0 (p[i], "caps") == 0) {
+                        regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
+                        var = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
+                        g_regex_unref (regex);
                         g_value_init (&value, G_TYPE_STRING);
-                        g_value_set_static_string (&value, v);
+                        g_value_set_static_string (&value, var);
                         gst_structure_set_value (structure, p[i], &value);
                         g_value_unset (&value);
                         g_free (var);
