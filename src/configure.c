@@ -624,7 +624,7 @@ configure_file_parse (Configure *configure)
         gsize number;
         gchar *ini, **p, *v;
         gint i;
-        GstStructure *structure, *channel;
+        GstStructure *structure, *channels;
         GValue value = { 0, { { 0 } } };
 
         ini = prepare_for_file_parse (configure);
@@ -662,25 +662,25 @@ configure_file_parse (Configure *configure)
         gst_structure_set (configure->data, "server", GST_TYPE_STRUCTURE, structure, NULL);
         gst_structure_free (structure);
 
-        /* parse channel group */
-        p = g_key_file_get_keys (gkeyfile, "channel", &number, &e);
-        structure = gst_structure_empty_new ("channel");
+        /* parse channels group */
+        p = g_key_file_get_keys (gkeyfile, "channels", &number, &e);
+        structure = gst_structure_empty_new ("channels");
         for (i = 0; i < number; i++) {
-                v = g_key_file_get_value (gkeyfile, "channel", p[i], &e);
+                v = g_key_file_get_value (gkeyfile, "channels", p[i], &e);
                 if (!is_valid_name (p[i])) {
                         g_print ("Invalid channel configure: %s\n", p[i]);
                         return 1;
                 }
-                channel = configure_channel_parse (p[i], v);
-                if (channel == NULL) {
+                channels = configure_channel_parse (p[i], v);
+                if (channels == NULL) {
                         return 1;
                 }
-                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channel, NULL);
+                gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, channels, NULL);
                 g_free (v);
-                gst_structure_free (channel);
+                gst_structure_free (channels);
         }
         g_strfreev (p);
-        gst_structure_set (configure->data, "channel", GST_TYPE_STRUCTURE, structure, NULL);
+        gst_structure_set (configure->data, "channels", GST_TYPE_STRUCTURE, structure, NULL);
         gst_structure_free (structure);
 
         g_key_file_free (gkeyfile);
@@ -736,16 +736,16 @@ configure_extract_lines (Configure *configure)
                                         if (g_ascii_strncasecmp (p3, "[server]", 8) == 0) {
                                                 g_free (group);
                                                 group = g_strdup ("server");
-                                        } else if (g_ascii_strncasecmp (p3, "[channel]", 9) == 0) {
+                                        } else if (g_ascii_strncasecmp (p3, "[channels]", 10) == 0) {
                                                 g_free (group);
-                                                group = g_strdup ("channel");
+                                                group = g_strdup ("channels");
                                         }
                                 }
                                 break;
                         case '{':
                                 bracket_depth++;
                                 group_array = g_strsplit (group, "/", 5);
-                                if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
+                                if (g_ascii_strncasecmp (group, "channels", 8) == 0) {
                                         if ((bracket_depth <= 2) || ((bracket_depth == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
@@ -761,7 +761,7 @@ configure_extract_lines (Configure *configure)
                         case '}':
                                 bracket_depth--;
                                 group_array = g_strsplit (group, "/", 5);
-                                if (g_ascii_strncasecmp (group, "channel", 7) == 0) {
+                                if (g_ascii_strncasecmp (group, "channels", 8) == 0) {
                                         if ((bracket_depth == 1) || ((bracket_depth == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
                                                 i = 0;
                                                 while (group_array[i] != NULL) {
@@ -780,7 +780,7 @@ configure_extract_lines (Configure *configure)
                                                 group = p5;
                                         } else if (bracket_depth == 0) {
                                                 g_free (group);
-                                                group = g_strdup ("channel");
+                                                group = g_strdup ("channels");
                                         }
                                 }
                                 g_strfreev (group_array);

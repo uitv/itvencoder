@@ -124,7 +124,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gchar *name, *enable;
         Channel *channel;
 
-        value = (GValue *)gst_structure_get_value (itvencoder->configure, "channel");
+        value = (GValue *)gst_structure_get_value (itvencoder->configure, "channels");
         structure1 = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure1);
         for (i = 0; i < n; i++) {
