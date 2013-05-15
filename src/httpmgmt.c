@@ -6,9 +6,11 @@
 #include <unistd.h>
 #include <gst/gst.h>
 #include <string.h>
+
 #include "httpmgmt.h"
 #include "itvencoder.h"
 #include "configure.h"
+#include "index.html"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -194,6 +196,13 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
+                        }
+                        break;
+                case 'm':
+                        /* get mgmt, index.html */
+                        if (g_str_has_prefix (request_data->uri, "/mgmt")) {
+                                write (request_data->sock, index_html, strlen (index_html));
+                                return 0;
                         }
                 #if 0
                         encoder = channel_get_encoder (request_data->uri, httpmgmt->itvencoder->channel_array);
