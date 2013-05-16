@@ -56,7 +56,6 @@ static gchar *index_html = "<html>\n"
 "    }\n"
 "    fieldgroup.innerHTML = fieldgroup.innerHTML + \"<label for=\\\"\" + id  + \"\\\">\" + name + \"</lable>\";\n"
 "    dashbox.appendChild (fieldgroup);\n"
-"    dashbox.innerHTML = dashbox.innerHTML + \"<li>\" + onboot.getAttribute (\"name\") + \"</li>\";\n"
      /* channel source */
 "    var source = c.getElementsByTagName (\"source\")[0];\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<ul>Source</ul>\";\n"
