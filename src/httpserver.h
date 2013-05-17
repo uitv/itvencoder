@@ -60,7 +60,7 @@ typedef GstClockTime (*http_callback_t) (gpointer data, gpointer user_data);
 
 enum request_method {
         HTTP_GET,
-        HTTP_PUT
+        HTTP_POST
 };
 
 enum http_version {
