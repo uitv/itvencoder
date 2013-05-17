@@ -230,13 +230,14 @@ parse_request (RequestData *request_data)
 
         if (strncmp (buf, "GET", 3) == 0) {
                 request_data->method = HTTP_GET;
-        } else if (strncmp (buf, "PUT", 3) == 0) {
-                request_data->method = HTTP_PUT;
+                buf += 3;
+        } else if (strncmp (buf, "POST", 4) == 0) {
+                request_data->method = HTTP_POST;
+                buf += 4;
         } else {
                 return 2; /* Bad request */
         }
 
-        buf += 3;
         while (*buf == ' ') { /* skip space */
                 buf++;
         }
