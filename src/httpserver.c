@@ -219,7 +219,7 @@ read_request (RequestData *request_data)
 static gint
 parse_request (RequestData *request_data)
 {
-        gchar *buf = request_data->raw_request;
+        gchar *buf = request_data->raw_request, *p;
         gchar *uri = &(request_data->uri[0]);
         gchar *parameters = &(request_data->parameters[0]);
         gint i;
@@ -283,7 +283,40 @@ parse_request (RequestData *request_data)
 
         buf += 8;
 
-        /* TODO : parse headers */
+        /* parse headers */
+        i = 0;
+        for (;;) {
+                if ((g_strncasecmp (buf, "\n\n", 2) == 0) || (g_strncasecmp (buf, "\r\n\r\n", 4) == 0)) {
+                        break;
+                }
+
+                while (*buf == '\r' || *buf == '\n') {
+                        buf++;
+                }
+
+                /* parse name */
+                p = buf;
+                while (*buf != ':' && *buf != ' ' && *buf != '\0') {
+                        buf++;
+                }
+                request_data->headers[i].name = g_strndup (p, buf - p);
+
+                while (*buf == ':' || *buf == ' ') {
+                        buf++;
+                }
+
+                /* parse value */
+                p = buf;
+                while (*buf != '\r' && *buf != '\n') {
+                        buf++;
+                }
+                request_data->headers[i].value = g_strndup (p, buf - p);
+                GST_ERROR ("%s >>>>>>>>>>> %s", request_data->headers[i].name, request_data->headers[i].value);
+                i++;
+        }
+        request_data->num_headers = i;
+        GST_ERROR (">>>>>>>>>>> %d", request_data->num_headers);
+
         return 0;
 }
 
