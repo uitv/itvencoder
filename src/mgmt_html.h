@@ -11,7 +11,13 @@ static gchar *index_html = "<html>\n"
 "}\n"
 /* save changes button onclick */
 "function saveChanges () {\n"
-"    alert (\"save changes\");\n"
+"    var data = xmlhttp.responseXML;\n"
+"    var serializer = new XMLSerializer();\n"
+/* check changes. */
+"    data.getElementById (79).textContent = 100;\n"
+/* POST */
+"    var requestXML = serializer.serializeToString(data);\n"
+"    alert (requestXML);\n"
 "}\n"
 /* process request responseXML. */
 "function processRequest () {\n"
