@@ -83,7 +83,7 @@ enum session_status {
         HTTP_FINISH
 };
 
-#define kRequestBufferSize 1024
+#define kRequestBufferSize 4096
 #define kMaxRequests 128
 
 typedef struct _RequestData {
