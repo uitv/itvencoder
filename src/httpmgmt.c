@@ -195,6 +195,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
+                                } else if (request_data->method == HTTP_POST) {
+                                        GST_ERROR ("POST configure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:%s", request_data->raw_request);
+                                        return 0;
                                 }
                         }
                         break;
