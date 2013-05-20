@@ -196,7 +196,12 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 } else if (request_data->method == HTTP_POST) {
-                                        GST_ERROR ("POST configure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!:%s", request_data->raw_request);
+                                        /* save configure. */
+                                        gchar *var;
+                                        var = request_data->raw_request + request_data->header_size;
+                                        GST_ERROR ("POST configure:\n%s", var);
+                                        configure_set_var (httpmgmt->configure, var);
+                                        configure_save_to_file (httpmgmt->configure);
                                         return 0;
                                 }
                         }

@@ -1254,7 +1254,6 @@ configure_set_var (Configure *configure, gchar *var)
         for (i = 0; i < var_array->len; i++) {
                 conf_var = g_array_index (var_array, gpointer, i);
                 //g_print ("id: %d value: %s", conf_var->index, conf_var->value);
-                g_strreverse (conf_var->value);
                 set_var (configure, conf_var);
         }
 
