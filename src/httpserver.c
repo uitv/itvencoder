@@ -253,6 +253,7 @@ parse_request (RequestData *request_data)
                 GST_LOG ("Content-Length: %d, request_length: %d", content_length, request_data->request_length);
                 g_free (p3);
                 if ((request_data->header_size + content_length) > request_data->request_length) {
+                        /* body not completed, read more data. */
                         g_free (header);
                         return 1;
                 }
