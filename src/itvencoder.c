@@ -106,6 +106,29 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         }
 }
 
+GType
+itvencoder_get_type (void)
+{
+        static GType type = 0;
+
+        if (type) return type;
+        static const GTypeInfo info = {
+                sizeof (ITVEncoderClass), // class size.
+                NULL, // base initializer
+                NULL, // base finalizer
+                (GClassInitFunc) itvencoder_class_init, // class init.
+                NULL, // class finalize.
+                NULL, // class data.
+                sizeof (ITVEncoder),
+                0, // instance size.
+                (GInstanceInitFunc) itvencoder_init, // instance init.
+                NULL // value table.
+        };
+        type = g_type_register_static (G_TYPE_OBJECT, "ITVEncoder", &info, 0);
+
+        return type;
+}
+
 /*
  * itvencoder_channel_initialize
  *
@@ -187,29 +210,6 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gchar *name)
         }
 
         return TRUE;
-}
-
-GType
-itvencoder_get_type (void)
-{
-        static GType type = 0;
-
-        if (type) return type;
-        static const GTypeInfo info = {
-                sizeof (ITVEncoderClass), // class size.
-                NULL, // base initializer
-                NULL, // base finalizer
-                (GClassInitFunc) itvencoder_class_init, // class init.
-                NULL, // class finalize.
-                NULL, // class data.
-                sizeof (ITVEncoder),
-                0, // instance size.
-                (GInstanceInitFunc) itvencoder_init, // instance init.
-                NULL // value table.
-        };
-        type = g_type_register_static (G_TYPE_OBJECT, "ITVEncoder", &info, 0);
-
-        return type;
 }
 
 static gboolean
