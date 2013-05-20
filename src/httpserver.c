@@ -219,14 +219,45 @@ read_request (RequestData *request_data)
 static gint
 parse_request (RequestData *request_data)
 {
-        gchar *buf = request_data->raw_request, *p;
+        gchar *buf = request_data->raw_request, *p1, *p2, *p3, *header;
         gchar *uri = &(request_data->uri[0]);
         gchar *parameters = &(request_data->parameters[0]);
-        gint i;
+        gint i, content_length;
 
         if ((strstr (buf, "\n\n") == NULL) && (strstr(buf, "\r\n\r\n") == NULL)) {
+                /* header not completed, read more data. */
                 return 1;
         }
+
+        p1 = strstr (buf, "\n\n");
+        if (p1 == NULL) {
+                p1 = strstr (buf, "\r\n\r\n");
+                request_data->header_size = p1 - buf + 4;
+        } else {
+                request_data->header_size = p1 - buf + 2;
+        }
+        GST_LOG ("head size: %d", request_data->header_size);
+        header = g_strndup (buf, p1 - buf);
+        p1 = strstr (header, "Content-Length:");
+        if (p1 != NULL) {
+                p1 += 15;
+                while (*p1 == ' ') {
+                        p1++;
+                }
+                p2 = p1;
+                while (g_ascii_isdigit (*p2)) {
+                        p2++;
+                }
+                p3 = g_strndup (p1, p2 - p1);
+                content_length = atoi (p3);
+                GST_LOG ("Content-Length: %d, request_length: %d", content_length, request_data->request_length);
+                g_free (p3);
+                if ((request_data->header_size + content_length) > request_data->request_length) {
+                        g_free (header);
+                        return 1;
+                }
+        }
+        g_free (header);
 
         if (strncmp (buf, "GET", 3) == 0) {
                 request_data->method = HTTP_GET;
@@ -295,27 +326,25 @@ parse_request (RequestData *request_data)
                 }
 
                 /* parse name */
-                p = buf;
+                p1 = buf;
                 while (*buf != ':' && *buf != ' ' && *buf != '\0') {
                         buf++;
                 }
-                request_data->headers[i].name = g_strndup (p, buf - p);
+                //request_data->headers[i].name = g_strndup (p1, buf - p1);
 
                 while (*buf == ':' || *buf == ' ') {
                         buf++;
                 }
 
                 /* parse value */
-                p = buf;
+                p1 = buf;
                 while (*buf != '\r' && *buf != '\n') {
                         buf++;
                 }
-                request_data->headers[i].value = g_strndup (p, buf - p);
-                GST_ERROR ("%s >>>>>>>>>>> %s", request_data->headers[i].name, request_data->headers[i].value);
+                //request_data->headers[i].value = g_strndup (p1, buf - p1);
                 i++;
         }
         request_data->num_headers = i;
-        GST_ERROR (">>>>>>>>>>> %d", request_data->num_headers);
 
         return 0;
 }

@@ -102,6 +102,7 @@ typedef struct _RequestData {
         gchar uri[256];
         gchar parameters[1025];
         enum http_version version;
+        gint header_size;
         gint num_headers;
         struct http_headers headers[64];
         gpointer user_data;
