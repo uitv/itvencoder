@@ -199,9 +199,16 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         /* save configure. */
                                         gchar *var;
                                         var = request_data->raw_request + request_data->header_size;
-                                        GST_ERROR ("POST configure:\n%s", var);
                                         configure_set_var (httpmgmt->configure, var);
-                                        configure_save_to_file (httpmgmt->configure);
+                                        if (configure_save_to_file (httpmgmt->configure) != 0) {
+                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        } else {
+                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
+                                                write (request_data->sock, buf, strlen (buf));
+                                                g_free (buf);
+                                        }
                                         return 0;
                                 }
                         }

@@ -970,8 +970,8 @@ configure_save_to_file (Configure *configure)
                 p = contents;
         }
 
-        if (g_file_set_contents ("xxxx.xxx", contents, strlen (contents), &e) == FALSE) {
-                g_error (e->message);
+        if (g_file_set_contents (configure->file_path, contents, strlen (contents), &e) == FALSE) {
+                GST_ERROR ("error: %s\n", e->message);
                 g_error_free (e);
                 g_free (contents);
                 return 1;

@@ -141,7 +141,7 @@ main (int argc, char *argv[])
                 }
         } else {
                 /* default config path */
-                configure = configure_new ("configure_path", "/home/zhangping/workdir/itvencoder/test/itvencoder.conf", NULL);
+                configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
                 if (configure_load_from_file (configure) != 0) {
                         g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
                         return 1;
