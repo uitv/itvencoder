@@ -167,13 +167,6 @@ main (int argc, char *argv[])
 
                                 value = configure_get_param (configure, "/server/logdir");
                                 log_dir = (gchar *)g_value_get_string (value);
-                                #if 0
-                                if (config->log_dir[strlen(config->log_dir) - 1] == '/') {
-                                        log_path = g_strdup_printf ("%sitvencoder.log", config->log_dir);
-                                } else {
-                                        log_path = g_strdup_printf ("%s/itvencoder.log", config->log_dir);
-                                }
-                                #endif
                                 if (log_dir[strlen(log_dir) - 1] == '/') {
                                         log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
                                 } else {
