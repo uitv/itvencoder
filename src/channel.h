@@ -155,6 +155,5 @@ gboolean channel_initialize (Channel *channel, GstStructure *configure);
 gboolean channel_start (Channel *channel);
 gboolean channel_stop (Channel *channel);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
-Channel * channel_get_channel (gchar *uri, GArray *channel);
 
 #endif /* __CHANNEL_H__ */

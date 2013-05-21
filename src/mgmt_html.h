@@ -43,6 +43,7 @@ static gchar *index_html = "<html>\n"
 "    getConfigureRequest.open (\"GET\", \"/kill\", true);\n"
 "    getConfigureRequest.send ();\n"
 "}\n"
+/* restart channel */
 "function restartChannel (i) {\n"
 "    restartRequest = new XMLHttpRequest();\n"
 "    getConfigureRequest.open (\"GET\", \"/channel/\" + i + \"/restart\", true);\n"
