@@ -1473,7 +1473,7 @@ channel_get_channel (gchar *uri, GArray *channels)
         gchar *c;
         Channel *channel;
 
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
         if (g_match_info_matches (match_info)) {
                 c = g_match_info_fetch_named (match_info, "channel");
@@ -1500,7 +1500,7 @@ channel_get_encoder (gchar *uri, GArray *channels)
         Channel *channel;
         Encoder *encoder = NULL;
 
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+)$", G_REGEX_OPTIMIZE, 0, NULL);
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
         g_regex_match (regex, uri, 0, &match_info);
         if (g_match_info_matches (match_info)) {
                 c = g_match_info_fetch_named (match_info, "channel");
