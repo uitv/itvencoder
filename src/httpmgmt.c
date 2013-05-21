@@ -192,6 +192,31 @@ get_channel_index (gchar *uri)
         return index;
 }
 
+static gint
+get_encoder_index (gchar *uri)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *e;
+        gint index = -1;
+
+        regex = g_regex_new ("^/channel/.*/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                e = g_match_info_fetch_named (match_info, "encoder");
+                index = atoi (e);
+                g_free (e);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return index;
+}
+
+
 /**
  * mgmt_dispatcher:
  * @data: RequestData type pointer
@@ -251,8 +276,8 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         return 0;
                                 }
                         } else if (g_str_has_prefix (request_data->uri, "/channel")) {
-                                encoder = channel_get_encoder (request_data->uri, httpmgmt->itvencoder->channel_array);
-                                if (encoder == NULL) {
+                                index = get_encoder_index (request_data->uri);
+                                if (index == -1) {
                                         index = get_channel_index (request_data->uri);
                                         if (index == -1) {
                                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
