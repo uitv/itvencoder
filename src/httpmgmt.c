@@ -273,6 +273,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
+                                        load_configure (httpmgmt); 
                                         return 0;
                                 }
                         } else if (g_str_has_prefix (request_data->uri, "/channel")) {

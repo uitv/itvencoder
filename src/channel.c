@@ -1441,7 +1441,6 @@ channel_start (Channel *channel)
         Encoder *encoder;
         gint i;
 
-GST_ERROR (">>>>>>>>>>>>>start");
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
         channel->source->state = GST_STATE_PLAYING;
         for (i = 0; i < channel->encoder_array->len; i++) {
@@ -1456,7 +1455,7 @@ channel_stop (Channel *channel)
 {
         Encoder *encoder;
         gint i;
-GST_ERROR (">>>>>>>>>>>>>stop");
+
         gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
         channel->source->state = GST_STATE_NULL;
         for (i = 0; i < channel->encoder_array->len; i++) {
