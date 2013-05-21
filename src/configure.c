@@ -62,7 +62,7 @@ configure_set_property (GObject *obj, guint prop_id, const GValue *value, GParam
 
         switch (prop_id) {
         case CONFIGURE_PROP_FILE_PATH:
-                CONFIGURE(obj)->file_path = (gchar *)g_value_dup_string (value);
+                CONFIGURE(obj)->configure_file = (gchar *)g_value_dup_string (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -77,7 +77,7 @@ configure_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *
 
         switch (prop_id) {
         case CONFIGURE_PROP_FILE_PATH:
-                g_value_set_string(value, configure->file_path);
+                g_value_set_string(value, configure->configure_file);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -91,9 +91,9 @@ configure_dispose (GObject *obj)
         Configure *configure = CONFIGURE (obj);
         GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
 
-        if (configure->file_path != NULL) {
-                g_free (configure->file_path);
-                configure->file_path = NULL;
+        if (configure->configure_file != NULL) {
+                g_free (configure->configure_file);
+                configure->configure_file = NULL;
         }
 
         G_OBJECT_CLASS (parent_class)->dispose (obj);
@@ -934,7 +934,7 @@ configure_load_from_file (Configure *configure)
         configure_reset (configure);
 
         /* load file */
-        if (!g_file_get_contents (configure->file_path, &configure->raw, &configure->size, &e)) {
+        if (!g_file_get_contents (configure->configure_file, &configure->raw, &configure->size, &e)) {
                 g_print ("Error: %s\n", e->message);
                 g_error_free (e);
                 return 1;
@@ -970,7 +970,7 @@ configure_save_to_file (Configure *configure)
                 p = contents;
         }
 
-        if (g_file_set_contents (configure->file_path, contents, strlen (contents), &e) == FALSE) {
+        if (g_file_set_contents (configure->configure_file, contents, strlen (contents), &e) == FALSE) {
                 GST_ERROR ("error: %s\n", e->message);
                 g_error_free (e);
                 g_free (contents);

@@ -22,7 +22,7 @@ typedef struct _ConfigurableVar {
 struct _Configure {
         GObject parent;
 
-        gchar *file_path;
+        gchar *configure_file;
         
         /* raw configure file content */
         gchar *raw;
