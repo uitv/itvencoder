@@ -346,7 +346,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                         g_free (buf);
                         return 0;
                 case 'k': /* kill self */
-                        exit (1);
+                        if (g_str_has_prefix (request_data->uri, "/kill")) {
+                                exit (1);
+                        }
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
