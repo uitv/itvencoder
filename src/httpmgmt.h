@@ -20,6 +20,7 @@ struct _HTTPMgmt {
         GObject parent;
     
         GstClock *system_clock;
+        gchar *configure_file;
         Configure *configure;
         ITVEncoder *itvencoder;
         HTTPServer *httpserver; /* management via http */

@@ -18,7 +18,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         HTTPMGMT_PROP_0,
         HTTPMGMT_PROP_ITVENCODER,
-        HTTPMGMT_PROP_CONFIGURE,
+        HTTPMGMT_PROP_CONFIGURE_FILE,
 };
 
 static void httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass);
@@ -52,7 +52,7 @@ httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
                 NULL,
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
-        g_object_class_install_property (g_object_class, HTTPMGMT_PROP_CONFIGURE, param);
+        g_object_class_install_property (g_object_class, HTTPMGMT_PROP_CONFIGURE_FILE, param);
 }
 
 static void
@@ -60,6 +60,7 @@ httpmgmt_init (HTTPMgmt *httpmgmt)
 {
         httpmgmt->system_clock = gst_system_clock_obtain ();
         g_object_set (httpmgmt->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
+        httpmgmt->configure = NULL;
 }
 
 static GObject *
@@ -82,8 +83,8 @@ httpmgmt_set_property (GObject *obj, guint prop_id, const GValue *value, GParamS
         case HTTPMGMT_PROP_ITVENCODER:
                 HTTPMGMT(obj)->itvencoder = (ITVEncoder *)g_value_get_pointer (value);
                 break;
-        case HTTPMGMT_PROP_CONFIGURE:
-                HTTPMGMT(obj)->configure = (Configure *)g_value_get_pointer (value);
+        case HTTPMGMT_PROP_CONFIGURE_FILE:
+                HTTPMGMT(obj)->configure_file = (gchar *)g_value_dup_string (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -100,8 +101,8 @@ httpmgmt_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *p
         case HTTPMGMT_PROP_ITVENCODER:
                 g_value_set_pointer (value, httpmgmt->itvencoder);
                 break;
-        case HTTPMGMT_PROP_CONFIGURE:
-                g_value_set_pointer (value, httpmgmt->configure);
+        case HTTPMGMT_PROP_CONFIGURE_FILE:
+                g_value_set_string(value, httpmgmt->configure_file);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -132,6 +133,16 @@ httpmgmt_get_type (void)
         return type;
 }
 
+static void
+load_configure (HTTPMgmt *httpmgmt)
+{
+        if (httpmgmt->configure != NULL) {
+                gst_object_unref (G_OBJECT (httpmgmt->configure));
+        }
+
+        httpmgmt->configure = configure_new ("configure_path", httpmgmt->configure_file, NULL);
+}
+
 gint
 httpmgmt_start (HTTPMgmt *httpmgmt)
 {
@@ -140,6 +151,7 @@ httpmgmt_start (HTTPMgmt *httpmgmt)
         gchar *p, **pp;
         gint port;
 
+        load_configure (httpmgmt);
         value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure, "server");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
