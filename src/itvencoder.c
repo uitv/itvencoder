@@ -194,15 +194,15 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         if (g_strcmp0 (enable, "no") == 0) {
                 GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
                 channel->enable = FALSE;
-        } else {
+        } else if (g_strcmp0 (enable, "yes") == 0) {
                 GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
                 channel->enable = TRUE;
                 if (!channel_initialize (channel, structure2)) {
                         GST_ERROR ("Initialize channel error.");
                         return FALSE;
                 }
+                channel_start (channel);
         }
-        channel_start (channel);
 
         return TRUE;
 }
