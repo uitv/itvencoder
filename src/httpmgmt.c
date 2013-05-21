@@ -285,7 +285,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 g_free (buf);
                                                 return 0;
                                         } else if (g_str_has_suffix (request_data->uri, "/stop")) {
-                                                GST_WARNING ("Stop channel %s", channel->name);
+                                                GST_WARNING ("Stop channel %d", index);
                                                 if (itvencoder_channel_stop (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
@@ -297,7 +297,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 }
                                                 return 0;
                                         } else if (g_str_has_suffix (request_data->uri, "/start")) {
-                                                GST_WARNING ("Start channel %s", channel->name);
+                                                GST_WARNING ("Start channel %d", index);
                                                 if (itvencoder_channel_start (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
@@ -309,7 +309,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 }
                                                 return 0;
                                         } else if (g_str_has_suffix (request_data->uri, "/restart")) {
-                                                GST_WARNING ("Restart channel");
+                                                GST_WARNING ("Restart channel %d", index);
                                                 index = get_channel_index (request_data->uri);
                                                 if (itvencoder_channel_stop (httpmgmt->itvencoder, index) &&
                                                     itvencoder_channel_start (httpmgmt->itvencoder, index)) {
