@@ -132,22 +132,6 @@ main (int argc, char *argv[])
 
         signal (SIGPIPE, SIG_IGN);
 
-        if (config_path) {
-                /* config command line option */
-                configure = configure_new ("configure_path", config_path, NULL);
-                if (configure_load_from_file (configure) != 0) {
-                        g_print ("Load configure file %s error, exit ...\n", config_path);
-                        return 1;
-                }
-        } else {
-                /* default config path */
-                configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
-                if (configure_load_from_file (configure) != 0) {
-                        g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
-                        return 1;
-                }
-        }
-
         /* run in background? */
         if (!foreground) {
                 /* daemon */
@@ -182,6 +166,22 @@ main (int argc, char *argv[])
                                 gchar *log_dir;
                                 gchar *log_path;
                                 gchar *pid_file;
+
+                                if (config_path) {
+                                        /* config command line option */
+                                        configure = configure_new ("configure_path", config_path, NULL);
+                                        if (configure_load_from_file (configure) != 0) {
+                                                g_print ("Load configure file %s error, exit ...\n", config_path);
+                                                return 1;
+                                        }
+                                } else {
+                                        /* default config path */
+                                        configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
+                                        if (configure_load_from_file (configure) != 0) {
+                                                g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
+                                                return 1;
+                                        }
+                                }
 
                                 value = configure_get_param (configure, "/server/logdir");
                                 log_dir = (gchar *)g_value_get_string (value);
@@ -220,8 +220,21 @@ main (int argc, char *argv[])
                         exit (0);
                 }
         } else {
-                log_set_stdout_handler ();
-                gst_debug_remove_log_function (gst_debug_log_default);
+                if (config_path) {
+                        /* config command line option */
+                        configure = configure_new ("configure_path", config_path, NULL);
+                        if (configure_load_from_file (configure) != 0) {
+                                g_print ("Load configure file %s error, exit ...\n", config_path);
+                                return 1;
+                        }
+                } else {
+                        /* default config path */
+                        configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
+                        if (configure_load_from_file (configure) != 0) {
+                                g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
+                                return 1;
+                        }
+                }
         }
 
         signal (SIGPIPE, SIG_IGN);
