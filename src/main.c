@@ -226,17 +226,24 @@ main (int argc, char *argv[])
         print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
-        itvencoder = itvencoder_new ("configure", configure->data, NULL);
+
+        /* itvencoder */
+        if (config_path) {
+                itvencoder = itvencoder_new ("configure", config_path, NULL);
+        } else {
+                itvencoder = itvencoder_new ("configure", "/etc/itvencoder.conf", NULL);
+        }
         if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");
                 return 1;
         }
         itvencoder_start (itvencoder);
 
+        /* management */
         if (config_path) {
-                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, config_path, NULL);
+                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", config_path, NULL);
         } else {
-                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "/etc/itvencoder.conf", NULL);
+                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", "/etc/itvencoder.conf", NULL);
         }
         httpmgmt_start (httpmgmt);
 

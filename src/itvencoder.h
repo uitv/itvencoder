@@ -10,6 +10,7 @@
 
 #include "config.h"
 
+#include "configure.h"
 #include "channel.h"
 #include "httpstreaming.h"
 
@@ -29,7 +30,8 @@ struct _ITVEncoder {
         guint64 last_ctime; // last process cpu time.
         guint64 start_ctime; // cpu time at process start.
 
-        GstStructure *configure;
+        gchar *configure_file;
+        Configure *configure;
         GArray *channel_array;
         HTTPStreaming *httpstreaming; /* streaming via http */
 };

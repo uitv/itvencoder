@@ -46,10 +46,11 @@ httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
         );
         g_object_class_install_property (g_object_class, HTTPMGMT_PROP_ITVENCODER, param);
 
-        param = g_param_spec_pointer (
+        param = g_param_spec_string (
                 "configure",
-                "configure",
-                NULL,
+                "configuref",
+                "configure file path",
+                "itvencoder.conf",
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, HTTPMGMT_PROP_CONFIGURE_FILE, param);
@@ -141,6 +142,7 @@ load_configure (HTTPMgmt *httpmgmt)
         }
 
         httpmgmt->configure = configure_new ("configure_path", httpmgmt->configure_file, NULL);
+        configure_load_from_file (httpmgmt->configure);
 }
 
 gint
@@ -152,7 +154,7 @@ httpmgmt_start (HTTPMgmt *httpmgmt)
         gint port;
 
         load_configure (httpmgmt);
-        value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure, "server");
+        value = (GValue *)gst_structure_get_value (httpmgmt->configure->data, "server");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
         p = (gchar *)g_value_get_string (value);

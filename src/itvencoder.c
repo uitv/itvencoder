@@ -13,7 +13,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         ITVENCODER_PROP_0,
-        ITVENCODER_PROP_CONFIGURE,
+        ITVENCODER_PROP_CONFIGURE_FILE,
 };
 
 static void itvencoder_class_init (ITVEncoderClass *itvencoderclass);
@@ -36,13 +36,14 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
         g_object_class->set_property = itvencoder_set_property;
         g_object_class->get_property = itvencoder_get_property;
 
-        param = g_param_spec_pointer (
+        param = g_param_spec_string (
                 "configure",
-                "Configure",
-                NULL,
+                "configuref",
+                "configure file path",
+                "itvencoder.conf",
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
-        g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONFIGURE, param);
+        g_object_class_install_property (g_object_class, ITVENCODER_PROP_CONFIGURE_FILE, param);
 }
 
 static void
@@ -52,6 +53,7 @@ itvencoder_init (ITVEncoder *itvencoder)
         gsize *length;
         gint i;
 
+        itvencoder->configure = NULL;
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
@@ -82,8 +84,8 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         g_return_if_fail(IS_ITVENCODER(obj));
 
         switch(prop_id) {
-        case ITVENCODER_PROP_CONFIGURE:
-                ITVENCODER(obj)->configure = (GstStructure *)g_value_get_pointer (value);
+        case ITVENCODER_PROP_CONFIGURE_FILE:
+                ITVENCODER(obj)->configure_file = (gchar *)g_value_dup_string (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -97,8 +99,8 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         ITVEncoder  *itvencoder = ITVENCODER(obj);
 
         switch(prop_id) {
-        case ITVENCODER_PROP_CONFIGURE:
-                g_value_set_pointer (value, itvencoder->configure);
+        case ITVENCODER_PROP_CONFIGURE_FILE:
+                g_value_set_string(value, itvencoder->configure_file);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -129,6 +131,17 @@ itvencoder_get_type (void)
         return type;
 }
 
+static void
+load_configure (ITVEncoder *itvencoder)
+{
+        if (itvencoder->configure != NULL) {
+                gst_object_unref (G_OBJECT (itvencoder->configure));
+        }
+
+        itvencoder->configure = configure_new ("configure_path", itvencoder->configure_file, NULL);
+        configure_load_from_file (itvencoder->configure);
+}
+
 /*
  * itvencoder_channel_initialize
  *
@@ -147,7 +160,8 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gchar *name, *enable;
         Channel *channel;
 
-        value = (GValue *)gst_structure_get_value (itvencoder->configure, "channels");
+        load_configure (itvencoder);
+        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
         structure1 = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure1);
         for (i = 0; i < n; i++) {
@@ -388,7 +402,7 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         /* start http streaming */
-        value = (GValue *)gst_structure_get_value (itvencoder->configure, "server");
+        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "server");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "httpstreaming");
         p = (gchar *)g_value_get_string (value);
