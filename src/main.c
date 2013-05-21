@@ -63,24 +63,6 @@ print_version_info ()
         GST_WARNING ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
 }
 
-#if 0
-static void
-print_itvencoder_info (ITVEncoder *itvencoder)
-{
-        ChannelConfig *channel_config;
-        gint i;
-
-        GST_WARNING ("start time : %lld", itvencoder_get_start_time(itvencoder));
-        GST_WARNING ("listening ports : %d", json_integer_value (json_object_get (itvencoder->config->config, "listening_ports")));
-        GST_WARNING ("channel configs : %s", json_string_value (json_object_get (itvencoder->config->config, "channel_configs")));
-        GST_WARNING ("log directory : %s", itvencoder->config->log_dir);
-        for (i=0; i<itvencoder->config->channel_config_array->len; i++) {
-                channel_config = g_array_index (itvencoder->config->channel_config_array, gpointer, i);
-                GST_WARNING ("config file %d - %s", i, channel_config->config_path);
-        }
-}
-#endif
-
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config_path = NULL;
