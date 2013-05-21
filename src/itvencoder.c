@@ -207,6 +207,17 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         return TRUE;
 }
 
+gboolean
+itvencoder_channel_stop (ITVEncoder *itvencoder, gint index)
+{
+        Channel *channel;
+
+        channel = g_array_index (itvencoder->channel_array, gpointer, index);
+        channel_stop (channel);
+        
+        return TRUE;
+}
+
 static gboolean
 itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
 {

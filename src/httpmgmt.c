@@ -284,10 +284,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                                 return 0;
-                                        } else if (request_data->parameters[0] == 's') {
+                                        } else if (g_str_has_suffix (request_data->uri, "/stop")) {
                                                 GST_WARNING ("Stop channel %s", channel->name);
-                                                //ret = channel_source_stop (channel->source);
-                                                if (ret == 0) {
+                                                if (itvencoder_channel_stop (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
@@ -297,17 +296,9 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                         g_free (buf);
                                                 }
                                                 return 0;
-                                        } else if (request_data->parameters[0] == 'p') {
+                                        } else if (g_str_has_suffix (request_data->uri, "/start")) {
                                                 GST_WARNING ("Start channel %s", channel->name);
-                                                //ret = channel_source_start (channel->source);
-                                                if (ret == 0) {
-                                                        for (i=0; i<channel->encoder_array->len; i++) {
-                                                                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                                                                GST_INFO ("channel encoder pipeline string is %s", encoder->pipeline_string);
-                                                                //if (channel_encoder_start (encoder) != 0) {//FIXME; return error
-                                                                //        GST_ERROR ("Start encoder %s falure", encoder->name);
-                                                                //}
-                                                        }
+                                                if (itvencoder_channel_start (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
@@ -320,6 +311,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         } else if (g_str_has_suffix (request_data->uri, "/restart")) {
                                                 GST_WARNING ("Restart channel");
                                                 index = get_channel_index (request_data->uri);
+                                                itvencoder_channel_stop (httpmgmt->itvencoder, index);
                                                 if (itvencoder_channel_start (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
