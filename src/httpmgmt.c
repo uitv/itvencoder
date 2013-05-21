@@ -311,8 +311,8 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         } else if (g_str_has_suffix (request_data->uri, "/restart")) {
                                                 GST_WARNING ("Restart channel");
                                                 index = get_channel_index (request_data->uri);
-                                                itvencoder_channel_stop (httpmgmt->itvencoder, index);
-                                                if (itvencoder_channel_start (httpmgmt->itvencoder, index)) {
+                                                if (itvencoder_channel_stop (httpmgmt->itvencoder, index) &&
+                                                    itvencoder_channel_start (httpmgmt->itvencoder, index)) {
                                                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
                                                         write (request_data->sock, buf, strlen (buf));
                                                         g_free (buf);
