@@ -158,9 +158,9 @@ main (int argc, char *argv[])
                                         }
                                 } else {
                                         /* default config path */
-                                        configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
+                                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
                                         if (configure_load_from_file (configure) != 0) {
-                                                g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
+                                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
                                                 return 1;
                                         }
                                 }
@@ -204,9 +204,9 @@ main (int argc, char *argv[])
                         }
                 } else {
                         /* default config path */
-                        configure = configure_new ("configure_path", "/etc/itvencoder.conf", NULL);
+                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
                         if (configure_load_from_file (configure) != 0) {
-                                g_print ("Load configure file /etc/itvencoder.conf error, exit ...\n");
+                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
                                 return 1;
                         }
                 }
@@ -224,7 +224,7 @@ main (int argc, char *argv[])
         if (config_path) {
                 itvencoder = itvencoder_new ("configure", config_path, NULL);
         } else {
-                itvencoder = itvencoder_new ("configure", "/etc/itvencoder.conf", NULL);
+                itvencoder = itvencoder_new ("configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");
@@ -236,7 +236,7 @@ main (int argc, char *argv[])
         if (config_path) {
                 httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", config_path, NULL);
         } else {
-                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", "/etc/itvencoder.conf", NULL);
+                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         httpmgmt_start (httpmgmt);
 
