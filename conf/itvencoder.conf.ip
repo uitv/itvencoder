@@ -20,7 +20,7 @@ pidfile = /var/run/itvencoder.pid
 
 [channels]
 test = {
-    enable = <var name="enable" type="option">yes</var>
+    enable = <var name="enable" type="option">no</var>
 
     # source pipeline defination
     source = {
@@ -133,7 +133,7 @@ cctvnews = {
             property = {
                 #es-pids = 0x201;0x26d;0x271;0x44f
                 #es-pids = <var name="pids" type="string">0x201;0x26d;0x271;0x44f</var>
-                program-number = 133
+                program-number = <var name="program number" type="number">133</var>
             }
         }
 
@@ -366,7 +366,7 @@ cctvnews = {
 }
 
 mpegtsoverip = {
-    enable = <var name="enable" type="option">yes</var>
+    enable = <var name="enable" type="option">no</var>
 
     # source pipeline defination
     source = {
@@ -489,7 +489,7 @@ mpegtsoverip = {
 }
 
 shanghai = {
-    enable = <var name="enable" type="option">yes</var>
+    enable = <var name="enable" type="option">no</var>
 
     # source pipeline defination
     source = {
