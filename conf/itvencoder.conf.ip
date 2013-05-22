@@ -94,7 +94,6 @@ channel0 = {
             }
             video = {
                 definition = demuxer.<var name="video pid" type="string">video_0532</var> ! queue ! <var name="video decoder" type="[mpeg2dec, ffdec_mpeg2video]">ffdec_mpeg2video</var> ! deinterlace ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
-                option = <var name="select video" type="option">yes</var>
             }
             audio1 = {
                 definition = demuxer.<var name="audio1 pid" type="string">audio_0533</var> ! queue ! mad ! queue ! appsink
@@ -172,7 +171,6 @@ channel0 = {
             bins = {
                 video = {
                     definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
-                    option = <var name="select video" type="option">yes</var>
                 }
                 audio1 = {
                     definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
@@ -186,8 +184,6 @@ channel0 = {
                     definition = mpegtsmux name=muxer ! queue ! appsink
                 }
             }
-            httpstreaming = <var name="http streaming out" type="option">yes</var>
-            udpstreaming = <var name="udp streaming out" type="option">224.1.1.1:1111</var>
         }
 
         encoder2 = {
@@ -253,7 +249,6 @@ channel0 = {
             bins = {
                 video = {
                     definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
-                    option = <var name="select video" type="option">yes</var>
                 }
                 audio1 = {
                     definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
