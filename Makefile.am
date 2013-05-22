@@ -4,7 +4,4 @@ SUBDIRS = src
 sysconfdir = /etc/itvencoder
 sysconf_DATA = conf/itvencoder.conf.sample
 
-channelsconfdir = $(sysconfdir)/channels.d
-channelsconf_DATA = conf/channels.d/channel-1.conf.sample conf/channels.d/channel-2.conf.sample conf/channels.d/channel-3.conf.sample
-
-EXTRA_DIST = conf src/*.h src/libjansson.a
+EXTRA_DIST = conf src/*.h
