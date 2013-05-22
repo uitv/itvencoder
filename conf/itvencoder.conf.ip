@@ -37,7 +37,7 @@ channel0 = {
         udpsrc = {
             property = {
                 #uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:1234</var>
-                uri = <var name="udpsrc uri" type="string">udp://239.100.190.2:4321</var>
+                uri = <var name="udpsrc uri" type="string">udp://239.100.191.8:1234</var>
             }
         }
 
@@ -45,7 +45,7 @@ channel0 = {
             property = {
                 #es-pids = 0x201;0x26d;0x271;0x44f
                 #es-pids = <var name="pids" type="string">0x201;0x26d;0x271;0x44f</var>
-                program-number = <var name="program number" type="number">634</var>
+                program-number = <var name="program number" type="number">133</var>
             }
         }
 
@@ -79,10 +79,252 @@ channel0 = {
             }
         }
 
-        audioconvert = {
-            caps = audio/x-raw-int,width=16,depth=16,rate=48000,channels=2,endianness=1234
+        appsink = {
+            property = {
+               sync = FALSE
+               drop = TRUE
+            }
         }
 
+        # element can be customized by elemment(property=vlue, ...)
+        bins = {
+            mpegtsdemuxer = {
+                # dont link a sometimes pad directly.
+                definition = udpsrc ! mpegtsdemux name=demuxer
+            }
+            video = {
+                definition = demuxer.<var name="video pid" type="string">video_0532</var> ! queue ! <var name="video decoder" type="[mpeg2dec, ffdec_mpeg2video]">ffdec_mpeg2video</var> ! deinterlace ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
+            }
+            audio1 = {
+                definition = demuxer.<var name="audio1 pid" type="string">audio_0533</var> ! queue ! mad ! queue ! appsink
+                option = <var name="select audio1" type="option">yes</var>
+            }
+            audio2 = {
+                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! mad ! queue ! appsink
+                option = <var name="select audio2" type="option">no</var>
+            }
+        }
+    }
+
+    # encoder pipeline defination
+    encoder = {
+        encoder1 = {
+            appsrc = {
+                property = {
+                    is-live = TRUE
+                }
+            }
+
+            videoscale = {
+                caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
+            }
+
+            # x264 encoder element
+            x264enc = {
+                property = {
+                    name = x264enc
+                    bitrate = <var name="bitrate" type="number">1200</var>
+                    byte-stream = TRUE
+                    sync-lookahead = 20
+                    key-int-max = 250
+                    key-int-min = 250
+                    dct8x8 = TRUE
+                    psy-tune = film
+                    subme = 5
+                    #qp-min = 1
+                    #qp-step = 8
+                    pass = 17
+                    #threads = <var name="threads" type="number">4</var>
+                    bframes = <var name="b frames" type="number">3</var>
+                    profile = <var name="profile" type="[baseline, main, high]">high</var>
+                }
+            }
+
+            # faac audio encoder
+            faac = {
+                property = {
+                    name = faac
+                    outputformat = 1
+                }
+            }
+
+            # mpeg2 ts mux
+            mpegtsmux = {
+                property = {
+                    name = muxer
+                }
+            }
+
+            # flv mux
+            flvmux = {
+                property = {
+                    name = muxer
+                }
+            }
+
+            appsink = {
+                property = {
+                    sync = FALSE
+                }
+            }
+
+            bins = {
+                video = {
+                    definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
+                }
+                audio1 = {
+                    definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
+                    option = <var name="select audio1" type="option">yes</var>
+                }
+                audio2 = {
+                    definition = appsrc name=audio2 ! queue ! audioconvert ! queue ! faac name=faac2 ! queue ! muxer.
+                    option = <var name="select audio2" type="option">no</var>
+                }
+                muxer = {
+                    definition = mpegtsmux name=muxer ! queue ! appsink
+                }
+            }
+        }
+
+        encoder2 = {
+            appsrc = {
+                property = {
+                    is-live = TRUE
+                }
+            }
+
+            videoscale = {
+                caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
+            }
+
+            # x264 encoder element
+            x264enc = {
+                property = {
+                    name = x264enc
+                    bitrate = <var name="bitrate" type="number">800</var>
+                    byte-stream = TRUE
+                    sync-lookahead = 20
+                    key-int-max = 250
+                    key-int-min = 250
+                    dct8x8 = TRUE
+                    psy-tune = film
+                    subme = 5
+                    #qp-min = 1
+                    #qp-step = 8
+                    pass = 17
+                    #threads = <var name="threads" type="number">4</var>
+                    bframes = <var name="b frames" type="number">3</var>
+                    profile = <var name="profile" type="[baseline, main, high]">high</var>
+                }
+            }
+
+            # faac audio encoder
+            faac = {
+                property = {
+                    name = faac
+                    outputformat = 1
+                }
+            }
+
+            # mpeg2 ts mux
+            mpegtsmux = {
+                property = {
+                    name = muxer
+                }
+            }
+
+            # flv mux
+            flvmux = {
+                property = {
+                    name = muxer
+                }
+            }
+
+            appsink = {
+                property = {
+                    sync = FALSE
+                }
+            }
+
+            bins = {
+                video = {
+                    definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
+                }
+                audio1 = {
+                    definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
+                    option = <var name="select audio1" type="option">yes</var>
+                }
+                audio2 = {
+                    definition = appsrc name=audio2 ! queue ! audioconvert ! queue ! faac name=faac2 ! queue ! muxer.
+                    option = <var name="select audio2" type="option">no</var>
+                }
+                muxer = {
+                    definition = mpegtsmux name=muxer ! queue ! appsink
+                }
+            }
+        }
+    }
+}
+
+channel1 = {
+    enable = <var name="enable" type="option">yes</var>
+
+    # source pipeline defination
+    source = {
+        textoverlay = {
+            property = {
+                text = iTVEncoder-0.2.0
+                valign = top
+                halign = right
+            }
+            # option define option element
+            option = <var name="textoverlay option" type="option">yes</var>
+        }
+
+        udpsrc = {
+            property = {
+                #uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:1234</var>
+                uri = <var name="udpsrc uri" type="string">udp://239.100.194.2:1234</var>
+            }
+        }
+
+        mpegtsdemux = {
+            property = {
+                #es-pids = 0x201;0x26d;0x271;0x44f
+                #es-pids = <var name="pids" type="string">0x201;0x26d;0x271;0x44f</var>
+                program-number = <var name="program number" type="number">632</var>
+            }
+        }
+
+        deinterlace = {
+            property = {
+                method = 0
+                fields = 1
+            }
+        }
+
+        clockoverlay = {
+            property = {
+                halign = left
+                valign = bottom
+                time-format = %Y/%m/%d %H:%M:%S
+            }
+        }
+
+        timeoverlay = {
+            property = {
+                halign = right
+                valign = bottom
+            }
+        }
+
+        textoverlay = {
+            property = {
+                text = iTVEncoder-0.3.0
+                valign = top
+                halign = right
+            }
+        }
 
         appsink = {
             property = {
@@ -98,14 +340,14 @@ channel0 = {
                 definition = udpsrc ! mpegtsdemux name=demuxer
             }
             video = {
-                definition = demuxer.<var name="video pid" type="string">video_18c4</var> ! queue ! <var name="video decoder" type="[mpeg2dec, ffdec_mpeg2video]">ffdec_mpeg2video</var> ! deinterlace ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
+                definition = demuxer.<var name="video pid" type="string">video_18b0</var> ! queue ! <var name="video decoder" type="[mpeg2dec, ffdec_mpeg2video]">ffdec_mpeg2video</var> ! deinterlace ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
             }
             audio1 = {
-                definition = demuxer.<var name="audio1 pid" type="string">audio_18c5</var> ! queue ! <var name="audio1 decoder" type="[mad, ffdec_ac3]">ffdec_ac3</var> ! queue ! audioconvert ! queue ! appsink
+                definition = demuxer.<var name="audio1 pid" type="string">audio_18b1</var> ! queue ! mad ! queue ! appsink
                 option = <var name="select audio1" type="option">yes</var>
             }
             audio2 = {
-                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! <var name="audio2 decoder" type="[mad, ffdec_ac3]">mad</var> ! queue ! appsink
+                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! mad ! queue ! appsink
                 option = <var name="select audio2" type="option">no</var>
             }
         }
@@ -176,14 +418,13 @@ channel0 = {
             bins = {
                 video = {
                     definition = appsrc name=video ! queue ! videoscale ! queue ! x264enc ! queue ! muxer.
-                    option = <var name="select video" type="option">yes</var>
                 }
                 audio1 = {
-                    definition = appsrc name=audio1 ! queue ! faac name=faac1 ! queue ! muxer.
+                    definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
                     option = <var name="select audio1" type="option">yes</var>
                 }
                 audio2 = {
-                    definition = appsrc name=audio2 ! queue ! faac name=faac2 ! queue ! muxer.
+                    definition = appsrc name=audio2 ! queue ! audioconvert ! queue ! faac name=faac2 ! queue ! muxer.
                     option = <var name="select audio2" type="option">no</var>
                 }
                 muxer = {
@@ -255,14 +496,13 @@ channel0 = {
             bins = {
                 video = {
                     definition = appsrc name=video ! queue ! videoscale ! queue ! x264enc ! queue ! muxer.
-                    option = <var name="select video" type="option">yes</var>
                 }
                 audio1 = {
-                    definition = appsrc name=audio1 ! queue ! faac name=faac1 ! queue ! muxer.
+                    definition = appsrc name=audio1 ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
                     option = <var name="select audio1" type="option">yes</var>
                 }
                 audio2 = {
-                    definition = appsrc name=audio2 ! queue ! faac name=faac2 ! queue ! muxer.
+                    definition = appsrc name=audio2 ! queue ! audioconvert ! queue ! faac name=faac2 ! queue ! muxer.
                     option = <var name="select audio2" type="option">no</var>
                 }
                 muxer = {
