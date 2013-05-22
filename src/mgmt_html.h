@@ -35,7 +35,7 @@ static gchar *index_html = "<html>\n"
 "    var postRequestXML = serializer.serializeToString(data);\n"
 "    postConfigureRequest.open (\"POST\", \"/configure/\", true);\n"
 "    postConfigureRequest.send (postRequestXML);\n"
-"    alert (postRequestXML);\n"
+//"    alert (postRequestXML);\n"
 "}\n"
 /* restart iTVEncoder */
 "function restartiTVEncoder () {\n"
