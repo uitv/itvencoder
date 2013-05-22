@@ -97,16 +97,12 @@ channel0 = {
                 option = <var name="select video" type="option">yes</var>
             }
             audio1 = {
-                definition = demuxer.audio_0533 ! queue ! mad ! queue ! appsink
+                definition = demuxer.<var name="audio1 pid" type="string">audio_0533</var> ! queue ! mad ! queue ! appsink
                 option = <var name="select audio1" type="option">yes</var>
             }
             audio2 = {
-                definition = demuxer.audio_0271 ! queue ! mad ! queue ! appsink
+                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! mad ! queue ! appsink
                 option = <var name="select audio2" type="option">no</var>
-            }
-            subtitle = {
-                definition = demuxer.private_044f ! appsink
-                option = <var name="select subtitle1" type="option">no</var>
             }
         }
     }
