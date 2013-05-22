@@ -1456,13 +1456,23 @@ channel_stop (Channel *channel)
         Encoder *encoder;
         gint i;
 
-        gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
-        channel->source->state = GST_STATE_NULL;
+        for (i = 0; i < channel->encoder_array->len; i++) {
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                gst_element_set_state (encoder->pipeline, GST_STATE_PAUSED);
+                encoder->state = GST_STATE_PAUSED;
+        }
+        gst_element_set_state (channel->source->pipeline, GST_STATE_PAUSED);
+        channel->source->state = GST_STATE_PAUSED;
+
         for (i = 0; i < channel->encoder_array->len; i++) {
                 encoder = g_array_index (channel->encoder_array, gpointer, i);
                 gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
                 encoder->state = GST_STATE_NULL;
         }
+        gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
+        channel->source->state = GST_STATE_NULL;
+
+        return TRUE;
 }
 
 Encoder *
