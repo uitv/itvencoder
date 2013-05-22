@@ -36,10 +36,8 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc
-/etc/itvencoder/channels.d/channel-1.conf.sample
-/etc/itvencoder/channels.d/channel-2.conf.sample
-/etc/itvencoder/channels.d/channel-3.conf.sample
-/etc/itvencoder/itvencoder.conf.sample
+/etc/itvencoder/itvencoder.conf.ip
+/etc/itvencoder/itvencoder.conf.test
 /usr/bin/itvencoder
 
 
