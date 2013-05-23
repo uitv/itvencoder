@@ -230,7 +230,10 @@ main (int argc, char *argv[])
                 GST_ERROR ("exit ...");
                 return 1;
         }
-        itvencoder_start (itvencoder);
+        if (itvencoder_start (itvencoder) != 0) {
+                GST_ERROR ("exit ...");
+                exit (1);
+        }
 
         /* management */
         if (config_path) {

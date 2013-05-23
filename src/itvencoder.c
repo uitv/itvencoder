@@ -387,7 +387,9 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
-                itvencoder_channel_start (itvencoder, i);
+                if (!itvencoder_channel_start (itvencoder, i)) {
+                        return 1;
+                }
         }
 
         /* start http streaming */
