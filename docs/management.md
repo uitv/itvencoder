@@ -65,4 +65,4 @@ The body is same the as GET current configure response.
 
 HTTP Request:
 
-   GET /kill
+    GET /kill
