@@ -31,6 +31,8 @@ gstreamer-plugins-base-devel
     cp itvencoder.conf.test itvencoder.conf
     sudo itvencoder
 
+You can customize iTVEncoder by edit configuration file, for detail information, reference [Configure](itvencoder/docs/configure.md).
+
 ## Management
 
 You can management iTVEncoder throuh browser, open http://your.host:httpmgmtport/mgmt.
