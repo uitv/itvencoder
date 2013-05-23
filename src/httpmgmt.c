@@ -411,7 +411,15 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 case 'k': /* kill self */
                         if (g_str_has_prefix (request_data->uri, "/kill")) {
-                                exit (1);
+                                if (!httpmgmt->daemon) {
+                                        GST_WARNING ("Can't restart when run in foreground.");
+                                        buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
+                                        write (request_data->sock, buf, strlen (buf));
+                                        g_free (buf);
+                                        return 0;
+                                } else {
+                                        exit (1);
+                                }
                         }
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
