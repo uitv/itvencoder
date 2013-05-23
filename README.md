@@ -20,9 +20,9 @@ gstreamer-plugins-base-devel
 
 ## Compile and install
 
-    ./autogen.sh
-    ./configure (--help)
-    make
-    make install
+$ ./autogen.sh
+$ ./configure (--help)
+$ make
+$ make install
 
 [Management](itvencoder/docs/management.md)
