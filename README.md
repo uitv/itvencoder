@@ -25,12 +25,14 @@ gstreamer-plugins-base-devel
     make
     make install
 
-## Run
+## Configuration and Run
 
     cd /etc/itvencoder
     cp itvencoder.conf.test itvencoder.conf
     sudo itvencoder
 
-in browser open http://your.host:httpmgmtport/mgmt
+## Management
 
-[Management](itvencoder/docs/management.md)
+You can management iTVEncoder throuh browser, open http://your.host:httpmgmtport/mgmt.
+
+iTVEncoder support RESTful compatibale managment interface, for more information, reference [Management](itvencoder/docs/management.md).
