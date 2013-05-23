@@ -273,7 +273,7 @@ is_valid_name (gchar *name)
 
         p = name;
         while (*p != '\0') {
-                if (!g_ascii_isalnum (*p)) {
+                if (!g_ascii_isalnum (*p) && ! (*p == '_')) {
                         return FALSE;
                 }
                 p++;
