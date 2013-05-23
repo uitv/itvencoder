@@ -13,6 +13,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         ITVENCODER_PROP_0,
+        ITVENCODER_PROP_DAEMON,
         ITVENCODER_PROP_CONFIGURE_FILE,
 };
 
@@ -35,6 +36,15 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
         g_object_class->constructor = itvencoder_constructor;
         g_object_class->set_property = itvencoder_set_property;
         g_object_class->get_property = itvencoder_get_property;
+
+        param = g_param_spec_boolean (
+                "daemon",
+                "daemon",
+                "run in background",
+                TRUE,
+                G_PARAM_WRITABLE | G_PARAM_READABLE
+        );
+        g_object_class_install_property (g_object_class, ITVENCODER_PROP_DAEMON, param);
 
         param = g_param_spec_string (
                 "configure",
@@ -84,6 +94,9 @@ itvencoder_set_property (GObject *obj, guint prop_id, const GValue *value, GPara
         g_return_if_fail(IS_ITVENCODER(obj));
 
         switch(prop_id) {
+        case ITVENCODER_PROP_DAEMON:
+                ITVENCODER(obj)->daemon = g_value_get_boolean (value);
+                break;
         case ITVENCODER_PROP_CONFIGURE_FILE:
                 ITVENCODER(obj)->configure_file = (gchar *)g_value_dup_string (value);
                 break;
@@ -99,6 +112,9 @@ itvencoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec 
         ITVEncoder  *itvencoder = ITVENCODER(obj);
 
         switch(prop_id) {
+        case ITVENCODER_PROP_DAEMON:
+                g_value_set_boolean (value, itvencoder->daemon);
+                break;
         case ITVENCODER_PROP_CONFIGURE_FILE:
                 g_value_set_string(value, itvencoder->configure_file);
                 break;

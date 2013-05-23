@@ -23,6 +23,8 @@ typedef struct _ITVEncoderClass ITVEncoderClass;
 struct _ITVEncoder {
         GObject parent;
     
+        /* run as daemon */
+        gboolean daemon;
         GstClock *system_clock;
         GstClockTime start_time;
         guint64 last_utime; // last process user time.

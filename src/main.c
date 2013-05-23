@@ -222,9 +222,9 @@ main (int argc, char *argv[])
 
         /* itvencoder */
         if (config_path) {
-                itvencoder = itvencoder_new ("configure", config_path, NULL);
+                itvencoder = itvencoder_new ("daemon", !foreground, "configure", config_path, NULL);
         } else {
-                itvencoder = itvencoder_new ("configure", "/etc/itvencoder/itvencoder.conf", NULL);
+                itvencoder = itvencoder_new ("daemon", !foreground, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");

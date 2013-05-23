@@ -1,5 +1,11 @@
 releases are sorted from youngest to oldest.
 
+v-0.3.0 2013-5-30 zhangping
+- rewrite configure file parse.
+- support multi audio track and multi subtitle tracks.
+- support RESTFul compatible management interface.
+- log cpu and memory usage.
+
 v-0.2.2 2013-3-15 zhangping
 - multiply streams support.
 - restart channel or encoder async.
