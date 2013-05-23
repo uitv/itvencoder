@@ -237,9 +237,9 @@ main (int argc, char *argv[])
 
         /* management */
         if (config_path) {
-                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", config_path, NULL);
+                httpmgmt = httpmgmt_new ("daemon", !foreground, "itvencoder", itvencoder, "configure", config_path, NULL);
         } else {
-                httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
+                httpmgmt = httpmgmt_new ("daemon", !foreground, "itvencoder", itvencoder, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         httpmgmt_start (httpmgmt);
 
