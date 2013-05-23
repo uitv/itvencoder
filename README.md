@@ -25,4 +25,4 @@ gstreamer-plugins-base-devel
     make
     make install
 
-[Management](/itvencoder/docs/management.md)
+[Management](itvencoder/docs/management.md)
