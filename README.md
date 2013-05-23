@@ -37,4 +37,4 @@ cd plugins
 需要修改的配置文件是channels.d目录下的通道配置文件，如何根据需求修改通道
 配置文件，参照docs目录下的iTVEncoderConfig.ppt。
 
-
+[Management](docs/management.md)
