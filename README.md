@@ -25,4 +25,12 @@ gstreamer-plugins-base-devel
     make
     make install
 
+## Run
+
+    cd /etc/itvencoder
+    cp itvencoder.conf.test itvencoder.conf
+    sudo itvencoder
+
+in browser open http://your.host:httpmgmtport/mgmt
+
 [Management](itvencoder/docs/management.md)
