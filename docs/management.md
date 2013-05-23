@@ -1,6 +1,6 @@
 # RESTFul management interface
 
- * GET /configure, get current configure.
+ ## GET /configure, get current configure.
 
     
     <?xml version="1.0" encoding="utf-8"?>
@@ -47,6 +47,7 @@
         </channels>
     </root>
 
- * POST /configure, save configure.
 
- * GET /kill, kill and restart iTVEncoder.
+ ## POST /configure, save configure.
+
+ ## GET /kill, kill and restart iTVEncoder.
