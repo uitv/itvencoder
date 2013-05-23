@@ -1,3 +1,6 @@
+# Introduction
+
+iTVEncoder is a real time encoder using gstreamer.
 
 # Install from source
 
