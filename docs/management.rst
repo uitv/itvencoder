@@ -1,12 +1,14 @@
-# RESTFul management interface
+RESTFul兼容的管理接口
+=====================
 
-## Get current configure
+获取当前配置
+------------
 
 HTTP Request:
 
     GET /configure
 
-Response:
+Response:::
     
     <?xml version="1.0" encoding="utf-8"?>
     <root>
@@ -53,7 +55,8 @@ Response:
     </root>
 
 
-## save configure.
+存储配置
+--------
 
 HTTP Request:
 
@@ -61,7 +64,8 @@ HTTP Request:
 
 The body is same the as GET current configure response.
 
-## kill and restart iTVEncoder
+重新启动iTVEncoder
+--------------------------
 
 HTTP Request:
 
