@@ -1306,8 +1306,13 @@ channel_encoder_extract_streams (Encoder *encoder)
                         stream->name = g_match_info_fetch_named (match_info, "stream");
                         GST_INFO ("stream found %s", stream->name);
                         g_array_append_val (encoder->streams, stream);
+                } else if (g_str_has_prefix (definition, "appsrc")) {
+                        GST_ERROR ("appsrc name property must be set");
+                        return 1;
                 }
         }
+
+        return 0;
 }
 
 static guint
@@ -1365,7 +1370,10 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->id = i;
                 encoder->name = name;
                 encoder->configure = structure;
-                channel_encoder_extract_streams (encoder);
+
+                if (channel_encoder_extract_streams (encoder) != 0) {
+                        return 1;
+                }
 
                 for (j = 0; j < encoder->streams->len; j++) {
                         stream = g_array_index (encoder->streams, gpointer, j);
