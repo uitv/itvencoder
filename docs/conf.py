@@ -38,7 +38,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'iTVEncoder Tutorial'
-copyright = u'2013, Zhang Ping'
+copyright = u'2013, iTV'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

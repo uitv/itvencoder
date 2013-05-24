@@ -24,6 +24,35 @@ pidfile是存储iTVEncoder进程pid的文件。
 channels
 --------
 
+channels配置的格式如下::
+
+    [channels]
+    channel_name_0 = {
+       ...
+    }
+    channel_name_1 = {
+       ...
+    }
+    ...
+
+在上面的例子中channel_name_x是channel的名字，名字必须是字母数字和下划线的组合。中括号括起的部分是channel的具体定义。理论上可以配置任意多个channel。
+
+单个channel的配置如下面的样子::
+
+    channel_name_x = {
+        enable = yes
+        source = {
+           ...
+        }
+        encoder = {
+            encoder_0 = {
+               ...
+            }
+            encoder_1 = {
+               ...
+            }
+        }
+    }
 
 可修改配置项
 ------------
