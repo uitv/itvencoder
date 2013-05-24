@@ -54,7 +54,62 @@ channels配置的格式如下::
         }
     }
 
+enable取值为yes或者no，yes表示启用这个通道，no表示不启用这个通道。
+
+source表示编码通道的源，encoder表示编码通道的编码器，一个通道可以有多路编码器，编码器的名字是字母数字和下划线的组合。
+
+source的配置如下面的样子::
+
+    source = {
+        element = {
+           ...
+        }
+
+           ...
+
+        bins = {
+           ...
+        }
+    }
+
+source的配置项有两类，一类是对element的配置，一类是对bins的配置。iTVEncoder解析bins，进而解析element配置，最终构造成一个gstreamer概念的pipeline，这个pipeline的输出作为encoder中的编码器的输入。
+
+element的配置如下面的样子::
+
+    element_name = {
+        property = {
+           ...
+        }
+        caps = gstreamer caps
+        option = yes
+    }
+
+element_name是element的名字，比如x264enc，系统的gstreamer安装了那些element可以用gst-inspect命令列出来，不加参数可以列出所有已经安装的element。property用于给出element的属性，property不是必须的。caps给出该element输出的caps，格式如下::
+
+    MIMETYPE [, PROPERTY[, PROPERTY ...]]]
+
+option主要是用于把该element设置为可选，让用户通过web管理界面来选择是否使用这个element，因此option通常设为可配置。
+
+bins的配置如下面的样子::
+
+    bins = {
+        bin_name = bin definition
+           ...
+    }
+
+其中bin的定义可以参照gst-launch命令的格式。需要注意的是source的bins中需要有末端为appsink的bin，这样的bin通过appsink输出stream，iTVEncoder读取appsink输出的流交给encoder对应的bin。encoder的bin与source的bin对应起来的方法是，encoder的bin中开头的appsrc必须有name属性，其值如果与source的某一个bin的名字匹配则两个bin就是对应的。
+
+encoder的定义与source类似，最大的区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin。
+
 可修改配置项
 ------------
 
 一个配置项被设为可修改，则可以通过http接口对这个配置项进行修改，而不用直接修改配置文件。通常情况下可修改配置项是针对iTVEncoder的最终用户的，比如对于输入类型为ip的源，源ip地址和端口就应该是可配置项。
+
+把可修改配置项放到xml格式的tag中，iTVEncoder就会自动在管理接口中提供相应的配置项::
+
+    httpstreaming = <var name="streaming address" type="string">0.0.0.0:20119</var>
+
+用于标示可变配置项的tag为var，需要给出两个属性，分别是name，type，相应的取值依赖于type属性。name除了标示这个配置项以外，还用于描述这个配置项的作用，在实现web管理界面的时候可以作为相应配置的label。type指出该配置项的值的类型，有四种类型的配置项，分别是string, number, option, select，string即字符串类型，number是数字型，option是布尔型，取值为TRUE和FALSE，select的格式是[baseline, main, high], 类似c中的enum类型。
+
+实际使用中，比如url是string类型：192.168.1.1:11111。视频编码profile是select类型，[baseline, main, high]。
