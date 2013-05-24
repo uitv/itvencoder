@@ -1,6 +1,8 @@
 管理接口
 ========
 
+如果已经安装了iTVEncoder，可以在浏览器中打开一个采用管理接口实现的简单的管理页面，地址是http://itvencoder.ip.addrss:port/mgmt，其中port是你所配置的管理接口对应的端口。
+
 获取当前配置
 ------------
 
@@ -61,6 +63,10 @@ HTTP Response::
             </channel0>
         </channels>
     </root>
+
+xml格式的应答是当前配置文件的可配置项。可配置项分成两大部分，server和channels。channels中可能有多个channel，每个channel有source和encoder两部分，其中encoder可能有多个，也就是通道有多个编码输出。
+
+var标签用于可配置项，其中属性name给出该配置项的名字，名字也反应该配置项的含义，id给出的是该配置项的编号，在存储配置的时候需要提交id，iTVEncoder需要根据id来存储相应的配置项，type属性给出了该配置项的类型，有四种type，分别是string，number，option和select类型，select类型的定义为：[baseline, main, high]的样子，对应web管理界面应该是一个下拉框。
 
 存储配置
 --------
