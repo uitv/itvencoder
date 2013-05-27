@@ -54,7 +54,6 @@ struct _Source {
         gchar *name;
         GstState state; /* state of the pipeline */
         Channel *channel;
-        gchar *pipeline_string;
         GstStructure *configure;
         GSList *bins;
         GstElement *pipeline;
@@ -96,7 +95,6 @@ struct _Encoder {
         gchar *name;
         GstState state; /* state of the pipeline */
         Channel *channel;
-        gchar *pipeline_string;
         GstStructure *configure;
         GSList *bins;
         GstElement *pipeline;
