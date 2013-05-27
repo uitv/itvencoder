@@ -3,86 +3,43 @@
 {% block body %}
   <h1>{{ _('Welcome') }}</h1>
 
-  <div class="quotebar">
-    <p><em>{%trans%}What users say:{%endtrans%}</em></p>
-    <p>{%trans%}&ldquo;Cheers for a great tool that actually makes programmers <b>want</b>
-      to write documentation!&rdquo;{%endtrans%}</p>
-  </div>
-
   <p>{%trans%}
     iTVEncoder是一个基于gstreamer的实时编码器，利用iTVEncoder能够很方便的在gstreamer环境中
-    实现自己的编码器。另外还可以通过编写gstreamer的插件对iTVEncoder进行定制，比如支持新的
-    编码，支持新的硬件采集设备等。{%endtrans%}</p>
-  <p>{%trans%}It was originally created for <a href="http://docs.python.org/">the
-    new Python documentation</a>, and it has excellent facilities for the
-    documentation of Python projects, but C/C++ is already supported as well,
-    and it is planned to add special support for other languages as well.  Of
-    course, this site is also created from reStructuredText sources using
-    Sphinx!  The following features should be highlighted:{%endtrans%}
+    实现自己的编码器。通过编写gstreamer的插件可以对iTVEncoder进行定制，比如支持新的编码，
+    支持新的硬件采集设备等。这样的实现方式使得iTVEncoder的扩展和定制变得非常灵活{%endtrans%}</p>
+  <p>{%trans%}
+    iTVEncoder本身不做编码等工作，具体的音视频编解码以及mux等工作由gstreamer的element实现，
+    iTVEncoder的当前开发版本是0.3.0，有以下主要改进：
+    {%endtrans%}
   </p>
   <ul>
-    <li>{%trans%}<b>Output formats:</b> HTML (including Windows HTML Help), LaTeX (for
-      printable PDF versions), Texinfo, manual pages, plain text{%endtrans%}</li>
-    <li>{%trans%}<b>Extensive cross-references:</b> semantic markup and automatic links
-      for functions, classes, citations, glossary terms and similar pieces of
-      information{%endtrans%}</li>
-    <li>{%trans%}<b>Hierarchical structure:</b> easy definition of a document tree, with
-      automatic links to siblings, parents and children{%endtrans%}</li>
-    <li>{%trans%}<b>Automatic indices:</b> general index as well as a language-specific
-      module indices{%endtrans%}</li>
-    <li>{%trans%}<b>Code handling:</b> automatic highlighting using the <a
-      href="http://pygments.org">Pygments</a> highlighter{%endtrans%}</li>
-    <li>{%trans path=pathto('extensions')%}<b>Extensions:</b> automatic testing of code snippets, inclusion of
-      docstrings from Python modules (API docs), and
-      <a href="{{ path }}#builtin-sphinx-extensions">more</a>{%endtrans%}</li>
+    <li>{%trans%}<b>支持新的配置文件格式:</b> 放弃采用json格式的配置文件，采用自定义的配置文件格式，自定义配置文件格式的可读性更好，更适合实现多音轨以及web管理接口的支持等。{%endtrans%}</li>
+    <li>{%trans%}<b>支持多音轨:</b> 对多音轨的支持，相应的底层element：mpegtsmux也支持多音轨。{%endtrans%}</li>
+    <li>{%trans%}<b>支持多字幕:</b> 对多字幕的支持，相应的底层element：mpegtsmux还不支持多字幕，需要进行相应的开发。{%endtrans%}</li>
+    <li>{%trans%}<b>支持web管理接口:</b> 支持http协议的管理接口。{%endtrans%}</li>
+    <li>{%trans%}<b>一个简单的web管理界面:</b> 基于http协议的管理接口实现的web管理界面。{%endtrans%}</li>
+    <li>{%trans%}<b>解决重启通道造成的内存泄露问题:</b> 每个通道作为一个进程，通过重启进程实现对通道的重启，避免了gstreamer本身重启通道时会存在内存泄露。{%endtrans%}</li>
+    <li>{%trans%}<b>把cpu和内存的使用情况写入日志:</b> 为了方便调试性能相关问题，为以后生成报表做准备。{%endtrans%}</li>
   </ul>
   <p>{%trans%}
-    Sphinx uses <a href="http://docutils.sf.net/rst.html">reStructuredText</a>
-    as its markup language, and many of its strengths come from the power and
-    straightforwardness of reStructuredText and its parsing and translating
-    suite, the <a href="http://docutils.sf.net/">Docutils</a>.{%endtrans%}
+    对于底层gstreamer的element，这段时间的主要改进包括：
+    {%endtrans%}
   </p>
-
-  <h2 style="margin-bottom: 0">{%trans%}Documentation{%endtrans%}</h2>
-
-  <table class="contentstable" align="center" style="margin-left: 30px"><tr>
-    <td width="50%">
-      <p class="biglink"><a class="biglink" href="{{ pathto("tutorial") }}">{%trans%}First steps with Sphinx{%endtrans%}</a><br/>
-         <span class="linkdescr">{%trans%}overview of basic tasks{%endtrans%}</span></p>
-      <p class="biglink"><a class="biglink" href="{{ pathto("contents") }}">{%trans%}Contents{%endtrans%}</a><br/>
-         <span class="linkdescr">{%trans%}for a complete overview{%endtrans%}</span></p>
-    </td><td width="50%">
-      <p class="biglink"><a class="biglink" href="{{ pathto("search") }}">{%trans%}Search page{%endtrans%}</a><br/>
-         <span class="linkdescr">{%trans%}search the documentation{%endtrans%}</span></p>
-      <p class="biglink"><a class="biglink" href="{{ pathto("genindex") }}">{%trans%}General Index{%endtrans%}</a><br/>
-         <span class="linkdescr">{%trans%}all functions, classes, terms{%endtrans%}</span></p>
-    </td></tr>
-  </table>
+  <ul>
+    <li>{%trans%}<b>支持sdi输入的采集卡:</b> 支持一款sdi输入采集卡。{%endtrans%}</li>
+    <li>{%trans%}<b>支持模拟输入采集卡:</b> 支持一款模拟输入的采集卡。{%endtrans%}</li>
+    <li>{%trans%}<b>更好的支持iOS类型设备的播放:</b> 更好的支持iphone、ipad等设备。{%endtrans%}</li>
+    <li>{%trans%}<b>支持AVX等硬件加速:</b> 支持AVX等硬件加速，性能大幅度提升。{%endtrans%}</li>
+  </ul>
 
   <p>{%trans%}
-    You can also download PDF versions of the Sphinx documentation:
-    a <a href="http://sphinx-doc.org/sphinx.pdf">version</a> generated from
-    the LaTeX Sphinx produces, and
-    a <a href="http://sphinx-doc.org/sphinx-rst2pdf.pdf">version</a> generated
-    by rst2pdf.{%endtrans%}
+    除了以上改进，为了方便配置实用，还提供了itvtool工具，可以通过-h选项来获得使用方法。
+    {%endtrans%}
   </p>
 
-  <h2>{%trans%}Examples{%endtrans%}</h2>
-  <p>{%trans path=pathto("examples")%}Links to documentation generated with Sphinx can be found on the
-    <a href="{{ path }}">Projects using Sphinx</a> page.{%endtrans%}
-  </p>
   <p>{%trans%}
-    For examples of how Sphinx source files look, use the &#8220;Show
-    source&#8221; links on all pages of the documentation apart from this
-    welcome page.{%endtrans%}
+    相关软件打包成一个单独的安装文件，可以在这里下载：
+    {%endtrans%}
   </p>
-
-  <p>{%trans%}You may also be interested in the very nice
-    <a href="http://matplotlib.sourceforge.net/sampledoc/">tutorial</a> on how to
-    create a customized documentation using Sphinx written by the matplotlib
-    developers.{%endtrans%}</p>
-
-  <p>{%trans%}There is a <a href="http://sphinx-users.jp/doc10/">Japanese translation</a>
-    of this documentation, thanks to Yoshiki Shibukawa.{%endtrans%}</p>
 
 {% endblock %}
