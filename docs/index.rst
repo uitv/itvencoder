@@ -15,6 +15,7 @@ Contents:
    install
    configure
    management
+   tools
 
 Indices and tables
 ==================
