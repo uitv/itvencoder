@@ -71,4 +71,9 @@ gst-inspect用于列出gstreamer插件或者element的相关信息。调试iTVEn
 tsreport
 ========
 
-tsreport是tstools工具集中的一个，用于列出给定ts流的相关信息，比如ts包的个数，ts流的构成，pcr相关信息，pts/dts相关信息等。
+tsreport是tstools工具集中的一个，用于列出给定ts流的相关信息，比如ts包的个数，ts流的构成，pcr相关信息，pts/dts相关信息等。tstools的主页是: http://tstools.berlios.de/。
+
+tsplay
+======
+
+tsplay是tstools工具集中的一个，用于把ts流通过udp、tcp协议或者标准输出推送出去，可以循环推送一个文件。
