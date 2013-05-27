@@ -1,5 +1,5 @@
-iTVEncoder安装
-**************
+iTVEncoder安装部署
+******************
 
 iTVEncoder已经随整个安装包一起安装，这里不再单独说明。
 
@@ -80,3 +80,15 @@ itvencoder采用了gstreamer的命令行选项::
     	/bin/kill -USR1 `cat /var/run/itvencoder.pid 2> /dev/null` 2> /dev/null || true
         endscript
     }
+
+启动多个itvencoder
+==================
+
+由于gstreamer的pipeline在运行状态下关闭并重新启动存在如下问题，第一是有时候关闭成功需要较长时间，根据以往的log信息发现最长时间需要半个小时。
+第二是有时候关闭并重新启动一个pipeline存在内存泄露。
+
+itvencoder运行过程中，由于解码出来的音视频数据严重不同步，解码出错，编码出现问题等原因，需要重新启动pipeline，因此重启时不可避免的。
+
+鉴于上面的原因，可以让一个通道对应一个itvencoder进程，也就是只为itvencoder配置一个通道，重启的时候不是采用streamer的相关功能，而是重新启动进程。
+
+itvencoder提供了-c选项，可以在运行的时候指定不同的配置文件来运行多个itvencoder，这样就运行了多个频道，需要注意的是，配置文件的server部分不能冲突。
