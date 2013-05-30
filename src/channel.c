@@ -430,22 +430,30 @@ get_property_names (gchar *param)
         gchar *p1, *p2, **pp, **pp1;
         GRegex *regex;
 
+        /* strip space at begin */
         regex = g_regex_new ("[^ ]* *(.*)", 0, 0, NULL);
         p1 = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        //g_print ("param: %s, property: %s\n", param, p1);
+        GST_INFO ("param: %s, property: %s", param, p1);
         g_regex_unref (regex);
+        /* strip space beside = */
         regex = g_regex_new ("( *= *)", 0, 0, NULL);
         p2 = g_regex_replace (regex, p1, -1, 0, "=", 0, NULL);
         g_free (p1);
         g_regex_unref (regex);
-        //g_print ("param: %s, property: %s\n", param, p2);
-        pp = g_strsplit_set (p2, " ", 0);
+        GST_INFO ("param: %s, property: %s", param, p2);
+        /* strip redundant space */
+        regex = g_regex_new ("( +)", 0, 0, NULL);
+        p1 = g_regex_replace (regex, p2, -1, 0, " ", 0, NULL);
         g_free (p2);
+        g_regex_unref (regex);
+        GST_INFO ("param: %s, property: %s\n", param, p1);
+        pp = g_strsplit_set (p1, " ", 0);
+        g_free (p1);
 
         pp1 = pp;
         while (*pp1 != NULL) {
                 if (g_strrstr (*pp1, "=") == NULL) {
-                        g_print ("Configure error: %s\n", *pp1);
+                        GST_ERROR ("Configure error: %s", *pp1);
                         g_strfreev (pp);
                         return NULL;
                 }
