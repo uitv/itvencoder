@@ -179,18 +179,21 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                    (request_data->parameters[0] == 'b')) { /* ?bitrate= */
                                 GST_INFO ("Play command");
                                 if (encoder->state != GST_STATE_PLAYING) {
+                                        GST_ERROR ("Play encoder it's status is not PLAYING.");
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
                                 }
                                 if (encoder->current_output_position == -1) {
+                                        GST_ERROR ("Play encoder it's output position is -1.");
                                         buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
                                         return 0;
                                 }
                                 if (encoder->output_count < ENCODER_RING_SIZE) {
+                                        GST_ERROR ("Caching, please wait a while.");
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
