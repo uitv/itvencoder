@@ -15,6 +15,7 @@ typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
 typedef struct _EncoderClass EncoderClass;
+typedef struct _ChannelOutput ChannelOutput;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
@@ -121,6 +122,25 @@ struct _EncoderClass {
 
 GType encoder_get_type (void);
 
+struct _ChannelState {
+        struct _SourceState {
+                gint64 sync_error_times;
+                gint64 stream_count;
+                struct _SourceStreamState {
+                        GstClockTime current_timestamp;
+                        GstClockTime last_heartbeat;
+                } **streams;
+        } source;
+        gint64 encoder_count;
+        struct _EncoderState {
+                gint64 stream_count;
+                struct _EncoderStreamState {
+                        GstClockTime last_heartbeat;
+                } **streams;
+                guint64 output_count; // total output packet counts
+        } **encoders;
+};
+
 struct _Channel {
         GObject parent;
 
@@ -149,6 +169,7 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
+gint64 channel_channelstate_sizeof (GstStructure *configure);
 gboolean channel_initialize (Channel *channel, GstStructure *configure);
 gboolean channel_start (Channel *channel);
 gboolean channel_stop (Channel *channel);
