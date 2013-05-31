@@ -271,13 +271,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         source_stream->name,
                                         time_diff,
                                         channel->name);
-                                if (g_mutex_trylock (channel->operate_mutex)) {
-                                        channel_stop (channel);
-                                        channel_start (channel);
-                                        g_mutex_unlock (channel->operate_mutex);
-                                } else {
-                                        GST_WARNING ("Try lock channel %s to restart failure!", channel->name);
-                                }
+                                channel_stop (channel);
                         } else {
                                 GST_INFO ("channel %s stream %s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
@@ -302,7 +296,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 encoder->name,
                                                 encoder_stream->name,
                                                 time_diff);
-                                        //channel_encoder_restart (encoder);
+                                        channel_stop (channel);
                                 } else {
                                         GST_INFO ("channel %s encoder stream %s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -346,14 +340,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         channel->source->sync_error_times += 1;
                         if (channel->source->sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
-                                if (g_mutex_trylock (channel->operate_mutex)) {
-                                        channel_stop (channel);
-                                        channel_start (channel);
-                                        channel->source->sync_error_times = 0;
-                                        g_mutex_unlock (channel->operate_mutex);
-                                } else {
-                                        GST_WARNING ("Try lock channel %s restart lock failure!", channel->name);
-                                }
+                                channel_stop (channel);
                         }
                 } else {
                         channel->source->sync_error_times = 0;

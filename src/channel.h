@@ -37,6 +37,7 @@ typedef struct _Bin {
         Link *previous;
         Link *next;
         gulong signal_id;
+        GstStructure *configure;
 } Bin;
 
 typedef struct _SourceStream {
@@ -152,8 +153,6 @@ struct _Channel {
         GArray *encoder_array;
 
         GstClock *system_clock;
-        /* lock befor start, stop or restart encoder, source or channel. */
-        GMutex *operate_mutex; 
 };
 
 struct _ChannelClass {
@@ -172,7 +171,7 @@ GType channel_get_type (void);
 gint64 channel_channelstate_sizeof (GstStructure *configure);
 gboolean channel_initialize (Channel *channel, GstStructure *configure);
 gboolean channel_start (Channel *channel);
-gboolean channel_stop (Channel *channel);
+void channel_stop (Channel *channel);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 
 #endif /* __CHANNEL_H__ */

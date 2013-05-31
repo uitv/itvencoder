@@ -266,7 +266,6 @@ static void
 channel_init (Channel *channel)
 {
         channel->system_clock = gst_system_clock_obtain ();
-        channel->operate_mutex = g_mutex_new ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
@@ -1484,29 +1483,10 @@ channel_start (Channel *channel)
         }
 }
 
-gboolean
+void
 channel_stop (Channel *channel)
 {
-        Encoder *encoder;
-        gint i;
-
-        channel->source->state = GST_STATE_PAUSED;
-        for (i = 0; i < channel->encoder_array->len; i++) {
-                encoder->state = GST_STATE_PAUSED;
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                gst_element_set_state (encoder->pipeline, GST_STATE_PAUSED);
-        }
-        gst_element_set_state (channel->source->pipeline, GST_STATE_PAUSED);
-
-        channel->source->state = GST_STATE_NULL;
-        for (i = 0; i < channel->encoder_array->len; i++) {
-                encoder->state = GST_STATE_NULL;
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                gst_element_set_state (encoder->pipeline, GST_STATE_NULL);
-        }
-        gst_element_set_state (channel->source->pipeline, GST_STATE_NULL);
-
-        return TRUE;
+        exit (1);
 }
 
 Encoder *
