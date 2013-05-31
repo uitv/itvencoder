@@ -1451,7 +1451,7 @@ channel_start (Channel *channel)
         Encoder *encoder;
         gint i;
 
-
+        /* channel enable? */
         enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
         if (g_strcmp0 (enable, "no") == 0) {
                 channel->enable = FALSE;
@@ -1462,6 +1462,7 @@ channel_start (Channel *channel)
                 channel->enable = TRUE;
         }
 
+        /* initialize source */
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
@@ -1469,6 +1470,7 @@ channel_start (Channel *channel)
                 return FALSE;
         }
 
+        /* initialize encoders */
         value = (GValue *)gst_structure_get_value (channel->configure, "encoder");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
@@ -1476,6 +1478,7 @@ channel_start (Channel *channel)
                 return FALSE;
         }
 
+        /* set pipelines as PLAYING state */
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
         channel->source->state = GST_STATE_PLAYING;
         for (i = 0; i < channel->encoder_array->len; i++) {
