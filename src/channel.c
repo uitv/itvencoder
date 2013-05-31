@@ -623,7 +623,7 @@ get_caps (GstStructure *configure, gchar *name)
 }
 
 static void
-pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
+pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 {
         gchar *src_pad_name;
         Bin *bin = data;
@@ -1000,7 +1000,7 @@ create_source_pipeline (Source *source)
                 } else {
                         /* delayed sometimes pad link. */
                         element = pickup_element (source->bins, bin->previous->src_name);
-                        bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_cb), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
+                        bin->signal_id = g_signal_connect_data (element, "pad-added", G_CALLBACK (pad_added_callback), bin, (GClosureNotify)free_bin, (GConnectFlags) 0);
                         GST_INFO ("Delayed link %s -> %s", bin->previous->src_name, bin->name);
                 }
                         
