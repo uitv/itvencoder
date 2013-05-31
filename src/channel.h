@@ -198,8 +198,6 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
-gint64 channel_channelstate_sizeof (GstStructure *configure);
-gboolean channel_initialize (Channel *channel, GstStructure *configure);
 gboolean channel_start (Channel *channel);
 void channel_stop (Channel *channel);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);

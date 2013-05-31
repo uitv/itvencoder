@@ -1437,7 +1437,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 }
 
 /*
- * channel_initialize
+ * channel_start
  *
  * @channel: channel to be initialize.
  * @structure: configure data.
@@ -1446,33 +1446,38 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
  *
  */
 gboolean
-channel_initialize (Channel *channel, GstStructure *configure)
+channel_start (Channel *channel)
 {
         GValue *value;
         GstStructure *structure;
+        gchar *enable;
+        Encoder *encoder;
+        gint i;
 
-        value = (GValue *)gst_structure_get_value (configure, "source");
+
+        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+        if (g_strcmp0 (enable, "no") == 0) {
+                channel->enable = FALSE;
+                GST_INFO ("Cant start hannel %s with enable set no.", channel->name);
+                return TRUE;
+        } else if (g_strcmp0 (enable, "yes") == 0) {
+                GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
+                channel->enable = TRUE;
+        }
+
+        value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel source error.");
                 return FALSE;
         }
 
-        value = (GValue *)gst_structure_get_value (configure, "encoder");
+        value = (GValue *)gst_structure_get_value (channel->configure, "encoder");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");
                 return FALSE;
         }
-
-        return TRUE;
-}
-
-gboolean
-channel_start (Channel *channel)
-{
-        Encoder *encoder;
-        gint i;
 
         gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
         channel->source->state = GST_STATE_PLAYING;
@@ -1481,6 +1486,8 @@ channel_start (Channel *channel)
                 gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
                 encoder->state = GST_STATE_PLAYING;
         }
+
+        return TRUE;
 }
 
 void

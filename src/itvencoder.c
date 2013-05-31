@@ -171,7 +171,7 @@ gboolean
 itvencoder_channel_initialize (ITVEncoder *itvencoder)
 {
         GValue *value;
-        GstStructure *structure;
+        GstStructure *structure, *configure;
         gint i, n;
         gchar *name;
         Channel *channel;
@@ -182,8 +182,9 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         n = gst_structure_n_fields (structure);
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
-                GST_INFO ("Channel found: %s.", name);
-                channel = channel_new ("name", name, NULL);
+                value = (GValue *)gst_structure_get_value (structure, name);
+                configure = (GstStructure *)gst_value_get_structure (value);
+                channel = channel_new ("name", name, "configure", configure, NULL);
                 channel->id = i;
                 g_array_append_val (itvencoder->channel_array, channel);
                 GST_INFO ("Channel %s added.", name);
@@ -196,31 +197,9 @@ gboolean
 itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 {
         Channel *channel;
-        GValue *value;
-        GstStructure *structure1, *structure2;
-        gchar *name, *enable;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
-        structure1 = (GstStructure *)gst_value_get_structure (value);
-        name = (gchar *)gst_structure_nth_field_name (structure1, index);
-        value = (GValue *)gst_structure_get_value (structure1, name);
-        structure2 = (GstStructure *)gst_value_get_structure (value);
-        enable = (gchar *)gst_structure_get_string (structure2, "enable");
-        if (g_strcmp0 (enable, "no") == 0) {
-                GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
-                channel->enable = FALSE;
-        } else if (g_strcmp0 (enable, "yes") == 0) {
-                GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
-                channel->enable = TRUE;
-                if (!channel_initialize (channel, structure2)) {
-                        GST_ERROR ("Initialize channel error.");
-                        return FALSE;
-                }
-                channel_start (channel);
-        }
-
-        return TRUE;
+        return channel_start (channel);
 }
 
 gboolean
@@ -230,7 +209,7 @@ itvencoder_channel_stop (ITVEncoder *itvencoder, gint index)
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
         channel_stop (channel);
-        
+
         return TRUE;
 }
 
