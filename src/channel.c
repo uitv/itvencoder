@@ -374,7 +374,6 @@ bus_callback (GstBus *bus, GstMessage *msg, gpointer user_data)
         GObject *object = user_data;
         GValue state = { 0, }, name = { 0, };
 
-        
         g_value_init (&name, G_TYPE_STRING);
         g_object_get_property (object, "name", &name);
 
@@ -932,14 +931,14 @@ get_caps (GstStructure *configure, gchar *name)
 }
 
 /**
- * create_pipeline
+ * create_source_pipeline
  * @configure: Configure object.
  * @param: like this: /server/httpstreaming
  *
  * Returns: the cteated pipeline or NULL.
  */
 static GstElement *
-create_pipeline (Source *source)
+create_source_pipeline (Source *source)
 {
         GValue *value;
         GstStructure *structure;
@@ -958,6 +957,7 @@ create_pipeline (Source *source)
         SourceStream *stream;
         gchar *p;
         GstCaps *caps;
+        GstBus *bus;
 
         pipeline = gst_pipeline_new (NULL);
 
@@ -1008,6 +1008,10 @@ create_pipeline (Source *source)
 
                 bins = g_slist_next (bins);
         }
+
+        bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+        gst_bus_add_watch (bus, bus_callback, source);
+        g_object_unref (bus);
 
         return pipeline;
 }
@@ -1100,6 +1104,7 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
         };
         gchar *p;
         GstCaps *caps;
+        GstBus *bus;
  
         pipeline = gst_pipeline_new (NULL);
 
@@ -1153,6 +1158,10 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
                 }
                 bins = g_slist_next (bins);
         }
+
+        bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+        gst_bus_add_watch (bus, bus_callback, encoder);
+        g_object_unref (bus);
 
         encoder->pipeline = pipeline;
 }
@@ -1351,7 +1360,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         if (source->bins == NULL) {
                 return 1;
         }
-        source->pipeline = create_pipeline (source);
+        source->pipeline = create_source_pipeline (source);
 
         return 0;
 }
