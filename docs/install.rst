@@ -1,7 +1,17 @@
 iTVEncoder安装部署
 ******************
 
-iTVEncoder已经随整个安装包一起安装，这里不再单独说明。
+iTVEncoder源码安装
+==================
+
+iTVEncoder已经随整个安装包一起安装，这里介绍如何从源代码安装和生成rpm包。
+
+源码编译安装::
+
+    ./autogen.sh
+    ./configure (--help)
+    make
+    make install
 
 iTVEncoder运行
 ==============
