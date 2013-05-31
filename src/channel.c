@@ -38,9 +38,6 @@ static void encoder_set_property (GObject *obj, guint prop_id, const GValue *val
 static void encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstFlowReturn source_appsink_callback (GstAppSink * elt, gpointer user_data);
-static GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data);
-static void encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data);
 
 /* Source class */
 static void
@@ -938,6 +935,35 @@ source_get_stream (Source *source, gchar *name)
         return stream;
 }
 
+static GstFlowReturn
+source_appsink_callback (GstAppSink *elt, gpointer user_data)
+{
+        GstBuffer *buffer;
+        SourceStream *stream = (SourceStream *)user_data;
+        EncoderStream *encoder;
+        gint i;
+
+        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
+        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
+
+        /* output running status */
+        GST_DEBUG ("%s current position %d, buffer duration: %d", stream->name, stream->current_position, GST_BUFFER_DURATION(buffer));
+        for (i = 0; i < stream->encoders->len; i++) {
+                encoder = g_array_index (stream->encoders, gpointer, i);
+                if (stream->current_position == encoder->current_position) {
+                        GST_WARNING ("encoder %s stream %s can not catch up output.", encoder->name, stream->name);
+                }
+        }
+
+        /* out a buffer */
+        if (stream->ring[stream->current_position] != NULL) {
+                gst_buffer_unref (stream->ring[stream->current_position]);
+        }
+        stream->ring[stream->current_position] = buffer;
+        stream->current_timestamp = GST_BUFFER_TIMESTAMP (buffer);
+}
+
 /**
  * create_source_pipeline
  * @configure: Configure object.
@@ -1082,6 +1108,64 @@ encoder_get_stream (Encoder *encoder, gchar *name)
         return stream;
 }
 
+static
+GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
+{
+        GstBuffer *buffer;
+        Encoder *encoder = (Encoder *)user_data;
+        gint i;
+
+        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        GST_DEBUG ("%s current position %d, buffer duration: %d", encoder->name, encoder->current_output_position, GST_BUFFER_DURATION(buffer));
+        i = encoder->current_output_position + 1;
+        i = i % ENCODER_RING_SIZE;
+        encoder->current_output_position = i;
+        if (encoder->output_ring[i] != NULL) {
+                gst_buffer_unref (encoder->output_ring[i]);
+        }
+        encoder->output_ring[i] = buffer;
+        encoder->output_count++;
+}
+
+static void
+encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data)
+{
+        EncoderStream *stream = (EncoderStream *)user_data;
+        gint current_position;
+        GstCaps *caps;
+
+        current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
+        for (;;) {
+                stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
+                /* insure next buffer isn't current buffer */
+                if (current_position == stream->source->current_position ||
+                        stream->source->current_position == -1) { /*FIXME: condition variable*/
+                        GST_DEBUG ("waiting %s source ready", stream->name);
+                        g_usleep (50000); /* wiating 50ms */
+                        continue;
+                }
+
+                /* first buffer, set caps. */
+                if (stream->current_position == -1) {
+                        caps = GST_BUFFER_CAPS (stream->source->ring[0]);
+                        gst_app_src_set_caps (src, caps);
+                        GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (caps));
+                }
+
+                GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
+                        stream->name,   
+                        stream->current_position,
+                        GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (stream->source->ring[stream->current_position])),
+                        stream->source->current_position);
+
+                if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[current_position])) != GST_FLOW_OK) {
+                        GST_ERROR ("%s, gst_app_src_push_buffer failure.", stream->name);
+                }
+                break;
+        }
+        stream->current_position = current_position;
+}
+
 /**
  * create_encoder_pipeline
  * @configure: Configure object.
@@ -1174,35 +1258,6 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
         encoder->pipeline = pipeline;
 }
 
-static GstFlowReturn
-source_appsink_callback (GstAppSink *elt, gpointer user_data)
-{
-        GstBuffer *buffer;
-        SourceStream *stream = (SourceStream *)user_data;
-        EncoderStream *encoder;
-        gint i;
-
-        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
-        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
-
-        /* output running status */
-        GST_DEBUG ("%s current position %d, buffer duration: %d", stream->name, stream->current_position, GST_BUFFER_DURATION(buffer));
-        for (i = 0; i < stream->encoders->len; i++) {
-                encoder = g_array_index (stream->encoders, gpointer, i);
-                if (stream->current_position == encoder->current_position) {
-                        GST_WARNING ("encoder %s stream %s can not catch up output.", encoder->name, stream->name);
-                }
-        }
-
-        /* out a buffer */
-        if (stream->ring[stream->current_position] != NULL) {
-                gst_buffer_unref (stream->ring[stream->current_position]);
-        }
-        stream->ring[stream->current_position] = buffer;
-        stream->current_timestamp = GST_BUFFER_TIMESTAMP (buffer);
-}
-
 static gint
 channel_source_extract_streams (Source *source)
 {
@@ -1238,64 +1293,6 @@ channel_source_extract_streams (Source *source)
                         g_array_append_val (source->streams, stream);
                 }
         }
-}
-
-static
-GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
-{
-        GstBuffer *buffer;
-        Encoder *encoder = (Encoder *)user_data;
-        gint i;
-
-        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_DEBUG ("%s current position %d, buffer duration: %d", encoder->name, encoder->current_output_position, GST_BUFFER_DURATION(buffer));
-        i = encoder->current_output_position + 1;
-        i = i % ENCODER_RING_SIZE;
-        encoder->current_output_position = i;
-        if (encoder->output_ring[i] != NULL) {
-                gst_buffer_unref (encoder->output_ring[i]);
-        }
-        encoder->output_ring[i] = buffer;
-        encoder->output_count++;
-}
-
-static void
-encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_data)
-{
-        EncoderStream *stream = (EncoderStream *)user_data;
-        gint current_position;
-        GstCaps *caps;
-
-        current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
-        for (;;) {
-                stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
-                /* insure next buffer isn't current buffer */
-                if (current_position == stream->source->current_position ||
-                        stream->source->current_position == -1) { /*FIXME: condition variable*/
-                        GST_DEBUG ("waiting %s source ready", stream->name);
-                        g_usleep (50000); /* wiating 50ms */
-                        continue;
-                }
-
-                /* first buffer, set caps. */
-                if (stream->current_position == -1) {
-                        caps = GST_BUFFER_CAPS (stream->source->ring[0]);
-                        gst_app_src_set_caps (src, caps);
-                        GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (caps));
-                }
-
-                GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
-                        stream->name,   
-                        stream->current_position,
-                        GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (stream->source->ring[stream->current_position])),
-                        stream->source->current_position);
-
-                if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[current_position])) != GST_FLOW_OK) {
-                        GST_ERROR ("%s, gst_app_src_push_buffer failure.", stream->name);
-                }
-                break;
-        }
-        stream->current_position = current_position;
 }
 
 static gint
