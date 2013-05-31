@@ -600,6 +600,29 @@ create_element (GstStructure *pipeline, gchar *param)
         return element;
 }
 
+static gchar *
+get_caps (GstStructure *configure, gchar *name)
+{
+        GstStructure *structure;
+        GValue *value;
+        gchar *p;
+
+        p = NULL;
+        value = (GValue *)gst_structure_get_value (configure, "elements");
+	structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, name);
+        if (value == NULL) {
+                return NULL;
+        }
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (gst_structure_has_field (structure, "caps")) {
+                p = (gchar *)gst_structure_get_string (structure, "caps");
+                GST_INFO ("%s caps found: %s", name, p);
+        }
+
+        return p;
+}
+
 static void
 pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
 {
@@ -609,6 +632,7 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         GSList *elements, *links;
         GstElement *element, *pipeline;
         Link *link;
+        gchar *p;
 
         src_pad_name = gst_pad_get_name (pad);
         if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
@@ -630,7 +654,14 @@ pad_added_cb (GstElement *src, GstPad *pad, gpointer data)
         while (links != NULL) {
                 link = links->data;
                 GST_INFO ("Link %s -> %s", link->src_name, link->sink_name);
-                gst_element_link (link->src, link->sink);
+                p = get_caps (bin->configure, link->src_name);
+                if (p != NULL) {
+                        caps = gst_caps_from_string (p);
+                        gst_element_link_filtered (link->src, link->sink, caps);
+                        gst_caps_unref (caps);
+                } else {
+                        gst_element_link (link->src, link->sink);
+                }
                 links = links->next;
         }
 
@@ -822,6 +853,7 @@ get_bins (GstStructure *structure)
                 bin->links = NULL;
                 bin->elements = NULL;
                 bin->previous = NULL;
+                bin->configure = structure;
                 p = get_bin_definition (structure, name);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
@@ -905,29 +937,6 @@ source_get_stream (Source *source, gchar *name)
         }
 
         return stream;
-}
-
-static gchar *
-get_caps (GstStructure *configure, gchar *name)
-{
-        GstStructure *structure;
-        GValue *value;
-        gchar *p;
-
-        p = NULL;
-        value = (GValue *)gst_structure_get_value (configure, "elements");
-	structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, name);
-        if (value == NULL) {
-                return NULL;
-        }
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (gst_structure_has_field (structure, "caps")) {
-                p = (gchar *)gst_structure_get_string (structure, "caps");
-                GST_INFO ("%s caps found: %s", name, p);
-        }
-
-        return p;
 }
 
 /**
