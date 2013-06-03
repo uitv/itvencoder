@@ -984,8 +984,9 @@ configure_save_to_file (Configure *configure)
 static gchar*
 group_alter (gchar *path, gchar *group)
 {
-        gchar *tag_close, *tag_open, *tag, *p1, *p2, *p3, *p4;
+        gchar *tag_close, *tag_open, *tag, *p1, *p2, *p3, *p4, *p5;
         gint i, j, indent, depth;
+        GRegex *regex;
 
         p1 = p3 = path;
         p2 = p4 = group;
@@ -1079,6 +1080,92 @@ group_alter (gchar *path, gchar *group)
                         p2++;
                 }
         }
+
+        /* channel tag <channel name="thename"> */
+        regex = g_regex_new (".*channels/([^/]*)$", G_REGEX_DOTALL, 0, NULL);
+        p1 = NULL;
+        p1 = g_regex_replace (regex, group, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        if ((p1 != NULL) && (g_strcmp0 (p1, group) != 0)) {
+                p2 = g_strdup_printf ("(.*<)%s(>.*)", p1);
+                regex = g_regex_new (p2, G_REGEX_DOTALL, 0, NULL);
+                p3 = g_strdup_printf ("\\1channel name=\"%s\"\\2", p1);
+                p4 = g_regex_replace (regex, tag_open, -1, 0, p3, 0, NULL);
+                g_free (p2);
+                g_free (p3);
+                p2 = tag_open;
+                tag_open = p4;
+                g_free (p2);
+        }
+        g_free (p1);
+
+        /* channel tag </channel> */
+        regex = g_regex_new (".*channels/([^/]*).*", G_REGEX_DOTALL, 0, NULL);
+        p1 = NULL;
+        p1 = g_regex_replace (regex, path, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        if ((p1 != NULL) && (g_strcmp0 (p1, path) != 0)) {
+                p2 = g_strdup_printf (".*channels/(%s).*", p1);
+                regex = g_regex_new (p2, G_REGEX_DOTALL, 0, NULL);
+                p3 = NULL;
+                p3 = g_regex_replace (regex, group, -1, 0, "\\1", 0, NULL);
+                g_regex_unref (regex);
+                if ((p3 != NULL) && (g_strcmp0 (group, p3) == 0)) {
+                        p4 = g_strdup_printf ("(.*)(</%s>)(.*)", p1);
+                        regex = g_regex_new (p4, G_REGEX_DOTALL, 0, NULL);
+                        p5 = g_regex_replace (regex, tag_close, -1, 0, "\\1</channel>\\3", 0, NULL);
+                        g_regex_unref (regex);
+                        g_free (tag_close);
+                        tag_close = p5;
+                        g_free (p4);
+                }
+                g_free (p2);
+                g_free (p3);
+        }
+        g_free (p1);
+
+        /* encoder tag <encoder name="thename"> */
+        regex = g_regex_new (".*encoders/([^/]*)$", G_REGEX_DOTALL, 0, NULL);
+        p1 = NULL;
+        p1 = g_regex_replace (regex, group, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        if ((p1 != NULL) && (g_strcmp0 (p1, group) != 0)) {
+                p2 = g_strdup_printf ("(.*<)%s(>.*)", p1);
+                regex = g_regex_new (p2, G_REGEX_DOTALL, 0, NULL);
+                p3 = g_strdup_printf ("\\1encoder name=\"%s\"\\2", p1);
+                p4 = g_regex_replace (regex, tag_open, -1, 0, p3, 0, NULL);
+                g_free (p2);
+                g_free (p3);
+                p2 = tag_open;
+                tag_open = p4;
+                g_free (p2);
+        }
+        g_free (p1);
+
+        /* encoder tag </encoder> */
+        regex = g_regex_new (".*encoders/([^/]*).*", G_REGEX_DOTALL, 0, NULL);
+        p1 = NULL;
+        p1 = g_regex_replace (regex, path, -1, 0, "\\1", 0, NULL);
+        g_regex_unref (regex);
+        if ((p1 != NULL) && (g_strcmp0 (p1, path) != 0)) {
+                p2 = g_strdup_printf (".*encoders/(%s).*", p1);
+                regex = g_regex_new (p2, G_REGEX_DOTALL, 0, NULL);
+                p3 = NULL;
+                p3 = g_regex_replace (regex, group, -1, 0, "\\1", 0, NULL);
+                g_regex_unref (regex);
+                if ((p3 != NULL) && (g_strcmp0 (group, p3) == 0)) {
+                        p4 = g_strdup_printf ("(.*)(</%s>)(.*)", p1);
+                        regex = g_regex_new (p4, G_REGEX_DOTALL, 0, NULL);
+                        p5 = g_regex_replace (regex, tag_close, -1, 0, "\\1</encoder>\\3", 0, NULL);
+                        g_regex_unref (regex);
+                        g_free (tag_close);
+                        tag_close = p5;
+                        g_free (p4);
+                }
+                g_free (p2);
+                g_free (p3);
+        }
+        g_free (p1);
 
         tag = g_strdup_printf ("%s%s", tag_close, tag_open);
         g_free (tag_close);
