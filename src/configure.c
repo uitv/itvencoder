@@ -548,7 +548,7 @@ configure_channel_parse (gchar *name, gchar *data)
                         }
                         gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, source, NULL);
                         gst_structure_free (source);
-                } else if (g_strcmp0 (p[i], "encoder") == 0) {
+                } else if (g_strcmp0 (p[i], "encoders") == 0) {
                         encoder = configure_encoder_parse (p[i], v);
                         if (encoder == NULL) {
                                 return NULL;
@@ -749,7 +749,7 @@ configure_extract_lines (Configure *configure)
                                 bracket_depth++;
                                 group_array = g_strsplit (group, "/", 5);
                                 if (g_ascii_strncasecmp (group, "channels", 8) == 0) {
-                                        if ((bracket_depth <= 2) || ((bracket_depth == 3) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                        if ((bracket_depth <= 2) || ((bracket_depth == 3) && (g_strcmp0 (group_array[2], "encoders") == 0))) {
                                                 regex = g_regex_new ("( *)([^ ]*)( *= *{.*)", G_REGEX_DOTALL, 0, NULL);
                                                 p5 = g_regex_replace (regex, p1, -1, 0, "\\2", 0, NULL);
                                                 g_regex_unref (regex);
@@ -765,7 +765,7 @@ configure_extract_lines (Configure *configure)
                                 bracket_depth--;
                                 group_array = g_strsplit (group, "/", 5);
                                 if (g_ascii_strncasecmp (group, "channels", 8) == 0) {
-                                        if ((bracket_depth == 1) || ((bracket_depth == 2) && (g_strcmp0 (group_array[2], "encoder") == 0))) {
+                                        if ((bracket_depth == 1) || ((bracket_depth == 2) && (g_strcmp0 (group_array[2], "encoders") == 0))) {
                                                 i = 0;
                                                 while (group_array[i] != NULL) {
                                                         i++;
@@ -1122,7 +1122,7 @@ configure_get_var (Configure *configure, gchar *group)
                 conf_var = g_array_index (configure->variables, gpointer, i);
                 if (g_ascii_strncasecmp (conf_var->group, group, strlen (group)) == 0) {
                         if (g_strcmp0 (conf_var->group, path) != 0) {
-                                /* group alternation */
+                                /* group alternation, close and open another tag. */
                                 tag = group_alter (path, conf_var->group);
                                 var = g_strdup_printf ("%s%s", p1, tag);
                                 g_free (p1);

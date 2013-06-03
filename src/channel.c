@@ -1471,7 +1471,7 @@ channel_start (Channel *channel)
         }
 
         /* initialize encoders */
-        value = (GValue *)gst_structure_get_value (channel->configure, "encoder");
+        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");

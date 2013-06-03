@@ -20,7 +20,7 @@ pidfile = /var/run/itvencoder.pid
 
 [channels]
 test = {
-    enable = <var name="enable" type="option">no</var>
+    enable = <var name="enable" type="option">yes</var>
 
     # source pipeline defination
     source = {
@@ -49,7 +49,7 @@ test = {
     }
 
     # encoder pipeline defination
-    encoder = {
+    encoders = {
         encoder1 = {
             videoscale = {
                 caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
