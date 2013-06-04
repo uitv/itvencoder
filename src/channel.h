@@ -15,7 +15,7 @@ typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
 typedef struct _EncoderClass EncoderClass;
-typedef struct _ChannelProduct ChannelProduct;
+typedef struct _ChannelOutput ChannelOutput;
 typedef struct _ChannelJob ChannelJob;
 typedef struct _ChannelJobClass ChannelJobClass;
 typedef struct _Channel Channel;
@@ -125,24 +125,26 @@ struct _EncoderClass {
 
 GType encoder_get_type (void);
 
-struct _ChannelProduct {
+struct _ChannelOutput {
         struct _SourceState {
                 gint64 sync_error_times;
                 gint64 stream_count;
                 struct _SourceStreamState {
                         GstClockTime current_timestamp;
                         GstClockTime last_heartbeat;
-                } **streams;
+                } *streams;
         } source;
         gint64 encoder_count;
         struct _EncoderOutput {
                 gint64 stream_count;
                 struct _EncoderStreamState {
                         GstClockTime last_heartbeat;
-                } **streams;
+                } *streams;
                 guint64 output_count; // total output packet counts
+                guint64 output_head;
+                guint64 output_tail;
                 gchar *stream;
-        } **encoders;
+        } *encoders;
 };
 
 struct _ChannelJob {
@@ -173,16 +175,14 @@ struct _ChannelJobClass {
 struct _Channel {
         GObject parent;
 
-        ChannelJob *channel_job;
-        ChannelProduct *channel_product;
+        GstClock *system_clock;
         gint id;
         gchar *name; // same as the name in channel config file
         gboolean enable;
         GstStructure *configure;
         Source *source; 
         GArray *encoder_array;
-
-        GstClock *system_clock;
+        ChannelOutput *output;
 };
 
 struct _ChannelClass {

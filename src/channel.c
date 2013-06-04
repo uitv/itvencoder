@@ -1426,6 +1426,103 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 }
 
 /*
+ * return pointer of a serialized ChannelOutput.
+ */
+static ChannelOutput *
+channel_output_new (GstStructure *configure)
+{
+        ChannelOutput *output;
+        gsize size;
+        gint i, j, n, k, sscount, escount;
+        GstStructure *structure, *encoder, *bins, *bin;
+        GValue *value;
+        gchar *name, *option, *definition, *p;
+        GRegex *regex;
+        GMatchInfo *match_info;
+        GArray *escountlist;
+
+        /* calculate corespond output size of the configure. */
+        size = sizeof (ChannelOutput);
+        value = (GValue *)gst_structure_get_value (configure, "source");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "bins");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (structure);
+        sscount = 0;
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure, i);
+                value = (GValue *)gst_structure_get_value (structure, name);
+                bin = (GstStructure *)gst_value_get_structure (value);
+                option = (gchar *)gst_structure_get_string (bin, "option");
+                if ((option != NULL) && (g_strcmp0 (option, "no") == 0)) {
+                        GST_WARNING ("%s option set to no.", name);
+                        continue;
+                }
+                definition = (gchar *)gst_structure_get_string (bin, "definition");
+                regex = g_regex_new ("! *appsink[^!]*$", G_REGEX_OPTIMIZE, 0, NULL);
+                g_regex_match (regex, definition, 0, &match_info);
+                g_regex_unref (regex);
+                if (g_match_info_matches (match_info)) {
+                        sscount += 1;
+                        size += sizeof (struct _SourceStreamState);
+                }
+        }
+
+        value = (GValue *)gst_structure_get_value (configure, "encoders");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (structure);
+        escountlist = g_array_new (FALSE, FALSE, sizeof (gint));
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure, i);
+                value = (GValue *)gst_structure_get_value (structure, name);
+                encoder = (GstStructure *)gst_value_get_structure (value);
+                size += sizeof (struct _EncoderOutput);
+                value = (GValue *)gst_structure_get_value (encoder, "bins");
+                bins = (GstStructure *)gst_value_get_structure (value);
+                k = gst_structure_n_fields (bins);
+                escount = 0;
+                for (j = 0; j < k; j++) {
+                        name = (gchar *)gst_structure_nth_field_name (bins, j);
+                        value = (GValue *)gst_structure_get_value (bins, name);
+                        bin = (GstStructure *)gst_value_get_structure (value);
+                        option = (gchar *)gst_structure_get_string (bin, "option");
+                        if ((option != NULL) && (g_strcmp0 (option, "no") == 0)) {
+                                GST_WARNING ("%s option set to no.", name);
+                                continue;
+                        }
+                        definition = (gchar *)gst_structure_get_string (bin, "definition");
+                        regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                        g_regex_match (regex, definition, 0, &match_info);
+                        g_regex_unref (regex);
+                        if (g_match_info_matches (match_info)) {
+                                GST_ERROR ("encoder stream");
+                                size += sizeof (struct _EncoderStreamState);
+                                escount += 1;
+                        }
+                }
+                g_array_append_val (escountlist, escount);
+        }
+        GST_INFO ("Channel sscount %d, encoder count %d, out put size is : %d", sscount, escountlist->len, size);
+
+        p = g_malloc (size);
+        output = (ChannelOutput *)p;
+        p += sizeof (ChannelOutput);
+        output->source.stream_count = sscount;
+        output->source.streams = (struct _SourceStreamState *)p;
+        p += sscount * sizeof (struct _SourceStreamState);
+        output->encoder_count = escountlist->len;
+        output->encoders = (struct _EncoderOutput *)p;
+        p += escountlist->len * sizeof (struct _EncoderOutput);
+        for (i = 0; i < escountlist->len; i++) {
+                output->encoders[i].stream_count = g_array_index (escountlist, gint, i);
+                output->encoders[i].streams = (struct _EncoderStreamState *)p;
+                output->encoders[i].stream = NULL;
+                p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
+        }
+        GST_LOG ("output : %llu, p: %llu", output, p);
+}
+
+/*
  * channel_start
  *
  * @channel: channel to be initialize.
@@ -1442,6 +1539,8 @@ channel_start (Channel *channel)
         gchar *enable;
         Encoder *encoder;
         gint i;
+
+        channel_output_new (channel->configure);
 
         /* channel enable? */
         enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
