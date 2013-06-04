@@ -638,14 +638,6 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 
         pipeline = (GstElement *)gst_element_get_parent (src);
 
-        elements = bin->elements;
-        while (elements != NULL) {
-                element = elements->data;
-                gst_element_set_state (element, GST_STATE_PLAYING);
-                gst_bin_add (GST_BIN (pipeline), element);
-                elements = elements->next;
-        }
-
         links = bin->links;
         while (links != NULL) {
                 link = links->data;
@@ -999,15 +991,15 @@ create_source_pipeline (Source *source)
         while (bins != NULL) {
                 bin = bins->data;
 
-                if (bin->previous == NULL) {
-                        /* add element to pipeline */
-                        elements = bin->elements;
-                        while (elements != NULL) {
-                                element = elements->data;
-                                gst_bin_add (GST_BIN (pipeline), element);
-                                elements = g_slist_next (elements);
-                        }
+                /* add element to pipeline */
+                elements = bin->elements;
+                while (elements != NULL) {
+                        element = elements->data;
+                        gst_bin_add (GST_BIN (pipeline), element);
+                        elements = g_slist_next (elements);
+                }
 
+                if (bin->previous == NULL) {
                         /* links element */
                         links = bin->links;
                         while (links != NULL) {
