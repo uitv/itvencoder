@@ -1,6 +1,6 @@
 INCLUDES = $(gstreamer_CFLAGS)
 
-bin_PROGRAMS = meidaprobe
+bin_PROGRAMS = mediaprobe
 
 itvencoder_LDADD = $(gstreamer_LIBS)
 
