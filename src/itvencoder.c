@@ -243,7 +243,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                 continue;
                         }
                         now = gst_clock_get_time (itvencoder->system_clock);
-                        time_diff = GST_CLOCK_DIFF (source_stream->last_heartbeat, now);
+                        time_diff = GST_CLOCK_DIFF (*(source_stream->last_heartbeat), now);
                         if (time_diff > HEARTBEAT_THRESHHOLD) {
                                 GST_ERROR ("channel %s stream %s heart beat error %lld, restart channel %s",
                                         channel->name,
@@ -255,7 +255,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                 GST_INFO ("channel %s stream %s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
                                         source_stream->name,
-                                        GST_TIME_ARGS (source_stream->last_heartbeat));
+                                        GST_TIME_ARGS (*(source_stream->last_heartbeat)));
                         }
                 }
 

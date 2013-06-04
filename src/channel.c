@@ -936,7 +936,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
+        *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
         stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
         /* output running status */
@@ -1351,6 +1351,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
+                stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
         }
 
         source->bins = get_bins (configure);
@@ -1520,6 +1521,8 @@ channel_output_new (GstStructure *configure)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
         }
         GST_LOG ("output : %llu, p: %llu", output, p);
+
+        return output;
 }
 
 /*
@@ -1540,7 +1543,7 @@ channel_start (Channel *channel)
         Encoder *encoder;
         gint i;
 
-        channel_output_new (channel->configure);
+        channel->output = channel_output_new (channel->configure);
 
         /* channel enable? */
         enable = (gchar *)gst_structure_get_string (channel->configure, "enable");

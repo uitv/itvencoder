@@ -48,7 +48,7 @@ typedef struct _SourceStream {
         gint current_position; // source output position
         GstClockTime current_timestamp;
         GstClock *system_clock;
-        GstClockTime last_heartbeat;
+        GstClockTime *last_heartbeat;
         GArray *encoders;
 } SourceStream;
 
