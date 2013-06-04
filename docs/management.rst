@@ -222,3 +222,28 @@ HTTP Request::
     Accept-Language: zh-CN,zh;q=0.8
 
 重新启动的请求没有应答，可以通过尝试连接管理接口来判断是否已经启动完成。
+
+查询当前iTVEncoder版本信息
+==========================
+
+HTTP Request::
+
+    GET /version HTTP/1.1
+    Host: 192.168.2.9:20118
+    Connection: keep-alive
+    Cache-Control: max-age=0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.94 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+
+HTTP Response::
+
+    HTTP/1.1 200 OK
+    Server: iTVEncoder-0.3.0
+    Content-Type: text/plain
+    Content-Length: 64
+    Connection: Close
+    
+    iTVEncoder version: 0.3.0
+    iTVEncoder build: Jun  4 2013 10:04:28
