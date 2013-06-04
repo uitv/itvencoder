@@ -52,7 +52,7 @@
                        "Content-Type: text/plain\r\n" \
                        "Content-Length: %d\r\n" \
                        "Connection: Close\r\n\r\n" \
-                       "%s-%s"
+                       "%s"
 
 typedef struct _HTTPServer      HTTPServer;
 typedef struct _HTTPServerClass HTTPServerClass;

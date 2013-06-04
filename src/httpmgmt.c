@@ -404,9 +404,17 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, gui_css, strlen (gui_css));
                                 return 0;
                         }
-                case 'i': /* uri is /httpmgmt/..... */
-                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (PACKAGE_NAME) + strlen (PACKAGE_VERSION) + 1, PACKAGE_NAME, PACKAGE_VERSION); 
-                        write (request_data->sock, buf, strlen (buf));
+                case 'v': /* uri is /version */
+                        if (g_str_has_prefix (request_data->uri, "/version")) {
+                                gchar *ver;
+                                ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
+                                buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
+                                g_free (ver);
+                                write (request_data->sock, buf, strlen (buf));
+                        } else {
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                        }
                         g_free (buf);
                         return 0;
                 case 'k': /* kill self */
