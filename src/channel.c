@@ -1128,7 +1128,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
 
         current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
         for (;;) {
-                stream->last_heartbeat = gst_clock_get_time (stream->system_clock);
+                *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
                 /* insure next buffer isn't current buffer */
                 if (current_position == stream->source->current_position ||
                         stream->source->current_position == -1) { /*FIXME: condition variable*/
@@ -1308,7 +1308,7 @@ channel_encoder_extract_streams (Encoder *encoder)
                 bin = (GstStructure *)gst_value_get_structure (value);
                 option = (gchar *)gst_structure_get_string (bin, "option");
                 if ((option != NULL) && (g_strcmp0 (option, "no") == 0)) {
-                        GST_WARNING ("Encoder %s's %s option set to no.", name);
+                        GST_WARNING ("Encoder %s's option set to no.", name);
                         continue;
                 }
                 definition = (gchar *)gst_structure_get_string (bin, "definition");
@@ -1393,6 +1393,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 
                 for (j = 0; j < encoder->streams->len; j++) {
                         stream = g_array_index (encoder->streams, gpointer, j);
+                        stream->last_heartbeat = &(channel->output->encoders[i].streams[j].last_heartbeat);
                         for (k = 0; k < channel->source->streams->len; k++) {
                                 source = g_array_index (channel->source->streams, gpointer, k);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {

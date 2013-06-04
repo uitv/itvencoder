@@ -89,7 +89,7 @@ typedef struct _EncoderStream {
         gchar *name;
         gint current_position; // encoder position
         GstClock *system_clock;
-        GstClockTime last_heartbeat;
+        GstClockTime *last_heartbeat;
         SourceStream *source;
 } EncoderStream;
 
