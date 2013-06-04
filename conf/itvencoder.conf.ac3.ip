@@ -111,8 +111,8 @@ channel0 = {
         }
     }
 
-    # encoder pipeline defination
-    encoder = {
+    # encoders pipeline defination
+    encoders = {
         encoder1 = {
             appsrc = {
                 property = {
