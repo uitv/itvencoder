@@ -13,6 +13,14 @@ iTVEncoder已经随整个安装包一起安装，这里介绍如何从源代码�
     make
     make install
 
+生成rpm安装包::
+
+    make dist
+    cp itvencoder-version.tar.gz ~/rpmbuild/SOURCES/
+    rpmbuild -bb itvencoder.spec
+
+以上步骤是在CentOS 6.2操作系统环境下进行的，在其它系统上可能会稍有差别，生成的rpm包在目录~/rpmbuild/RPMS/x86_64/中。
+
 iTVEncoder运行
 ==============
 

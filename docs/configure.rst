@@ -44,7 +44,7 @@ channels配置的格式如下::
         source = {
            ...
         }
-        encoder = {
+        encoders = {
             encoder_0 = {
                ...
             }
@@ -56,7 +56,7 @@ channels配置的格式如下::
 
 enable取值为yes或者no，yes表示启用这个通道，no表示不启用这个通道。
 
-source表示编码通道的源，encoder表示编码通道的编码器，一个通道可以有多路编码器，编码器的名字是字母数字和下划线的组合。
+source表示编码通道的源，encoders表示编码通道的编码器，一个通道可以有多路编码器，编码器的名字是字母数字和下划线的组合。
 
 source的配置如下面的样子::
 
@@ -72,7 +72,7 @@ source的配置如下面的样子::
         }
     }
 
-source的配置项有两类，一类是对element的配置，一类是对bins的配置。iTVEncoder解析bins，进而解析element配置，最终构造成一个gstreamer概念的pipeline，这个pipeline的输出作为encoder中的编码器的输入。
+source的配置项有两类，一类是对element的配置，一类是对bins的配置。iTVEncoder解析bins，进而解析element配置，最终构造成一个gstreamer概念的pipeline，这个pipeline的输出作为encoders中的编码器的输入。
 
 element的配置如下面的样子::
 
