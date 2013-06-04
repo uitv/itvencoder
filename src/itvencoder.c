@@ -306,11 +306,11 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                 /* don't check subtitle */
                                 continue;
                         }
-                        if (min > source_stream->current_timestamp) {
-                                min = source_stream->current_timestamp;
+                        if (min > *(source_stream->current_timestamp)) {
+                                min = *(source_stream->current_timestamp);
                         }
-                        if (max < source_stream->current_timestamp) {
-                                max = source_stream->current_timestamp;
+                        if (max < *(source_stream->current_timestamp)) {
+                                max = *(source_stream->current_timestamp);
                         }
                 }
                 time_diff = GST_CLOCK_DIFF (min, max);
@@ -328,7 +328,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                 GST_INFO ("channel %s stream %s timestamp %" GST_TIME_FORMAT,
                                         channel->name,
                                         source_stream->name,
-                                        GST_TIME_ARGS (source_stream->current_timestamp));
+                                        GST_TIME_ARGS (*(source_stream->current_timestamp)));
                         }
                 }
         }

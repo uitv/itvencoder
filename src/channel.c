@@ -953,7 +953,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
                 gst_buffer_unref (stream->ring[stream->current_position]);
         }
         stream->ring[stream->current_position] = buffer;
-        stream->current_timestamp = GST_BUFFER_TIMESTAMP (buffer);
+        *(stream->current_timestamp) = GST_BUFFER_TIMESTAMP (buffer);
 }
 
 /**
@@ -1352,6 +1352,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                         stream->ring[j] = NULL;
                 }
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
+                stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
         }
 
         source->bins = get_bins (configure);
