@@ -17,8 +17,6 @@ typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
 typedef struct _EncoderClass EncoderClass;
 typedef struct _ChannelOutput ChannelOutput;
-typedef struct _ChannelJob ChannelJob;
-typedef struct _ChannelJobClass ChannelJobClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
@@ -166,31 +164,6 @@ struct _ChannelOutput {
                 gchar *output;
         } *encoders;
 };
-
-struct _ChannelJob {
-        GObject parent;
-
-        gint id;
-        gchar *name; // same as the name in channel config file
-        gboolean enable;
-        GstStructure *configure;
-        Source *source; 
-        GArray *encoder_array;
-
-        GstClock *system_clock;
-};
-
-struct _ChannelJobClass {
-        GObjectClass parent;
-};
-
-#define TYPE_CHANNEL_JOB           (channel_job_get_type())
-#define CHANNEL_JOB(obj)           (G_TYPE_CHECK_INSTANCE_CAST ((obj), TYPE_CHANNEL_JOB, ChannelJob))
-#define CHANNEL_JOB_CLASS(cls)     (G_TYPE_CHECK_CLASS_CAST    ((cls), TYPE_CHANNEL_JOB, ChannelJobClass))
-#define IS_CHANNEL_JOB(obj)        (G_TYPE_CHECK_INSTANCE_TYPE ((obj), TYPE_CHANNEL_JOB))
-#define IS_CHANNEL_JOB_CLASS(cls)  (G_TYPE_CHECK_CLASS_TYPE    ((cls), TYPE_CHANNEL_JOB))
-#define CHANNEL_JOB_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS  ((obj), TYPE_CHANNEL, ChannelJobClass))
-#define channel_job_new(...)       (g_object_new(TYPE_CHANNEL_JOB, ## __VA_ARGS__, NULL))
 
 struct _Channel {
         GObject parent;
