@@ -935,9 +935,22 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         SourceStream *stream = (SourceStream *)user_data;
         EncoderStream *encoder;
         gint i;
+        GstCaps *caps;
+        gchar *str;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
+        if (stream->current_position == -1) {
+                /* set stream type */
+                caps = GST_BUFFER_CAPS (buffer);
+                str = gst_caps_to_string (caps);
+                if (g_str_has_prefix (str, "video")) {
+                        *(stream->type) = ST_VIDEO;
+                } else if (g_str_has_prefix (str, "audio")) {
+                        *(stream->type) = ST_AUDIO;
+                }
+                g_free (str);
+        }
         stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
         /* output running status */
@@ -1339,7 +1352,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 
         source = channel->source;
         source->configure = configure;
-        source->name = (gchar *)gst_structure_get_name (configure);
+        source->name = (gchar *)gst_structure_get_name (configure);GST_STATE_PLAYING;
         source->channel = channel;
         channel_source_extract_streams (source);
 
@@ -1351,8 +1364,10 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 for (j = 0; j < SOURCE_RING_SIZE; j++) {
                         stream->ring[j] = NULL;
                 }
+                stream->type = &(channel->output->source.streams[i].type);
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
+                g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
         }
 
         source->bins = get_bins (configure);
@@ -1385,6 +1400,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->channel = channel;
                 encoder->id = i;
                 encoder->name = name;
+                g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
                 encoder->configure = structure;
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
@@ -1394,6 +1410,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 for (j = 0; j < encoder->streams->len; j++) {
                         stream = g_array_index (encoder->streams, gpointer, j);
                         stream->last_heartbeat = &(channel->output->encoders[i].streams[j].last_heartbeat);
+                        g_strlcpy (channel->output->encoders[i].streams[j].name, stream->name, STREAM_NAME_LEN);
                         for (k = 0; k < channel->source->streams->len; k++) {
                                 source = g_array_index (channel->source->streams, gpointer, k);
                                 if (g_strcmp0 (source->name, stream->name) == 0) {
@@ -1518,6 +1535,9 @@ channel_output_new (GstStructure *configure, gboolean daemon)
         output->source.sync_error_times = 0;
         output->source.stream_count = sscount;
         output->source.streams = (struct _SourceStreamState *)p;
+        for (i = 0; i < sscount; i++) {
+                output->source.streams[i].type = ST_UNKNOWN;
+        }
         p += sscount * sizeof (struct _SourceStreamState);
         output->encoder_count = escountlist->len;
         output->encoders = (struct _EncoderOutput *)p;
@@ -1593,6 +1613,7 @@ channel_start (Channel *channel, gboolean daemon)
                 gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
                 encoder->state = GST_STATE_PLAYING;
         }
+        channel->output->state = GST_STATE_PLAYING;
 
         return TRUE;
 }

@@ -222,114 +222,101 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
         GstClockReturn ret;
         ITVEncoder *itvencoder = (ITVEncoder *)user_data;
         Channel *channel;
-        SourceStream *source_stream;
-        EncoderStream *encoder_stream;
+        ChannelOutput *output;
         gint i, j, k;
 
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                if (channel->source->state != GST_STATE_PLAYING) {
+                output = channel->output;
+                if (output->state != GST_STATE_PLAYING) {
                         continue;
                 }
 
                 /* source heartbeat check */
-                for (j = 0; j < channel->source->streams->len; j++) {
-                        source_stream = g_array_index (channel->source->streams, gpointer, j);
-                        if (source_stream->ring[0] == NULL) {
-                                continue;
-                        }
-                        if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
-                                /* don't check subtitle */
+                for (j = 0; j < output->source.stream_count; j++) {
+                        if (output->source.streams[j].type == ST_UNKNOWN) {
                                 continue;
                         }
                         now = gst_clock_get_time (itvencoder->system_clock);
-                        time_diff = GST_CLOCK_DIFF (*(source_stream->last_heartbeat), now);
+                        time_diff = GST_CLOCK_DIFF (output->source.streams[j].last_heartbeat, now);
                         if (time_diff > HEARTBEAT_THRESHHOLD) {
-                                GST_ERROR ("channel %s stream %s heart beat error %lld, restart channel %s",
+                                GST_ERROR ("%s.source.%s heart beat error %lld, restart channel.",
                                         channel->name,
-                                        source_stream->name,
-                                        time_diff,
-                                        channel->name);
+                                        output->source.streams[j].name,
+                                        time_diff);
                                 channel_stop (channel);
                         } else {
-                                GST_INFO ("channel %s stream %s heart beat %" GST_TIME_FORMAT,
+                                GST_INFO ("%s.source.%s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
-                                        source_stream->name,
-                                        GST_TIME_ARGS (*(source_stream->last_heartbeat)));
+                                        output->source.streams[j].name,
+                                        GST_TIME_ARGS (output->source.streams[j].last_heartbeat));
                         }
                 }
 
-                /* encoder heartbeat check */
-                for (j = 0; j < channel->encoder_array->len; j++) {
-                        Encoder *encoder = g_array_index (channel->encoder_array, gpointer, j);
-                        if (encoder->state != GST_STATE_PLAYING) {
-                                continue;
-                        }
+                /* log source timestamp. */
+                for (j = 0; j < output->source.stream_count; j++) {
+                        GST_INFO ("%s.source.%s timestamp %" GST_TIME_FORMAT,
+                                channel->name,
+                                output->source.streams[j].name,
+                                GST_TIME_ARGS (output->source.streams[j].current_timestamp));
+                }
 
-                        for (k = 0; k < encoder->streams->len; k++) {
-                                encoder_stream = g_array_index (encoder->streams, gpointer, k);
+                /* encoder heartbeat check */
+                for (j = 0; j < output->encoder_count; j++) {
+                        for (k = 0; k < output->encoders[j].stream_count; k++) {
                                 now = gst_clock_get_time (itvencoder->system_clock);
-                                time_diff = GST_CLOCK_DIFF (*(encoder_stream->last_heartbeat), now);
+                                time_diff = GST_CLOCK_DIFF (output->encoders[j].streams[k].last_heartbeat, now);
                                 if (time_diff > HEARTBEAT_THRESHHOLD) {
-                                        GST_ERROR ("endcoder %s stream %s heart beat error %lld, restart",
-                                                encoder->name,
-                                                encoder_stream->name,
+                                        GST_ERROR ("%s.encoders.%s.%s heart beat error %lld, restart",
+                                                channel->name,
+                                                output->encoders[j].name,
+                                                output->encoders[j].streams[k].name,
                                                 time_diff);
                                         channel_stop (channel);
                                 } else {
-                                        GST_INFO ("channel %s encoder stream %s heart beat %" GST_TIME_FORMAT,
+                                        GST_INFO ("%s.encoders.%s.%s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
-                                                encoder_stream->name,
-                                                GST_TIME_ARGS (*(encoder_stream->last_heartbeat)));
+                                                output->encoders[j].name,
+                                                output->encoders[j].streams[k].name,
+                                                GST_TIME_ARGS (output->encoders[j].streams[k].last_heartbeat));
                                 }
 
-                                time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->current_position]),
-                                        GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->source->current_position]));
-                                if (time_diff > GST_SECOND) {
-                                        GST_WARNING ("channel %s encoder stream %s delay %" GST_TIME_FORMAT,
-                                                channel->name,
-                                                encoder_stream->name,
-                                                GST_TIME_ARGS (time_diff));
-                                }
+                                //TODO: delay check?
+                                //time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->current_position]),
+                                //        GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->source->current_position]));
+                                //if (time_diff > GST_SECOND) {
+                                //        GST_WARNING ("channel %s encoder stream %s delay %" GST_TIME_FORMAT,
+                                //                channel->name,
+                                //                encoder_stream->name,
+                                //                GST_TIME_ARGS (time_diff));
+                                //}
                         }
                 }
 
                 /* sync check */
                 min = GST_CLOCK_TIME_NONE;
                 max = 0;
-                for (j = 0; j < channel->source->streams->len; j++) {
-                        source_stream = g_array_index (channel->source->streams, gpointer, j);
-                        if (source_stream->ring[0] == NULL) {
+                for (j = 0; j < output->source.stream_count; j++) {
+                        if (output->source.streams[j].type == ST_UNKNOWN) {
                                 continue;
                         }
-                        if (g_strcmp0 (gst_caps_to_string (GST_BUFFER_CAPS (source_stream->ring[0])), "private/x-dvbsub") == 0) {
-                                /* don't check subtitle */
-                                continue;
+                        if (min > output->source.streams[j].current_timestamp) {
+                                min = output->source.streams[j].current_timestamp;
                         }
-                        if (min > *(source_stream->current_timestamp)) {
-                                min = *(source_stream->current_timestamp);
-                        }
-                        if (max < *(source_stream->current_timestamp)) {
-                                max = *(source_stream->current_timestamp);
+                        if (max < output->source.streams[j].current_timestamp) {
+                                max = output->source.streams[j].current_timestamp;
                         }
                 }
                 time_diff = GST_CLOCK_DIFF (min, max);
                 if (time_diff > SYNC_THRESHHOLD) {
-                        GST_ERROR ("channel %s sync error %lld", channel->name, time_diff);
-                        channel->output->source.sync_error_times += 1;
-                        if (channel->output->source.sync_error_times == 3) {
-                                GST_ERROR ("sync error times %d, restart channel %s", channel->output->source.sync_error_times, channel->name);
+                        GST_ERROR ("%s sync error %lld", channel->name, time_diff);
+                        output->source.sync_error_times += 1;
+                        if (output->source.sync_error_times == 3) {
+                                GST_ERROR ("sync error times %d, restart %s", output->source.sync_error_times, channel->name);
                                 channel_stop (channel);
                         }
                 } else {
-                        channel->output->source.sync_error_times = 0;
-                        for (j = 0; j < channel->source->streams->len; j++) {
-                                source_stream = g_array_index (channel->source->streams, gpointer, j);
-                                GST_INFO ("channel %s stream %s timestamp %" GST_TIME_FORMAT,
-                                        channel->name,
-                                        source_stream->name,
-                                        GST_TIME_ARGS (*(source_stream->current_timestamp)));
-                        }
+                        output->source.sync_error_times = 0;
                 }
         }
 

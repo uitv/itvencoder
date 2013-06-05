@@ -10,6 +10,7 @@
 
 #define SOURCE_RING_SIZE 1500
 #define ENCODER_RING_SIZE (4*250)
+#define STREAM_NAME_LEN 32
 
 typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
@@ -20,6 +21,13 @@ typedef struct _ChannelJob ChannelJob;
 typedef struct _ChannelJobClass ChannelJobClass;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
+
+enum StreamType {
+        ST_UNKNOWN,
+        ST_VIDEO,
+        ST_AUDIO,
+        ST_SUBTITLE
+};
 
 typedef struct _Link {
         GstElement *src;
@@ -44,6 +52,7 @@ typedef struct _Bin {
 
 typedef struct _SourceStream {
         gchar *name;
+        guint64 *type;
         GstBuffer *ring[SOURCE_RING_SIZE];
         gint current_position; // source output position
         GstClockTime *current_timestamp;
@@ -120,6 +129,7 @@ struct _EncoderClass {
 GType encoder_get_type (void);
 
 struct _ChannelOutput {
+        guint64 state;
         struct _SourceState {
                 /*  sync error cause sync_error_times inc, 
                  *  sync normal cause sync_error_times reset to zero,
@@ -128,14 +138,19 @@ struct _ChannelOutput {
                 guint64 sync_error_times;
                 gint64 stream_count;
                 struct _SourceStreamState {
+                        gchar name[STREAM_NAME_LEN];
+                        /* enum StreamType */
+                        guint64 type;
                         GstClockTime current_timestamp;
                         GstClockTime last_heartbeat;
                 } *streams;
         } source;
         gint64 encoder_count;
         struct _EncoderOutput {
+                gchar name[STREAM_NAME_LEN];
                 gint64 stream_count;
                 struct _EncoderStreamState {
+                        gchar name[STREAM_NAME_LEN];
                         GstClockTime last_heartbeat;
                 } *streams;
                 guint64 output_count; // total output packet counts
