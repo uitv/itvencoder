@@ -92,6 +92,7 @@ typedef struct _EncoderStream {
         gchar *name;
         gint current_position; // encoder position
         GstClock *system_clock;
+        GstClockTime *current_timestamp;
         GstClockTime *last_heartbeat;
         SourceStream *source;
 } EncoderStream;
@@ -151,6 +152,7 @@ struct _ChannelOutput {
                 gint64 stream_count;
                 struct _EncoderStreamState {
                         gchar name[STREAM_NAME_LEN];
+                        GstClockTime current_timestamp;
                         GstClockTime last_heartbeat;
                 } *streams;
                 guint64 output_count; // total output packet counts

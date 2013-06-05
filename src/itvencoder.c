@@ -293,6 +293,17 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                 }
 
+                /* log encoder current timestamp. */
+                for (j = 0; j < output->encoder_count; j++) {
+                        for (k = 0; k < output->encoders[j].stream_count; k++) {
+                                GST_INFO ("%s.encoders.%s.%s current timestamp %" GST_TIME_FORMAT,
+                                        channel->name,
+                                        output->encoders[j].name,
+                                        output->encoders[j].streams[k].name,
+                                        GST_TIME_ARGS (output->encoders[j].streams[k].current_timestamp));
+                        }
+                }
+
                 /* sync check */
                 min = GST_CLOCK_TIME_NONE;
                 max = 0;

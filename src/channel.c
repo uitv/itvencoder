@@ -1167,6 +1167,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[current_position])) != GST_FLOW_OK) {
                         GST_ERROR ("%s, gst_app_src_push_buffer failure.", stream->name);
                 }
+                *(stream->current_timestamp) = GST_BUFFER_TIMESTAMP (stream->source->ring[current_position]);
                 break;
         }
         stream->current_position = current_position;
@@ -1410,6 +1411,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 for (j = 0; j < encoder->streams->len; j++) {
                         stream = g_array_index (encoder->streams, gpointer, j);
                         stream->last_heartbeat = &(channel->output->encoders[i].streams[j].last_heartbeat);
+                        stream->current_timestamp = &(channel->output->encoders[i].streams[j].current_timestamp);
                         g_strlcpy (channel->output->encoders[i].streams[j].name, stream->name, STREAM_NAME_LEN);
                         for (k = 0; k < channel->source->streams->len; k++) {
                                 source = g_array_index (channel->source->streams, gpointer, k);
