@@ -17,7 +17,6 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         HTTPMGMT_PROP_0,
-        HTTPMGMT_PROP_DAEMON,
         HTTPMGMT_PROP_ITVENCODER,
         HTTPMGMT_PROP_CONFIGURE_FILE,
 };
@@ -38,15 +37,6 @@ httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
         g_object_class->constructor = httpmgmt_constructor;
         g_object_class->set_property = httpmgmt_set_property;
         g_object_class->get_property = httpmgmt_get_property;
-
-        param = g_param_spec_boolean (
-                "daemon",
-                "daemon",
-                "run in background",
-                TRUE,
-                G_PARAM_WRITABLE | G_PARAM_READABLE
-        );
-        g_object_class_install_property (g_object_class, HTTPMGMT_PROP_DAEMON, param);
 
         param = g_param_spec_pointer (
                 "itvencoder",
@@ -91,9 +81,6 @@ httpmgmt_set_property (GObject *obj, guint prop_id, const GValue *value, GParamS
         g_return_if_fail(IS_HTTPMGMT(obj));
 
         switch(prop_id) {
-        case HTTPMGMT_PROP_DAEMON:
-                HTTPMGMT(obj)->daemon = g_value_get_boolean (value);
-                break;
         case HTTPMGMT_PROP_ITVENCODER:
                 HTTPMGMT(obj)->itvencoder = (ITVEncoder *)g_value_get_pointer (value);
                 break;
@@ -112,9 +99,6 @@ httpmgmt_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *p
         HTTPMgmt  *httpmgmt = HTTPMGMT(obj);
 
         switch(prop_id) {
-        case HTTPMGMT_PROP_DAEMON:
-                g_value_set_boolean (value, httpmgmt->daemon);
-                break;
         case HTTPMGMT_PROP_ITVENCODER:
                 g_value_set_pointer (value, httpmgmt->itvencoder);
                 break;
@@ -419,7 +403,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 case 'k': /* kill self */
                         if (g_str_has_prefix (request_data->uri, "/kill")) {
-                                if (!httpmgmt->daemon) {
+                                if (!httpmgmt->itvencoder->daemon) {
                                         GST_WARNING ("Can't restart when run in foreground.");
                                         buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));

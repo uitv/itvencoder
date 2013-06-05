@@ -19,8 +19,6 @@ typedef struct _HTTPMgmtClass HTTPMgmtClass;
 struct _HTTPMgmt {
         GObject parent;
 
-        /* run as daemon */
-        gboolean daemon;
         GstClock *system_clock;
         gchar *configure_file;
         Configure *configure;
