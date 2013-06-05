@@ -192,7 +192,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                         g_free (buf);
                                         return 0;
                                 }
-                                if (encoder->output_count < ENCODER_RING_SIZE) {
+                                if (*(encoder->output_count) < ENCODER_RING_SIZE) {
                                         GST_ERROR ("Caching, please wait a while.");
                                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));

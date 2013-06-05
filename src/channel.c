@@ -1130,7 +1130,7 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
                 gst_buffer_unref (encoder->output_ring[i]);
         }
         encoder->output_ring[i] = buffer;
-        *(encoder->output_count)++;
+        (*(encoder->output_count))++;
 }
 
 static void
