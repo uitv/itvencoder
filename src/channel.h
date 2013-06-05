@@ -196,7 +196,7 @@ struct _ChannelClass {
 #define channel_new(...)       (g_object_new(TYPE_CHANNEL, ## __VA_ARGS__, NULL))
 
 GType channel_get_type (void);
-gboolean channel_start (Channel *channel);
+gboolean channel_start (Channel *channel, gboolean daemon);
 void channel_stop (Channel *channel);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 

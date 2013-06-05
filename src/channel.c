@@ -1431,7 +1431,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
  * return pointer of a serialized ChannelOutput.
  */
 static ChannelOutput *
-channel_output_new (GstStructure *configure)
+channel_output_new (GstStructure *configure, gboolean daemon)
 {
         ChannelOutput *output;
         gsize size;
@@ -1537,7 +1537,7 @@ channel_output_new (GstStructure *configure)
  *
  */
 gboolean
-channel_start (Channel *channel)
+channel_start (Channel *channel, gboolean daemon)
 {
         GValue *value;
         GstStructure *structure;
@@ -1545,7 +1545,7 @@ channel_start (Channel *channel)
         Encoder *encoder;
         gint i;
 
-        channel->output = channel_output_new (channel->configure);
+        channel->output = channel_output_new (channel->configure, daemon);
 
         /* channel enable? */
         enable = (gchar *)gst_structure_get_string (channel->configure, "enable");

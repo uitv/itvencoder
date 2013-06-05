@@ -199,7 +199,7 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         Channel *channel;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        return channel_start (channel);
+        return channel_start (channel, itvencoder->daemon);
 }
 
 gboolean
