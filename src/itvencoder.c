@@ -281,15 +281,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 GST_TIME_ARGS (output->encoders[j].streams[k].last_heartbeat));
                                 }
 
-                                //TODO: delay check?
-                                //time_diff = GST_CLOCK_DIFF (GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->current_position]),
-                                //        GST_BUFFER_TIMESTAMP (encoder_stream->source->ring[encoder_stream->source->current_position]));
-                                //if (time_diff > GST_SECOND) {
-                                //        GST_WARNING ("channel %s encoder stream %s delay %" GST_TIME_FORMAT,
-                                //                channel->name,
-                                //                encoder_stream->name,
-                                //                GST_TIME_ARGS (time_diff));
-                                //}
                         }
                 }
 
