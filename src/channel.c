@@ -1338,7 +1338,6 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 
         source = channel->source;
         source->configure = configure;
-        source->sync_error_times = 0;
         source->name = (gchar *)gst_structure_get_name (configure);
         source->channel = channel;
         channel_source_extract_streams (source);
@@ -1510,6 +1509,7 @@ channel_output_new (GstStructure *configure)
         p = g_malloc (size);
         output = (ChannelOutput *)p;
         p += sizeof (ChannelOutput);
+        output->source.sync_error_times = 0;
         output->source.stream_count = sscount;
         output->source.streams = (struct _SourceStreamState *)p;
         p += sscount * sizeof (struct _SourceStreamState);

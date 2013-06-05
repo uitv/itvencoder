@@ -316,13 +316,13 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 time_diff = GST_CLOCK_DIFF (min, max);
                 if (time_diff > SYNC_THRESHHOLD) {
                         GST_ERROR ("channel %s sync error %lld", channel->name, time_diff);
-                        channel->source->sync_error_times += 1;
-                        if (channel->source->sync_error_times == 3) {
-                                GST_ERROR ("sync error times %d, restart channel %s", channel->source->sync_error_times, channel->name);
+                        channel->output->source.sync_error_times += 1;
+                        if (channel->output->source.sync_error_times == 3) {
+                                GST_ERROR ("sync error times %d, restart channel %s", channel->output->source.sync_error_times, channel->name);
                                 channel_stop (channel);
                         }
                 } else {
-                        channel->source->sync_error_times = 0;
+                        channel->output->source.sync_error_times = 0;
                         for (j = 0; j < channel->source->streams->len; j++) {
                                 source_stream = g_array_index (channel->source->streams, gpointer, j);
                                 GST_INFO ("channel %s stream %s timestamp %" GST_TIME_FORMAT,

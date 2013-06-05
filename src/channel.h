@@ -62,12 +62,6 @@ struct _Source {
         GSList *bins;
         GstElement *pipeline;
 
-        /*  sync error cause sync_error_times inc, 
-         *  sync normal cause sync_error_times reset to zero,
-         *  sync_error_times == 5 cause the channel restart.
-         * */
-        gint sync_error_times;
-
         GArray *streams;
 };
 
@@ -127,7 +121,11 @@ GType encoder_get_type (void);
 
 struct _ChannelOutput {
         struct _SourceState {
-                gint64 sync_error_times;
+                /*  sync error cause sync_error_times inc, 
+                 *  sync normal cause sync_error_times reset to zero,
+                 *  sync_error_times == 5 cause the channel restart.
+                 */
+                guint64 sync_error_times;
                 gint64 stream_count;
                 struct _SourceStreamState {
                         GstClockTime current_timestamp;
