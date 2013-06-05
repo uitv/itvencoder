@@ -112,7 +112,11 @@ struct _Encoder {
 
         GstBuffer *output_ring[ENCODER_RING_SIZE];
         gint current_output_position; // encoder output position
-        guint64 output_count; // total output packet counts
+        gchar *output;
+        guint64 *output_size; // total output packet counts
+        guint64 *output_count; // total output packet counts
+        guint64 *output_head;
+        guint64 *output_tail;
 };
 
 struct _EncoderClass {
@@ -155,10 +159,11 @@ struct _ChannelOutput {
                         GstClockTime current_timestamp;
                         GstClockTime last_heartbeat;
                 } *streams;
+                guint64 output_size;
                 guint64 output_count; // total output packet counts
                 guint64 output_head;
                 guint64 output_tail;
-                gchar *stream;
+                gchar *output;
         } *encoders;
 };
 
