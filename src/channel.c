@@ -3,6 +3,7 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <sys/mman.h>
 #include <unistd.h>
 #include <string.h>
 #include <gst/gst.h>
@@ -1506,7 +1507,12 @@ channel_output_new (GstStructure *configure, gboolean daemon)
         }
         GST_INFO ("Channel sscount %d, encoder count %d, out put size is : %d", sscount, escountlist->len, size);
 
-        p = g_malloc (size);
+        if (daemon) {
+                /* daemon, use share memory */
+                p = mmap (NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+        } else {
+                p = g_malloc (size);
+        }
         output = (ChannelOutput *)p;
         p += sizeof (ChannelOutput);
         output->source.sync_error_times = 0;
@@ -1519,7 +1525,12 @@ channel_output_new (GstStructure *configure, gboolean daemon)
         for (i = 0; i < escountlist->len; i++) {
                 output->encoders[i].stream_count = g_array_index (escountlist, gint, i);
                 output->encoders[i].streams = (struct _EncoderStreamState *)p;
-                output->encoders[i].stream = NULL;
+                if (daemon) {
+                        /* daemon, use share memory. */
+                        output->encoders[i].stream = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                } else {
+                        output->encoders[i].stream = g_malloc (64 * 1024 * 1024);
+                }
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
         }
         GST_LOG ("output : %llu, p: %llu", output, p);
