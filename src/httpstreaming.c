@@ -15,8 +15,7 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 
 enum {
         HTTPSTREAMING_PROP_0,
-        HTTPSTREAMING_PROP_CHANNELS,
-        HTTPSTREAMING_PROP_SYSCLOCK,
+        HTTPSTREAMING_PROP_ITVENCODER,
 };
 
 static void httpstreaming_class_init (HTTPStreamingClass *httpstreamingclass);
@@ -37,20 +36,12 @@ httpstreaming_class_init (HTTPStreamingClass *httpstreamingclass)
         g_object_class->get_property = httpstreaming_get_property;
 
         param = g_param_spec_pointer (
-                "channels",
-                "channels",
+                "itvencoder",
+                "itvencoder",
                 NULL,
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
-        g_object_class_install_property (g_object_class, HTTPSTREAMING_PROP_CHANNELS, param);
- 
-        param = g_param_spec_pointer (
-                "system_clock",
-                "sysclock",
-                NULL,
-                G_PARAM_WRITABLE | G_PARAM_READABLE
-        );
-        g_object_class_install_property (g_object_class, HTTPSTREAMING_PROP_SYSCLOCK, param);
+        g_object_class_install_property (g_object_class, HTTPSTREAMING_PROP_ITVENCODER, param);
 }
 
 static void
@@ -75,11 +66,8 @@ httpstreaming_set_property (GObject *obj, guint prop_id, const GValue *value, GP
         g_return_if_fail(IS_HTTPSTREAMING(obj));
 
         switch(prop_id) {
-        case HTTPSTREAMING_PROP_CHANNELS:
-                HTTPSTREAMING(obj)->channels = (GArray *)g_value_get_pointer (value);
-                break;
-        case HTTPSTREAMING_PROP_SYSCLOCK:
-                HTTPSTREAMING(obj)->system_clock = (GstClock *)g_value_get_pointer (value);
+        case HTTPSTREAMING_PROP_ITVENCODER:
+                HTTPSTREAMING(obj)->itvencoder = (ITVEncoder *)g_value_get_pointer (value);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -93,11 +81,8 @@ httpstreaming_get_property (GObject *obj, guint prop_id, GValue *value, GParamSp
         HTTPStreaming  *httpstreaming = HTTPSTREAMING(obj);
 
         switch(prop_id) {
-        case HTTPSTREAMING_PROP_CHANNELS:
-                g_value_set_pointer (value, httpstreaming->channels);
-                break;
-        case HTTPSTREAMING_PROP_SYSCLOCK:
-                g_value_set_pointer (value, httpstreaming->system_clock);
+        case HTTPSTREAMING_PROP_ITVENCODER:
+                g_value_set_pointer (value, httpstreaming->itvencoder);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -129,8 +114,22 @@ httpstreaming_get_type (void)
 }
 
 gint
-httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads, gint port)
+httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads)
 {
+        GValue *value;
+        GstStructure *structure;
+        gchar *p, **pp;
+        gint port;
+
+        /* get streaming listen port */
+        value = (GValue *)gst_structure_get_value (httpstreaming->itvencoder->configure->data, "server");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "httpstreaming");
+        p = (gchar *)g_value_get_string (value);
+        pp = g_strsplit (p, ":", 0);
+        port = atoi (pp[1]);
+        g_strfreev (pp);
+
         /* start http streaming */
         httpstreaming->httpserver = httpserver_new ("maxthreads", maxthreads, "port", port, NULL);
         if (httpserver_start (httpstreaming->httpserver, httpserver_dispatcher, httpstreaming) != 0) {
@@ -169,7 +168,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        encoder = channel_get_encoder (request_data->uri, httpstreaming->channels);
+                        encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
                         if (encoder == NULL) {
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
@@ -219,7 +218,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                 buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
-                                return gst_clock_get_time (httpstreaming->system_clock)  + GST_MSECOND; // 50ms
+                                return gst_clock_get_time (httpstreaming->itvencoder->system_clock)  + GST_MSECOND; // 50ms
                         }
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -281,7 +280,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                                 request_user_data->last_send_count += ret;
                                 request_data->bytes_send += ret;
                                 g_free (chunksize);
-                                return gst_clock_get_time (httpstreaming->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                                return gst_clock_get_time (httpstreaming->itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                         }
                         request_data->bytes_send += ret;
                         g_free (chunksize);
@@ -289,7 +288,7 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                         i = (i + 1) % ENCODER_RING_SIZE;
                         request_user_data->current_send_position = i;
                 }
-                return gst_clock_get_time (httpstreaming->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                return gst_clock_get_time (httpstreaming->itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;

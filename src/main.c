@@ -12,6 +12,7 @@
 #include "itvencoder.h"
 #include "configure.h"
 #include "httpmgmt.h"
+#include "httpstreaming.h"
 
 GST_DEBUG_CATEGORY(ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -81,6 +82,7 @@ main (int argc, char *argv[])
         GstStructure *channels;
         ITVEncoder *itvencoder;
         HTTPMgmt *httpmgmt;
+        HTTPStreaming *httpstreaming;
         GMainLoop *loop;
         pid_t process_id = 0;
         gint status;
@@ -242,6 +244,10 @@ main (int argc, char *argv[])
                 httpmgmt = httpmgmt_new ("itvencoder", itvencoder, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         httpmgmt_start (httpmgmt);
+
+        /* httpstreaming */
+        httpstreaming = httpstreaming_new ("itvencoder", itvencoder, NULL);
+        httpstreaming_start (httpstreaming, 10);
 
         g_main_loop_run (loop);
 

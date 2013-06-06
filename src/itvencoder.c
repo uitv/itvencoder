@@ -322,7 +322,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
         }
 
-        httpserver_report_request_data (itvencoder->httpstreaming->httpserver);
         stat_report (itvencoder);
 
         now = gst_clock_get_time (itvencoder->system_clock);
@@ -362,17 +361,6 @@ itvencoder_start (ITVEncoder *itvencoder)
                         return 1;
                 }
         }
-
-        /* start http streaming */
-        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "server");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "httpstreaming");
-        p = (gchar *)g_value_get_string (value);
-        pp = g_strsplit (p, ":", 0);
-        port = atoi (pp[1]);
-        g_strfreev (pp);
-        itvencoder->httpstreaming = httpstreaming_new ("channels", itvencoder->channel_array, "system_clock", itvencoder->system_clock, NULL);
-        httpstreaming_start (itvencoder->httpstreaming, 10, port);
 
         /* regist itvencoder monitor */
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;

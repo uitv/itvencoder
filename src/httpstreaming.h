@@ -7,11 +7,10 @@
 #define __HTTPSTREAMING_H__
 
 #include <gst/gst.h>
-
 #include "config.h"
-
 #include "channel.h"
 #include "httpserver.h"
+#include "itvencoder.h"
 
 typedef struct _RequestDataUserData {
         gint current_send_position;
@@ -25,8 +24,7 @@ typedef struct _HTTPStreamingClass HTTPStreamingClass;
 struct _HTTPStreaming {
         GObject parent;
     
-        GArray *channels;
-        GstClock *system_clock;
+        ITVEncoder *itvencoder;
         HTTPServer *httpserver; /* streaming via http */
 };
 
@@ -43,6 +41,6 @@ struct _HTTPStreamingClass {
 #define httpstreaming_new(...)       (g_object_new(TYPE_HTTPSTREAMING, ## __VA_ARGS__, NULL))
 
 GType httpstreaming_get_type (void);
-gint httpstreaming_start (HTTPStreaming *httpstreaming, gint port, gint maxthreads);
+gint httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads);
 
 #endif /* __HTTPSTREAMING_H__ */
