@@ -18,7 +18,6 @@ GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 enum {
         HTTPMGMT_PROP_0,
         HTTPMGMT_PROP_ITVENCODER,
-        HTTPMGMT_PROP_CONFIGURE_FILE,
 };
 
 static void httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass);
@@ -45,15 +44,6 @@ httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
                 G_PARAM_WRITABLE | G_PARAM_READABLE
         );
         g_object_class_install_property (g_object_class, HTTPMGMT_PROP_ITVENCODER, param);
-
-        param = g_param_spec_string (
-                "configure",
-                "configuref",
-                "configure file path",
-                "itvencoder.conf",
-                G_PARAM_WRITABLE | G_PARAM_READABLE
-        );
-        g_object_class_install_property (g_object_class, HTTPMGMT_PROP_CONFIGURE_FILE, param);
 }
 
 static void
@@ -61,7 +51,6 @@ httpmgmt_init (HTTPMgmt *httpmgmt)
 {
         httpmgmt->system_clock = gst_system_clock_obtain ();
         g_object_set (httpmgmt->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
-        httpmgmt->configure = NULL;
 }
 
 static GObject *
@@ -84,9 +73,6 @@ httpmgmt_set_property (GObject *obj, guint prop_id, const GValue *value, GParamS
         case HTTPMGMT_PROP_ITVENCODER:
                 HTTPMGMT(obj)->itvencoder = (ITVEncoder *)g_value_get_pointer (value);
                 break;
-        case HTTPMGMT_PROP_CONFIGURE_FILE:
-                HTTPMGMT(obj)->configure_file = (gchar *)g_value_dup_string (value);
-                break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
                 break;
@@ -101,9 +87,6 @@ httpmgmt_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *p
         switch(prop_id) {
         case HTTPMGMT_PROP_ITVENCODER:
                 g_value_set_pointer (value, httpmgmt->itvencoder);
-                break;
-        case HTTPMGMT_PROP_CONFIGURE_FILE:
-                g_value_set_string(value, httpmgmt->configure_file);
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
@@ -134,17 +117,6 @@ httpmgmt_get_type (void)
         return type;
 }
 
-static void
-load_configure (HTTPMgmt *httpmgmt)
-{
-        if (httpmgmt->configure != NULL) {
-                gst_object_unref (G_OBJECT (httpmgmt->configure));
-        }
-
-        httpmgmt->configure = configure_new ("configure_path", httpmgmt->configure_file, NULL);
-        configure_load_from_file (httpmgmt->configure);
-}
-
 gint
 httpmgmt_start (HTTPMgmt *httpmgmt)
 {
@@ -153,14 +125,16 @@ httpmgmt_start (HTTPMgmt *httpmgmt)
         gchar *p, **pp;
         gint port;
 
-        load_configure (httpmgmt);
-        value = (GValue *)gst_structure_get_value (httpmgmt->configure->data, "server");
+        /* httpmgmt port */
+        value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure->data, "server");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
         p = (gchar *)g_value_get_string (value);
         pp = g_strsplit (p, ":", 0);
         port = atoi (pp[1]);
         g_strfreev (pp);
+
+        /* start httpmgmt */
         httpmgmt->httpserver = httpserver_new ("maxthreads", 1, "port", port, NULL);
         if (httpserver_start (httpmgmt->httpserver, mgmtserver_dispatcher, httpmgmt) != 0) {
                 GST_ERROR ("Start mgmt httpserver error!");
@@ -252,7 +226,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         } else {
                                                 path += 1;
                                         }
-                                        buf = configure_get_var (httpmgmt->configure, path);
+                                        buf = configure_get_var (httpmgmt->itvencoder->configure, path);
                                         if (buf == NULL) {
                                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                         }
@@ -263,8 +237,8 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                         /* save configure. */
                                         gchar *var;
                                         var = request_data->raw_request + request_data->header_size;
-                                        configure_set_var (httpmgmt->configure, var);
-                                        if (configure_save_to_file (httpmgmt->configure) != 0) {
+                                        configure_set_var (httpmgmt->itvencoder->configure, var);
+                                        if (configure_save_to_file (httpmgmt->itvencoder->configure) != 0) {
                                                 buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
@@ -273,7 +247,7 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                                                 write (request_data->sock, buf, strlen (buf));
                                                 g_free (buf);
                                         }
-                                        load_configure (httpmgmt); 
+                                        itvencoder_load_configure (httpmgmt->itvencoder); 
                                         return 0;
                                 }
                         } else if (g_str_has_prefix (request_data->uri, "/channel")) {

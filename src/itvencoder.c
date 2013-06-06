@@ -147,8 +147,8 @@ itvencoder_get_type (void)
         return type;
 }
 
-static void
-load_configure (ITVEncoder *itvencoder)
+void
+itvencoder_load_configure (ITVEncoder *itvencoder)
 {
         if (itvencoder->configure != NULL) {
                 gst_object_unref (G_OBJECT (itvencoder->configure));
@@ -176,7 +176,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gchar *name;
         Channel *channel;
 
-        load_configure (itvencoder);
+        itvencoder_load_configure (itvencoder);
         value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
         structure = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure);
