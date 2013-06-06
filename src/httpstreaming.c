@@ -23,7 +23,6 @@ static void httpstreaming_init (HTTPStreaming *httpstreaming);
 static GObject *httpstreaming_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void httpstreaming_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpstreaming_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstClockTime httpserver_dispatcher (gpointer data, gpointer user_data);
 
 static void
 httpstreaming_class_init (HTTPStreamingClass *httpstreamingclass)
@@ -113,33 +112,6 @@ httpstreaming_get_type (void)
         return type;
 }
 
-gint
-httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads)
-{
-        GValue *value;
-        GstStructure *structure;
-        gchar *p, **pp;
-        gint port;
-
-        /* get streaming listen port */
-        value = (GValue *)gst_structure_get_value (httpstreaming->itvencoder->configure->data, "server");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "httpstreaming");
-        p = (gchar *)g_value_get_string (value);
-        pp = g_strsplit (p, ":", 0);
-        port = atoi (pp[1]);
-        g_strfreev (pp);
-
-        /* start http streaming */
-        httpstreaming->httpserver = httpserver_new ("maxthreads", maxthreads, "port", port, NULL);
-        if (httpserver_start (httpstreaming->httpserver, httpserver_dispatcher, httpstreaming) != 0) {
-                GST_ERROR ("Start streaming httpserver error!");
-                exit (0);
-        }
-
-        return 0;
-}
-
 /**
  * httpserver_dispatcher:
  * @data: RequestData type pointer
@@ -151,7 +123,7 @@ httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads)
  *      0 if have completed the processing.
  */
 static GstClockTime
-httpserver_dispatcher (gpointer data, gpointer user_data)
+httpstreaming_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         HTTPStreaming *httpstreaming = (HTTPStreaming *)user_data;
@@ -300,5 +272,32 @@ httpserver_dispatcher (gpointer data, gpointer user_data)
                 g_free (buf);
                 return 0;
         }
+}
+
+gint
+httpstreaming_start (HTTPStreaming *httpstreaming, gint maxthreads)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p, **pp;
+        gint port;
+
+        /* get streaming listen port */
+        value = (GValue *)gst_structure_get_value (httpstreaming->itvencoder->configure->data, "server");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "httpstreaming");
+        p = (gchar *)g_value_get_string (value);
+        pp = g_strsplit (p, ":", 0);
+        port = atoi (pp[1]);
+        g_strfreev (pp);
+
+        /* start http streaming */
+        httpstreaming->httpserver = httpserver_new ("maxthreads", maxthreads, "port", port, NULL);
+        if (httpserver_start (httpstreaming->httpserver, httpstreaming_dispatcher, httpstreaming) != 0) {
+                GST_ERROR ("Start streaming httpserver error!");
+                exit (0);
+        }
+
+        return 0;
 }
 
