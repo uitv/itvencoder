@@ -335,8 +335,8 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         }
                         return 0;
                 case 'm':
-                        /* get mgmt, index.html */
                         if (g_str_has_prefix (request_data->uri, "/mgmt")) {
+                                /* get mgmt, index.html */
                                 write (request_data->sock, index_html, strlen (index_html));
                         } else {
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -345,8 +345,8 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         }
                         return 0;
                 case 'g':
-                        /* get gui.css */
                         if (g_str_has_prefix (request_data->uri, "/gui.css")) {
+                                /* get gui.css */
                                 write (request_data->sock, gui_css, strlen (gui_css));
                         } else {
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -354,8 +354,9 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                         }
                         return 0;
-                case 'v': /* uri is /version */
+                case 'v': 
                         if (g_str_has_prefix (request_data->uri, "/version")) {
+                                /* get version */
                                 gchar *ver;
                                 ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
                                 buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
@@ -367,8 +368,9 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         }
                         g_free (buf);
                         return 0;
-                case 'k': /* kill self */
+                case 'k': 
                         if (g_str_has_prefix (request_data->uri, "/kill")) {
+                                /* kill self */
                                 if (!httpmgmt->itvencoder->daemon) {
                                         GST_WARNING ("Can't restart when run in foreground.");
                                         buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
