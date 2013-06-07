@@ -325,24 +325,35 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         if (g_str_has_prefix (request_data->uri, "/configure")) {
                                 /* get or post configure data. */
                                 configure_request (httpmgmt, request_data);
-                                return 0;
                         } else if (g_str_has_prefix (request_data->uri, "/channel")) {
                                 /* channel operate. */
                                 channel_request (httpmgmt, request_data);
-                                return 0;
+                        } else {
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
                         }
+                        return 0;
                 case 'm':
                         /* get mgmt, index.html */
                         if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                                 write (request_data->sock, index_html, strlen (index_html));
-                                return 0;
+                        } else {
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
                         }
+                        return 0;
                 case 'g':
                         /* get gui.css */
                         if (g_str_has_prefix (request_data->uri, "/gui.css")) {
                                 write (request_data->sock, gui_css, strlen (gui_css));
-                                return 0;
+                        } else {
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
                         }
+                        return 0;
                 case 'v': /* uri is /version */
                         if (g_str_has_prefix (request_data->uri, "/version")) {
                                 gchar *ver;
@@ -363,11 +374,15 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                         buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                                         write (request_data->sock, buf, strlen (buf));
                                         g_free (buf);
-                                        return 0;
                                 } else {
                                         exit (1);
                                 }
+                        } else {
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
                         }
+                        return 0;
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
