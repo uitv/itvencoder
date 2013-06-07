@@ -207,6 +207,8 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         gint i, index;
         gchar *buf;
         gboolean ret;
+        //Encoder *encoder;
+        //Channel *channel;
 
         index = get_encoder_index (request_data->uri);
         if (index == -1) {
@@ -314,82 +316,46 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
         gchar *buf;
-        Encoder *encoder;
-        Channel *channel;
 
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
-                switch (request_data->uri[1]) {
-                case 'c':
-                        if (g_str_has_prefix (request_data->uri, "/configure")) {
-                                /* get or post configure data. */
-                                configure_request (httpmgmt, request_data);
-                        } else if (g_str_has_prefix (request_data->uri, "/channel")) {
-                                /* channel operate. */
-                                channel_request (httpmgmt, request_data);
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                        }
-                        break;
-                case 'm':
-                        if (g_str_has_prefix (request_data->uri, "/mgmt")) {
-                                /* get mgmt, index.html */
-                                write (request_data->sock, index_html, strlen (index_html));
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                        }
-                        break;
-                case 'g':
-                        if (g_str_has_prefix (request_data->uri, "/gui.css")) {
-                                /* get gui.css */
-                                write (request_data->sock, gui_css, strlen (gui_css));
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                        }
-                        break;
-                case 'v': 
-                        if (g_str_has_prefix (request_data->uri, "/version")) {
-                                /* get version */
-                                gchar *ver;
-                                ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
-                                buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
-                                g_free (ver);
-                                write (request_data->sock, buf, strlen (buf));
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                        }
+                if (g_str_has_prefix (request_data->uri, "/configure")) {
+                        /* get or post configure data. */
+                        configure_request (httpmgmt, request_data);
+                } else if (g_str_has_prefix (request_data->uri, "/channel")) {
+                        /* channel operate. */
+                        channel_request (httpmgmt, request_data);
+                } else if (g_str_has_prefix (request_data->uri, "/mgmt")) {
+                        /* get mgmt, index.html */
+                        write (request_data->sock, index_html, strlen (index_html));
+                } else if (g_str_has_prefix (request_data->uri, "/gui.css")) {
+                        /* get gui.css */
+                        write (request_data->sock, gui_css, strlen (gui_css));
+                } else if (g_str_has_prefix (request_data->uri, "/version")) {
+                        /* get version */
+                        gchar *ver;
+                        ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
+                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
+                        g_free (ver);
+                        write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                        break;
-                case 'k': 
-                        if (g_str_has_prefix (request_data->uri, "/kill")) {
-                                /* kill self */
-                                if (!httpmgmt->itvencoder->daemon) {
-                                        GST_WARNING ("Can't restart when run in foreground.");
-                                        buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                } else {
-                                        exit (1);
-                                }
-                        } else {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                } else if (g_str_has_prefix (request_data->uri, "/kill")) {
+                        /* kill self */
+                        if (!httpmgmt->itvencoder->daemon) {
+                                GST_WARNING ("Can't restart when run in foreground.");
+                                buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
+                        } else {
+                                exit (1);
                         }
-                        break;
-                default:
+                } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 }
+                break;
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;
