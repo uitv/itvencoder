@@ -25,7 +25,6 @@ static void httpmgmt_init (HTTPMgmt *httpmgmt);
 static GObject *httpmgmt_constructor (GType type, guint n_construct_properties, GObjectConstructParam *construct_properties);
 static void httpmgmt_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void httpmgmt_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
-static GstClockTime mgmtserver_dispatcher (gpointer data, gpointer user_data);
 
 static void
 httpmgmt_class_init (HTTPMgmtClass *httpmgmtclass)
@@ -117,31 +116,6 @@ httpmgmt_get_type (void)
         return type;
 }
 
-gint
-httpmgmt_start (HTTPMgmt *httpmgmt)
-{
-        GValue *value;
-        GstStructure *structure;
-        gchar *p, **pp;
-        gint port;
-
-        /* httpmgmt port */
-        value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure->data, "server");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
-        p = (gchar *)g_value_get_string (value);
-        pp = g_strsplit (p, ":", 0);
-        port = atoi (pp[1]);
-        g_strfreev (pp);
-
-        /* start httpmgmt */
-        httpmgmt->httpserver = httpserver_new ("maxthreads", 1, "port", port, NULL);
-        if (httpserver_start (httpmgmt->httpserver, mgmtserver_dispatcher, httpmgmt) != 0) {
-                GST_ERROR ("Start mgmt httpserver error!");
-                exit (0);
-        }
-}
-
 static gint
 get_channel_index (gchar *uri)
 {
@@ -190,9 +164,45 @@ get_encoder_index (gchar *uri)
         return index;
 }
 
+static void
+configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
+{
+        gchar *buf, *path, *var;
+
+        if (request_data->method == HTTP_GET) {
+                /* get variables. */
+                path = request_data->uri + 10;
+                if ((*path == '\0') || (*(path + 1) == '\0')) {
+                        path = "";
+                } else {
+                        path += 1;
+                }
+                buf = configure_get_var (httpmgmt->itvencoder->configure, path);
+                if (buf == NULL) {
+                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                }
+                write (request_data->sock, buf, strlen (buf));
+                g_free (buf);
+        } else if (request_data->method == HTTP_POST) {
+                /* save configure. */
+                var = request_data->raw_request + request_data->header_size;
+                configure_set_var (httpmgmt->itvencoder->configure, var);
+                if (configure_save_to_file (httpmgmt->itvencoder->configure) != 0) {
+                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                } else {
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                }
+                itvencoder_load_configure (httpmgmt->itvencoder); 
+        }
+
+}
 
 /**
- * mgmt_dispatcher:
+ * httpmgmt_dispatcher:
  * @data: RequestData type pointer
  * @user_data: httpmgmt type pointer
  *
@@ -202,7 +212,7 @@ get_encoder_index (gchar *uri)
  *      0 if have completed the processing.
  */
 static GstClockTime
-mgmtserver_dispatcher (gpointer data, gpointer user_data)
+httpmgmt_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
@@ -217,39 +227,10 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 switch (request_data->uri[1]) {
                 case 'c':
-                        /* get or post configure data. */
                         if (g_str_has_prefix (request_data->uri, "/configure")) {
-                                if (request_data->method == HTTP_GET) {
-                                        path = request_data->uri + 10;
-                                        if ((*path == '\0') || (*(path + 1) == '\0')) {
-                                                path = "";
-                                        } else {
-                                                path += 1;
-                                        }
-                                        buf = configure_get_var (httpmgmt->itvencoder->configure, path);
-                                        if (buf == NULL) {
-                                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                        }
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                } else if (request_data->method == HTTP_POST) {
-                                        /* save configure. */
-                                        gchar *var;
-                                        var = request_data->raw_request + request_data->header_size;
-                                        configure_set_var (httpmgmt->itvencoder->configure, var);
-                                        if (configure_save_to_file (httpmgmt->itvencoder->configure) != 0) {
-                                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        } else {
-                                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
-                                                write (request_data->sock, buf, strlen (buf));
-                                                g_free (buf);
-                                        }
-                                        itvencoder_load_configure (httpmgmt->itvencoder); 
-                                        return 0;
-                                }
+                                /* get or post configure data. */
+                                configure_request (httpmgmt, request_data);
+                                return 0;
                         } else if (g_str_has_prefix (request_data->uri, "/channel")) {
                                 index = get_encoder_index (request_data->uri);
                                 if (index == -1) {
@@ -403,6 +384,31 @@ mgmtserver_dispatcher (gpointer data, gpointer user_data)
                 write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
                 return 0;
+        }
+}
+
+gint
+httpmgmt_start (HTTPMgmt *httpmgmt)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p, **pp;
+        gint port;
+
+        /* httpmgmt port */
+        value = (GValue *)gst_structure_get_value (httpmgmt->itvencoder->configure->data, "server");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "httpmgmt");
+        p = (gchar *)g_value_get_string (value);
+        pp = g_strsplit (p, ":", 0);
+        port = atoi (pp[1]);
+        g_strfreev (pp);
+
+        /* start httpmgmt */
+        httpmgmt->httpserver = httpserver_new ("maxthreads", 1, "port", port, NULL);
+        if (httpserver_start (httpmgmt->httpserver, httpmgmt_dispatcher, httpmgmt) != 0) {
+                GST_ERROR ("Start mgmt httpserver error!");
+                exit (0);
         }
 }
 
