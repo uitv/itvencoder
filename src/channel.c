@@ -1130,7 +1130,7 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
                 gst_buffer_unref (encoder->output_ring[i]);
         }
         encoder->output_ring[i] = buffer;
-        (*(encoder->output_count))++;
+        (*(encoder->total_count))++;
 }
 
 static void
@@ -1402,11 +1402,11 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->id = i;
                 encoder->name = name;
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
-                encoder->output = channel->output->encoders[i].output;
-                encoder->output_size = &(channel->output->encoders[i].output_size);
-                encoder->output_count = &(channel->output->encoders[i].output_count);
-                encoder->output_head = &(channel->output->encoders[i].output_head);
-                encoder->output_tail = &(channel->output->encoders[i].output_tail);
+                encoder->cache_addr = channel->output->encoders[i].cache_addr;
+                encoder->cache_size = &(channel->output->encoders[i].cache_size);
+                encoder->total_count = &(channel->output->encoders[i].total_count);
+                encoder->head_addr = channel->output->encoders[i].head_addr;
+                encoder->tail_addr = channel->output->encoders[i].tail_addr;
                 encoder->configure = structure;
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
@@ -1555,14 +1555,14 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
                         /* daemon, use share memory. */
-                        output->encoders[i].output = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
                 } else {
-                        output->encoders[i].output = g_malloc (64 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
                 }
-                output->encoders[i].output_size = 64 * 1024 * 1024;
-                output->encoders[i].output_head = 0;
-                output->encoders[i].output_tail = 0;
-                output->encoders[i].output_count = 0;
+                output->encoders[i].cache_size = 64 * 1024 * 1024;
+                output->encoders[i].head_addr = output->encoders[i].cache_addr;
+                output->encoders[i].tail_addr = output->encoders[i].cache_addr;
+                output->encoders[i].total_count = 0;
         }
         GST_LOG ("output : %llu, p: %llu", output, p);
 
