@@ -333,7 +333,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                         }
-                        return 0;
+                        break;
                 case 'm':
                         if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                                 /* get mgmt, index.html */
@@ -343,7 +343,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                         }
-                        return 0;
+                        break;
                 case 'g':
                         if (g_str_has_prefix (request_data->uri, "/gui.css")) {
                                 /* get gui.css */
@@ -353,7 +353,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                         }
-                        return 0;
+                        break;
                 case 'v': 
                         if (g_str_has_prefix (request_data->uri, "/version")) {
                                 /* get version */
@@ -367,7 +367,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, buf, strlen (buf));
                         }
                         g_free (buf);
-                        return 0;
+                        break;
                 case 'k': 
                         if (g_str_has_prefix (request_data->uri, "/kill")) {
                                 /* kill self */
@@ -384,24 +384,24 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                         }
-                        return 0;
+                        break;
                 default:
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                        return 0;
                 }
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;
-                return 0;
+                break;
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
                 buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
                 write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
-                return 0;
         }
+
+        return 0;
 }
 
 gint
