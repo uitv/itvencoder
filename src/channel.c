@@ -1114,6 +1114,91 @@ encoder_get_stream (Encoder *encoder, gchar *name)
         return stream;
 }
 
+/*
+ * memory between tail and head is free.
+ */
+static gint
+cache_free (Encoder *encoder)
+{
+        if (encoder->head_addr > encoder->tail_addr) {
+                return encoder->head_addr - encoder->tail_addr;
+        } else {
+                return (encoder->head_addr - encoder->cache_addr) + (encoder->cache_end_addr - encoder->tail_addr);
+        }
+}
+
+/*
+ * move head_addr to next gop.
+ */
+static void
+move_head (Encoder *encoder)
+{
+        gint gop_size;
+
+        gop_size = *(encoder->head_addr + 8);
+        if (encoder->head_addr + gop_size < encoder->cache_end_addr) {
+                encoder->head_addr += gop_size;
+        } else {
+                encoder->head_addr = encoder->cache_addr + (encoder->head_addr - encoder->cache_addr + gop_size - *(encoder->cache_size));
+        }
+}
+
+/*
+ * move last random access point address.
+ */
+static void
+move_last_rap (Encoder *encoder, GstBuffer *buffer)
+{
+        gchar buf[12];
+        gint32 size, n;
+
+        if (encoder->tail_addr > encoder->last_rap_addr) {
+                size = encoder->tail_addr - encoder->last_rap_addr;
+        } else {
+                size = encoder->cache_end_addr - encoder->last_rap_addr + encoder->tail_addr - encoder->cache_addr;
+        }
+        if (encoder->last_rap_addr + 12 < encoder->cache_end_addr) {
+                memcpy (encoder->last_rap_addr + 8, &size, 4);
+        } else {
+                n = encoder->cache_end_addr - encoder->last_rap_addr - 8;
+                memcpy (encoder->last_rap_addr, &size, n);
+                memcpy (encoder->cache_addr, &size + n, 4 - n);
+        }
+
+        if (encoder->tail_addr < encoder->cache_end_addr) {
+                encoder->last_rap_addr = encoder->tail_addr + 1;
+        } else {
+                /* encoder->tail_addr == encoder->cache_end_addr. */
+                encoder->last_rap_addr = encoder->cache_addr;
+        }
+        memcpy (buf, &(GST_BUFFER_TIMESTAMP (buffer)), 8);
+        if (encoder->tail_addr + 12 < encoder->cache_end_addr) {
+                memcpy (encoder->tail_addr, buf, 12);
+                encoder->tail_addr += 12;
+        } else {
+                size = encoder->cache_end_addr - encoder->tail_addr;
+                memcpy (encoder->tail_addr, buf, size);
+                memcpy (encoder->cache_addr, buf + size, 12 - size);
+                encoder->tail_addr = encoder->cache_addr + 12 - size;
+        }
+}
+
+static void
+copy_buffer (Encoder *encoder, GstBuffer *buffer)
+{
+        gint size;
+
+        if (encoder->tail_addr + size < encoder->cache_end_addr) {
+                memcpy (encoder->tail_addr, GST_BUFFER_DATA (buffer), GST_BUFFER_SIZE (buffer));
+                encoder->tail_addr += size;
+        } else {
+                size = encoder->cache_end_addr - encoder->tail_addr;
+                memcpy (encoder->tail_addr, GST_BUFFER_DATA (buffer), size);
+                memcpy (encoder->cache_addr, GST_BUFFER_DATA (buffer) + size, GST_BUFFER_SIZE (buffer) - size);
+                encoder->tail_addr = encoder->cache_addr + GST_BUFFER_SIZE (buffer) - size;
+        }
+}
+
 static
 GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
@@ -1131,6 +1216,27 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         }
         encoder->output_ring[i] = buffer;
         (*(encoder->total_count))++;
+        
+        /* update head_addr, free enough memory for current buffer. */
+        while (cache_free (encoder) < GST_BUFFER_SIZE (buffer) + 12) { /* timestamp + gop size = 12 */
+                move_head (encoder);
+        }
+
+        if (!GST_BUFFER_FLAG_IS_SET (buffer, GST_BUFFER_FLAG_DELTA_UNIT)) {
+                /* 
+                 * random access point found.
+                 * write previous gop size to 4 bytes reservation,
+                 * write current gop timestamp,
+                 * reserve 4 bytes for size of current gop,
+                 */
+                move_last_rap (encoder, buffer);
+        }
+
+        /*
+         * copy buffer to cache.
+         * update tail_addr and last_rap_addr
+         */
+        copy_buffer (encoder, buffer);
 }
 
 static void
@@ -1403,10 +1509,12 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->name = name;
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
                 encoder->cache_addr = channel->output->encoders[i].cache_addr;
+                encoder->cache_end_addr = channel->output->encoders[i].cache_end_addr;
                 encoder->cache_size = &(channel->output->encoders[i].cache_size);
                 encoder->total_count = &(channel->output->encoders[i].total_count);
                 encoder->head_addr = channel->output->encoders[i].head_addr;
                 encoder->tail_addr = channel->output->encoders[i].tail_addr;
+                encoder->last_rap_addr = channel->output->encoders[i].last_rap_addr;
                 encoder->configure = structure;
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
@@ -1562,6 +1670,8 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 output->encoders[i].cache_size = 64 * 1024 * 1024;
                 output->encoders[i].head_addr = output->encoders[i].cache_addr;
                 output->encoders[i].tail_addr = output->encoders[i].cache_addr;
+                output->encoders[i].last_rap_addr = output->encoders[i].cache_addr;
+                output->encoders[i].cache_end_addr = output->encoders[i].cache_addr + output->encoders[i].cache_size;
                 output->encoders[i].total_count = 0;
         }
         GST_LOG ("output : %llu, p: %llu", output, p);
