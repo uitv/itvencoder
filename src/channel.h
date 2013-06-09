@@ -17,6 +17,7 @@ typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
 typedef struct _EncoderClass EncoderClass;
 typedef struct _ChannelOutput ChannelOutput;
+typedef struct _EncoderOutput EncoderOutput;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
@@ -133,6 +134,23 @@ struct _EncoderClass {
 
 GType encoder_get_type (void);
 
+struct _EncoderOutput {
+        gchar name[STREAM_NAME_LEN];
+        gint64 stream_count;
+        struct _EncoderStreamState {
+                gchar name[STREAM_NAME_LEN];
+                GstClockTime current_timestamp;
+                GstClockTime last_heartbeat;
+        } *streams;
+        gchar *cache_addr;
+        gchar *cache_end_addr;
+        guint64 cache_size;
+        guint64 total_count; // total output packet counts
+        gchar *head_addr;
+        gchar *tail_addr;
+        gchar *last_rap_addr; // last random access point address
+};
+
 struct _ChannelOutput {
         guint64 state;
         struct _SourceState {
@@ -151,22 +169,7 @@ struct _ChannelOutput {
                 } *streams;
         } source;
         gint64 encoder_count;
-        struct _EncoderOutput {
-                gchar name[STREAM_NAME_LEN];
-                gint64 stream_count;
-                struct _EncoderStreamState {
-                        gchar name[STREAM_NAME_LEN];
-                        GstClockTime current_timestamp;
-                        GstClockTime last_heartbeat;
-                } *streams;
-                gchar *cache_addr;
-                gchar *cache_end_addr;
-                guint64 cache_size;
-                guint64 total_count; // total output packet counts
-                gchar *head_addr;
-                gchar *tail_addr;
-                gchar *last_rap_addr; // last random access point address
-        } *encoders;
+        EncoderOutput *encoders;
 };
 
 struct _Channel {
