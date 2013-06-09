@@ -138,65 +138,57 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
-                switch (request_data->uri[1]) {
-                case 'c': /* uri is /channel..., maybe request for encoder streaming */
-                        encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
-                        if (encoder == NULL) {
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
-                        } else if ((request_data->parameters[0] == '\0') || /* default operator is play */
-                                   (request_data->parameters[0] == 'b')) { /* ?bitrate= */
-                                GST_INFO ("Play command");
-                                if (encoder->state != GST_STATE_PLAYING) {
-                                        GST_ERROR ("Play encoder it's status is not PLAYING.");
-                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
-                                if (encoder->current_output_position == -1) {
-                                        GST_ERROR ("Play encoder it's output position is -1.");
-                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
-                                if (*(encoder->total_count) < ENCODER_RING_SIZE) {
-                                        GST_ERROR ("Caching, please wait a while.");
-                                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
-                                request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
-                                if (request_user_data == NULL) {
-                                        GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
-                                        buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                        write (request_data->sock, buf, strlen (buf));
-                                        g_free (buf);
-                                        return 0;
-                                }
-                                request_user_data->last_send_count = 0;
-                                request_user_data->encoder = encoder;
-                                /* should send a IDR with pat and pmt first */
-                                request_user_data->current_send_position = (encoder->current_output_position + 25) % ENCODER_RING_SIZE;
-                                while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
-                                        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
-                                }
-                                request_data->user_data = request_user_data;
-                                request_data->bytes_send = 0;
-                                buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return gst_clock_get_time (httpstreaming->itvencoder->system_clock)  + GST_MSECOND; // 50ms
-                        }
-                default:
+                encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
+                if (encoder == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0;
+                } else if ((request_data->parameters[0] == '\0') || /* default operator is play */
+                           (request_data->parameters[0] == 'b')) { /* ?bitrate= */
+                        GST_INFO ("Play command");
+                        if (encoder->state != GST_STATE_PLAYING) {
+                                GST_ERROR ("Play encoder it's status is not PLAYING.");
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return 0;
+                        }
+                        if (encoder->current_output_position == -1) {
+                                GST_ERROR ("Play encoder it's output position is -1.");
+                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return 0;
+                        }
+                        if (*(encoder->total_count) < ENCODER_RING_SIZE) {
+                                GST_ERROR ("Caching, please wait a while.");
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return 0;
+                        }
+                        request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
+                        if (request_user_data == NULL) {
+                                GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
+                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return 0;
+                        }
+                        request_user_data->last_send_count = 0;
+                        request_user_data->encoder = encoder;
+                        /* should send a IDR with pat and pmt first */
+                        request_user_data->current_send_position = (encoder->current_output_position + 25) % ENCODER_RING_SIZE;
+                        while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
+                                request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
+                        }
+                        request_data->user_data = request_user_data;
+                        request_data->bytes_send = 0;
+                        buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                        return gst_clock_get_time (httpstreaming->itvencoder->system_clock)  + GST_MSECOND; // 50ms
                 }
         case HTTP_CONTINUE:
                 request_user_data = request_data->user_data;
