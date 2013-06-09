@@ -411,3 +411,52 @@ stat_report (ITVEncoder *itvencoder)
         itvencoder->last_utime = utime;
         itvencoder->last_stime = stime;
 }
+
+gint
+itvencoder_url_channel_index (gchar *uri)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c;
+        gint index = -1;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                index = atoi (c);
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return index;
+}
+
+gint
+itvencoder_url_encoder_index (gchar *uri)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *e;
+        gint index = -1;
+
+        regex = g_regex_new ("^/channel/.*/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                e = g_match_info_fetch_named (match_info, "encoder");
+                index = atoi (e);
+                g_free (e);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return index;
+}
+

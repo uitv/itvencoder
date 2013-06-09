@@ -116,54 +116,6 @@ httpmgmt_get_type (void)
         return type;
 }
 
-static gint
-get_channel_index (gchar *uri)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c;
-        gint index = -1;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                index = atoi (c);
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return index;
-}
-
-static gint
-get_encoder_index (gchar *uri)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *e;
-        gint index = -1;
-
-        regex = g_regex_new ("^/channel/.*/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                e = g_match_info_fetch_named (match_info, "encoder");
-                index = atoi (e);
-                g_free (e);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return index;
-}
-
 static void
 configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
@@ -210,9 +162,9 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         //Encoder *encoder;
         //Channel *channel;
 
-        index = get_encoder_index (request_data->uri);
+        index = itvencoder_url_encoder_index (request_data->uri);
         if (index == -1) {
-                index = get_channel_index (request_data->uri);
+                index = itvencoder_url_channel_index (request_data->uri);
                 if (index == -1) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
@@ -241,7 +193,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         }
                 } else if (g_str_has_suffix (request_data->uri, "/restart")) {
                         GST_WARNING ("Restart channel %d", index);
-                        index = get_channel_index (request_data->uri);
+                        index = itvencoder_url_channel_index (request_data->uri);
                         if (itvencoder_channel_stop (httpmgmt->itvencoder, index) &&
                             itvencoder_channel_start (httpmgmt->itvencoder, index)) {
                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION);
