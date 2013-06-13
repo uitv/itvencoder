@@ -170,7 +170,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
 
         request_user_data = request_data->user_data;
         if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
-                /* last chunk has not complete, resend uncompleted data. */
+                /* last chunk has not complete, try again. */
                 ret = send_data (encoder_output, request_data);
                 if (ret == -1) {
                         return GST_CLOCK_TIME_NONE;
@@ -181,6 +181,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                 }
         } else {
+                /* chunk has completed. send next chunk. */
                 tail = encoder_output->tail_addr;
                 memcpy (&current_gop_size, request_user_data->current_send_gop_addr + 8, 4);
                 if (current_gop_size == 0) {

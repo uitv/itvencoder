@@ -1133,9 +1133,15 @@ cache_free (Encoder *encoder)
 static void
 move_head (Encoder *encoder)
 {
-        gint gop_size;
+        gint gop_size, n;
 
-        gop_size = *(*(encoder->head_addr) + 8);
+        if (*(encoder->last_rap_addr) + 12 < encoder->cache_end_addr) {
+                memcpy (&gop_size, *(encoder->last_rap_addr) + 8, 4);
+        } else {
+                n = encoder->cache_end_addr - *(encoder->last_rap_addr) - 8;
+                memcpy (&gop_size, *(encoder->last_rap_addr), n);
+                memcpy (&gop_size + n, encoder->cache_addr, 4 - n);
+        }
         if (*(encoder->head_addr) + gop_size < encoder->cache_end_addr) {
                 *(encoder->head_addr) += gop_size;
         } else {
@@ -1152,12 +1158,13 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
         gchar buf[12];
         gint32 size, n;
 
+        /* calculate and write gop size. */
         if (*(encoder->tail_addr) > *(encoder->last_rap_addr)) {
                 size = *(encoder->tail_addr) - *(encoder->last_rap_addr);
         } else {
                 size = encoder->cache_end_addr - *(encoder->last_rap_addr) + *(encoder->tail_addr) - encoder->cache_addr;
         }
-        GST_ERROR ("new gop, last gop size: %d", size);
+        GST_ERROR ("new gop, last gop size: %d, new buffer size %d", size, GST_BUFFER_SIZE (buffer));
         if (*(encoder->last_rap_addr) + 12 < encoder->cache_end_addr) {
                 memcpy (*(encoder->last_rap_addr) + 8, &size, 4);
         } else {
@@ -1169,18 +1176,19 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
         if (*(encoder->tail_addr) < encoder->cache_end_addr) {
                 *(encoder->last_rap_addr) = *(encoder->tail_addr) + 1;
         } else {
-                /* encoder->tail_addr == encoder->cache_end_addr. */
                 *(encoder->last_rap_addr) = encoder->cache_addr;
         }
         memcpy (buf, &(GST_BUFFER_TIMESTAMP (buffer)), 8);
+        size = 0;
+        memcpy (buf + 8, &size, 4);
         if (*(encoder->tail_addr) + 12 < encoder->cache_end_addr) {
                 memcpy (*(encoder->tail_addr), buf, 12);
                 *(encoder->tail_addr) += 12;
         } else {
-                size = encoder->cache_end_addr - *(encoder->tail_addr);
-                memcpy (*(encoder->tail_addr), buf, size);
-                memcpy (encoder->cache_addr, buf + size, 12 - size);
-                *(encoder->tail_addr) = encoder->cache_addr + 12 - size;
+                n = encoder->cache_end_addr - *(encoder->tail_addr);
+                memcpy (*(encoder->tail_addr), buf, n);
+                memcpy (encoder->cache_addr, buf + n, 12 - n);
+                *(encoder->tail_addr) = encoder->cache_addr + 12 - n;
         }
 }
 
