@@ -169,6 +169,8 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         gint32 current_gop_size, ret;
 
         request_user_data = request_data->user_data;
+        memcpy (&current_gop_size, request_user_data->current_send_gop_addr + 8, 4);
+        current_gop_end_addr = request_user_data->current_send_gop_addr + current_gop_size;
         if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
                 /* last chunk has not complete, try again. */
                 ret = send_data (encoder_output, request_data);
@@ -178,12 +180,14 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         request_user_data->send_count += ret;
                         request_user_data->current_send_position += ret;
                         request_data->bytes_send += ret;
+                        if (request_user_data->current_send_position == current_gop_end_addr) {
+                                request_user_data->current_send_gop_addr = current_gop_end_addr + 1;
+                        }
                         return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                 }
         } else {
                 /* chunk has completed. send next chunk. */
                 tail = encoder_output->tail_addr;
-                memcpy (&current_gop_size, request_user_data->current_send_gop_addr + 8, 4);
                 if (current_gop_size == 0) {
                         GST_ERROR ("current gop size is 0.");
                         /* current uncompleted gop. */
@@ -201,42 +205,35 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                                 return GST_CLOCK_TIME_NONE;
                         } else {
                                 request_user_data->send_count += ret;
+                                request_user_data->current_send_position += ret;
                                 return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                         }
                 } else {
                         GST_ERROR ("current gop size is %d.", current_gop_size);
                         g_free (request_user_data->chunk_size_str);
-                        current_gop_end_addr = request_user_data->current_send_gop_addr + current_gop_size;
                         if ((current_gop_end_addr - request_user_data->current_send_position) > 16384) {
                                 /* send 64k. */
                                 request_user_data->chunk_size = 16384;
-                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
-                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
-                                request_user_data->send_count = 0;
-                                ret = send_data (encoder_output, request_data);
-                                request_user_data->current_send_position += ret;
                         } else if (encoder_output->cache_end_addr > current_gop_end_addr) {
                                 /* send to gop end. */
                                 request_user_data->chunk_size = current_gop_end_addr - request_user_data->current_send_position;
-                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
-                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
-                                request_user_data->send_count = 0;
-                                ret = send_data (encoder_output, request_data);
-                                request_user_data->current_send_position += ret;
-                                request_user_data->current_send_gop_addr = current_gop_end_addr + 1;
                         } else {
                                 /* send to cache end. */
                                 request_user_data->chunk_size = encoder_output->cache_addr - request_user_data->current_send_position;
-                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
-                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
-                                request_user_data->send_count = 0;
-                                ret = send_data (encoder_output, request_data);
-                                request_user_data->current_send_position += ret;
                         }
+                        GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
+                        request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
+                        request_user_data->send_count = 0;
+                        ret = send_data (encoder_output, request_data);
                         if (ret == -1) {
                                 return GST_CLOCK_TIME_NONE;
                         } else {
                                 request_user_data->send_count += ret;
+                                request_user_data->current_send_position += ret;
+                                request_data->bytes_send += ret;
+                                if (request_user_data->current_send_position == current_gop_end_addr) {
+                                        request_user_data->current_send_gop_addr = current_gop_end_addr + 1;
+                                }
                                 return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                         }
                 }
