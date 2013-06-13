@@ -1197,7 +1197,7 @@ copy_buffer (Encoder *encoder, GstBuffer *buffer)
 {
         gint size;
 
-        if (*(encoder->tail_addr) + size < encoder->cache_end_addr) {
+        if (*(encoder->tail_addr) + GST_BUFFER_SIZE (buffer) < encoder->cache_end_addr) {
                 memcpy (*(encoder->tail_addr), GST_BUFFER_DATA (buffer), GST_BUFFER_SIZE (buffer));
                 *(encoder->tail_addr) = *(encoder->tail_addr) + GST_BUFFER_SIZE (buffer);
         } else {
