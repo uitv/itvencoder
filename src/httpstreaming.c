@@ -173,13 +173,11 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 /* last chunk has not complete, resend uncompleted data. */
                 ret = send_data (encoder_output, request_data);
                 if (ret == -1) {
-                        GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
                         return GST_CLOCK_TIME_NONE;
                 } else if (ret + request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
                         request_user_data->send_count += ret;
                         request_user_data->current_send_position += ret;
                         request_data->bytes_send += ret;
-                        g_free (request_user_data->chunk_size_str);
                         return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                 }
         } else {
@@ -199,7 +197,6 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         request_user_data->send_count = 0;
                         ret = send_data (encoder_output, request_data);
                         if (ret == -1) {
-                                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
                                 return GST_CLOCK_TIME_NONE;
                         } else {
                                 request_user_data->send_count += ret;
@@ -236,7 +233,6 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                                 request_user_data->current_send_position += ret;
                         }
                         if (ret == -1) {
-                                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
                                 return GST_CLOCK_TIME_NONE;
                         } else {
                                 request_user_data->send_count += ret;
