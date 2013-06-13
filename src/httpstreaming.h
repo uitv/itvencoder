@@ -13,9 +13,13 @@
 #include "itvencoder.h"
 
 typedef struct _RequestDataUserData {
-        gint current_send_position;
-        gint last_send_count;
+        gchar *current_send_gop_addr;
+        gchar *current_send_position;
+        gchar *chunk_size_str;
+        gint chunk_size;
+        gint send_count;
         gpointer encoder;
+        gpointer encoder_output;
 } RequestDataUserData;
 
 typedef struct _HTTPStreaming      HTTPStreaming;

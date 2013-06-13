@@ -112,6 +112,140 @@ httpstreaming_get_type (void)
         return type;
 }
 
+static EncoderOutput *
+get_encoder_output (HTTPStreaming *httpstreaming, RequestData *request_data)
+{
+        gint channel_index, encoder_index;
+        Channel *channel;
+
+        channel_index = itvencoder_url_channel_index (request_data->uri);
+        channel = g_array_index (httpstreaming->itvencoder->channel_array, gpointer, channel_index);
+        encoder_index = itvencoder_url_encoder_index (request_data->uri);
+
+        return &channel->output->encoders[encoder_index];
+}
+
+static gint
+send_data (EncoderOutput *encoder_output, RequestData *request_data)
+{
+        RequestDataUserData *request_user_data;
+        struct iovec iov[3];
+        gint ret;
+        gint chunk_size_str_len;
+
+        request_user_data = request_data->user_data;
+        chunk_size_str_len = strlen (request_user_data->chunk_size_str);
+        iov[0].iov_base = NULL;
+        iov[0].iov_len = 0;
+        iov[1].iov_base = NULL;
+        iov[1].iov_len = 0;
+        iov[2].iov_base = "\r\n";
+        iov[2].iov_len = 2;
+        if (request_user_data->send_count < chunk_size_str_len) {
+                iov[0].iov_base = request_user_data->chunk_size_str + request_user_data->send_count;
+                iov[0].iov_len = chunk_size_str_len - request_user_data->send_count;
+                iov[1].iov_base = request_user_data->current_send_position;
+                iov[1].iov_len = request_user_data->chunk_size;
+        } else if (request_user_data->send_count < (chunk_size_str_len + request_user_data->chunk_size)) {
+                iov[1].iov_base = request_user_data->current_send_position + (request_user_data->send_count - chunk_size_str_len);
+                iov[1].iov_len = request_user_data->chunk_size - (request_user_data->send_count - chunk_size_str_len);
+        } else if (request_user_data->send_count > (chunk_size_str_len + request_user_data->chunk_size)) {
+                iov[2].iov_base = "\n";
+                iov[2].iov_len = 1;
+        }
+        ret = writev (request_data->sock, iov, 3);
+        if (ret == -1) {
+                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
+        }
+
+        return ret;
+}
+
+static GstClockTime
+send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
+{
+        RequestDataUserData *request_user_data;
+        gchar *tail, *current_gop_end_addr;
+        gint32 current_gop_size, ret;
+
+        request_user_data = request_data->user_data;
+        if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
+                /* last chunk has not complete, resend uncompleted data. */
+                ret = send_data (encoder_output, request_data);
+                if (ret == -1) {
+                        GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                        return GST_CLOCK_TIME_NONE;
+                } else if (ret + request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
+                        request_user_data->send_count += ret;
+                        request_user_data->current_send_position += ret;
+                        request_data->bytes_send += ret;
+                        g_free (request_user_data->chunk_size_str);
+                        return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                }
+        } else {
+                tail = encoder_output->tail_addr;
+                memcpy (&current_gop_size, request_user_data->current_send_gop_addr + 8, 4);
+                if (current_gop_size == 0) {
+                        GST_ERROR ("current gop size is 0.");
+                        /* current uncompleted gop. */
+                        g_free (request_user_data->chunk_size_str);
+                        if (tail < encoder_output->cache_end_addr) {
+                                /* send to tail. */
+                                request_user_data->chunk_size = tail - request_user_data->current_send_position;
+                        } else {
+                                request_user_data->chunk_size = encoder_output->cache_addr - request_user_data->current_send_position;
+                        }
+                        request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
+                        request_user_data->send_count = 0;
+                        ret = send_data (encoder_output, request_data);
+                        if (ret == -1) {
+                                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                                return GST_CLOCK_TIME_NONE;
+                        } else {
+                                request_user_data->send_count += ret;
+                                return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                        }
+                } else {
+                        GST_ERROR ("current gop size is %d.", current_gop_size);
+                        g_free (request_user_data->chunk_size_str);
+                        current_gop_end_addr = request_user_data->current_send_gop_addr + current_gop_size;
+                        if ((current_gop_end_addr - request_user_data->current_send_position) > 16384) {
+                                /* send 64k. */
+                                request_user_data->chunk_size = 16384;
+                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
+                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
+                                request_user_data->send_count = 0;
+                                ret = send_data (encoder_output, request_data);
+                                request_user_data->current_send_position += ret;
+                        } else if (encoder_output->cache_end_addr > current_gop_end_addr) {
+                                /* send to gop end. */
+                                request_user_data->chunk_size = current_gop_end_addr - request_user_data->current_send_position;
+                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
+                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
+                                request_user_data->send_count = 0;
+                                ret = send_data (encoder_output, request_data);
+                                request_user_data->current_send_position += ret;
+                                request_user_data->current_send_gop_addr = current_gop_end_addr + 1;
+                        } else {
+                                /* send to cache end. */
+                                request_user_data->chunk_size = encoder_output->cache_addr - request_user_data->current_send_position;
+                                GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
+                                request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
+                                request_user_data->send_count = 0;
+                                ret = send_data (encoder_output, request_data);
+                                request_user_data->current_send_position += ret;
+                        }
+                        if (ret == -1) {
+                                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                                return GST_CLOCK_TIME_NONE;
+                        } else {
+                                request_user_data->send_count += ret;
+                                return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                        }
+                }
+        }
+}
+
 /**
  * httpserver_dispatcher:
  * @data: RequestData type pointer
@@ -130,16 +264,16 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         gchar *buf;
         int i = 0, j, ret;
         Encoder *encoder;
+        EncoderOutput *encoder_output;
         Channel *channel;
         RequestDataUserData *request_user_data;
-        gchar *chunksize;
-        struct iovec iov[3];
 
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
-                if (encoder == NULL) {
+                encoder_output = get_encoder_output (httpstreaming, request_data);
+                if (encoder_output == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
@@ -147,6 +281,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                 } else if ((request_data->parameters[0] == '\0') || /* default operator is play */
                            (request_data->parameters[0] == 'b')) { /* ?bitrate= */
                         GST_INFO ("Play command");
+#if 0
                         if (encoder->state != GST_STATE_PLAYING) {
                                 GST_ERROR ("Play encoder it's status is not PLAYING.");
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -168,6 +303,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
+#endif
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                         if (request_user_data == NULL) {
                                 GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
@@ -176,13 +312,17 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
-                        request_user_data->last_send_count = 0;
-                        request_user_data->encoder = encoder;
+                        request_user_data->chunk_size = 0;
+                        request_user_data->send_count = 2;
+                        request_user_data->chunk_size_str = g_strdup ("");
+                        request_user_data->encoder_output = encoder_output;
+                        //request_user_data->encoder = encoder;
                         /* should send a IDR with pat and pmt first */
-                        request_user_data->current_send_position = (encoder->current_output_position + 25) % ENCODER_RING_SIZE;
-                        while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
-                                request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
-                        }
+                        request_user_data->current_send_gop_addr = encoder_output->last_rap_addr;
+                        request_user_data->current_send_position = encoder_output->last_rap_addr;//(encoder->current_output_position + 25) % ENCODER_RING_SIZE;
+                        //while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
+                        //        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
+                        //}
                         request_data->user_data = request_user_data;
                         request_data->bytes_send = 0;
                         buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
@@ -191,7 +331,17 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         return gst_clock_get_time (httpstreaming->itvencoder->system_clock)  + GST_MSECOND; // 50ms
                 }
         case HTTP_CONTINUE:
+                GST_ERROR ("HTTP Continue.");
                 request_user_data = request_data->user_data;
+                encoder_output = request_user_data->encoder_output;
+                if (request_user_data->current_send_position == encoder_output->tail_addr) {
+                        /* no more stream, wait 10ms */
+                        GST_ERROR ("current send position is the same as tail addr, current: %llu, tail: %llu", request_user_data->current_send_position, encoder_output->tail_addr);
+                        return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+                }
+
+                return send_chunk (encoder_output, request_data);
+#if 0
                 encoder = request_user_data->encoder;
                 
                 if (encoder->state != GST_STATE_PLAYING) {
@@ -253,6 +403,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         request_user_data->current_send_position = i;
                 }
                 return gst_clock_get_time (httpstreaming->itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+#endif
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;
