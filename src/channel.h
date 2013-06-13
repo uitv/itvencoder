@@ -115,9 +115,9 @@ struct _Encoder {
         gchar *cache_end_addr;
         gint64 *cache_size; // total output packet counts
         guint64 *total_count; // total output packet counts
-        gchar *head_addr;
-        gchar *tail_addr;
-        gchar *last_rap_addr;
+        gchar **head_addr;
+        gchar **tail_addr;
+        gchar **last_rap_addr;
 };
 
 struct _EncoderClass {
