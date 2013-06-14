@@ -200,10 +200,6 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         /* send next chunk. */
         if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
                 GST_ERROR ("current gop size is 0 output: %llu: send:%llu.", encoder_output->tail_addr, request_user_data->current_send_position);
-                if (encoder_output->tail_addr == request_user_data->current_send_position) {
-                        /* no more data. */
-                        return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
-                }
                 /* current uncompleted gop. */
                 g_free (request_user_data->chunk_size_str);
                 if (encoder_output->tail_addr > request_user_data->current_send_position) {
