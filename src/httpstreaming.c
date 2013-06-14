@@ -186,7 +186,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         /* send complete. */
                         memcpy (&current_gop_size, request_user_data->current_rap_addr + 8, 4);
                         current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
-                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) + 2;
+                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
                         if (request_user_data->current_send_position == current_gop_end_addr) {
                                 request_user_data->current_rap_addr = current_gop_end_addr + 1;
                         }
@@ -219,7 +219,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 request_user_data->send_count += ret;
                 if (ret + request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
                         /* send complete. */
-                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) + 2;
+                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
                 } 
                 return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
         } else {
@@ -248,7 +248,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 request_data->bytes_send += ret;
                 if (ret + request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
                         /* send complete. */
-                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) + 2;
+                        request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
                 } 
                 if (request_user_data->current_send_position == current_gop_end_addr) {
                         request_user_data->current_rap_addr = current_gop_end_addr + 1;
