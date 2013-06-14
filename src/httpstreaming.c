@@ -207,7 +207,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         /* send to tail. */
                         request_user_data->chunk_size = encoder_output->tail_addr - request_user_data->current_send_position;
                 } else {
-                        request_user_data->chunk_size = encoder_output->cache_addr - request_user_data->current_send_position;
+                        request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position;
                 }
                 GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
                 request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
@@ -235,7 +235,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         request_user_data->chunk_size = current_gop_end_addr - request_user_data->current_send_position;
                 } else {
                         /* send to cache end. */
-                        request_user_data->chunk_size = encoder_output->cache_addr - request_user_data->current_send_position;
+                        request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position;
                 }
                 GST_ERROR ("chunk size is %d.", request_user_data->chunk_size);
                 request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
