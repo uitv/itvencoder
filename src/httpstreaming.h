@@ -13,7 +13,7 @@
 #include "itvencoder.h"
 
 typedef struct _RequestDataUserData {
-        gchar *current_send_gop_addr;
+        gchar *current_rap_addr;
         gchar *current_send_position;
         gchar *chunk_size_str;
         gint chunk_size;
