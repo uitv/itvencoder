@@ -180,7 +180,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
         } else { /* send next chunk. */
                 if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
-                        /* uncompleted gop. */
+                        /* current output gop. */
                         current_gop_end_addr = NULL;
                         GST_ERROR ("current gop size is 0 output: %llu: send:%llu.", encoder_output->tail_addr, request_user_data->current_send_position);
                         g_free (request_user_data->chunk_size_str);
@@ -191,6 +191,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                                 request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position;
                         }
                 } else {
+                        /* completely output gop. */
                         memcpy (&current_gop_size, request_user_data->current_rap_addr + 8, 4);
                         current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
                         GST_ERROR ("current gop size is %d.", current_gop_size);
