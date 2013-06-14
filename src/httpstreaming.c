@@ -182,7 +182,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 } 
                 request_user_data->send_count += ret;
                 request_data->bytes_send += ret;
-                if (ret + request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
+                if (request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
                         /* send complete. */
                         memcpy (&current_gop_size, request_user_data->current_rap_addr + 8, 4);
                         current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
