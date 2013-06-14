@@ -203,7 +203,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 }
                 /* current uncompleted gop. */
                 g_free (request_user_data->chunk_size_str);
-                if (encoder_output->tail_addr < encoder_output->cache_end_addr) {
+                if (encoder_output->tail_addr > request_user_data->current_send_position) {
                         /* send to tail. */
                         request_user_data->chunk_size = encoder_output->tail_addr - request_user_data->current_send_position;
                 } else {
