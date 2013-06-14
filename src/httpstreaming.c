@@ -172,8 +172,9 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         gint32 current_gop_size, ret;
 
         request_user_data = request_data->user_data;
+
+        /* if last chunk has not completely send, try again. */
         if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
-                /* last chunk has not complete, try again. */
                 GST_ERROR ("resend");
                 ret = send_data (encoder_output, request_data);
                 if (ret == -1) {
@@ -193,7 +194,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
         }
 
-        /* chunk has completed. send next chunk. */
+        /* send next chunk. */
         if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
                 GST_ERROR ("current gop size is 0 output: %llu: send:%llu.", encoder_output->tail_addr, request_user_data->current_send_position);
                 if (encoder_output->tail_addr == request_user_data->current_send_position) {
