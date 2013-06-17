@@ -269,7 +269,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
-                encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
+                //encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
                 encoder_output = get_encoder_output (httpstreaming, request_data);
                 if (encoder_output == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
