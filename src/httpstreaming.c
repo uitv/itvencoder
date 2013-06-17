@@ -186,8 +186,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         request_user_data = request_data->user_data;
 
         if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
-                /* last chunk has not completely send, try again. */
-                GST_ERROR ("resend");
+                /* resend uncompleted data. */
                 current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
         } else { /* send next chunk. */
                 if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
@@ -312,17 +311,14 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                                 g_free (buf);
                                 return 0;
                         }
+
+                        /* let send_chunk send new chunk. */
                         request_user_data->chunk_size = 0;
                         request_user_data->send_count = 2;
                         request_user_data->chunk_size_str = g_strdup ("");
                         request_user_data->encoder_output = encoder_output;
-                        //request_user_data->encoder = encoder;
-                        /* should send a IDR with pat and pmt first */
                         request_user_data->current_rap_addr = encoder_output->last_rap_addr;
-                        request_user_data->current_send_position = encoder_output->last_rap_addr + 12;//(encoder->current_output_position + 25) % ENCODER_RING_SIZE;
-                        //while (GST_BUFFER_FLAG_IS_SET (encoder->output_ring[request_user_data->current_send_position], GST_BUFFER_FLAG_DELTA_UNIT)) {
-                        //        request_user_data->current_send_position = (request_user_data->current_send_position + 1) % ENCODER_RING_SIZE;
-                        //}
+                        request_user_data->current_send_position = encoder_output->last_rap_addr + 12;
                         request_data->user_data = request_user_data;
                         request_data->bytes_send = 0;
                         buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
