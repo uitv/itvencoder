@@ -270,32 +270,9 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0;
-                } else if ((request_data->parameters[0] == '\0') || /* default operator is play */
-                           (request_data->parameters[0] == 'b')) { /* ?bitrate= */
+                } else if ((request_data->parameters[0] == '\0') || (request_data->parameters[0] == 'b')) {
+                        /* default operator is play, ?bitrate= */
                         GST_INFO ("Play command");
-#if 0
-                        if (encoder->state != GST_STATE_PLAYING) {
-                                GST_ERROR ("Play encoder it's status is not PLAYING.");
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
-                        }
-                        if (encoder->current_output_position == -1) {
-                                GST_ERROR ("Play encoder it's output position is -1.");
-                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
-                        }
-                        if (*(encoder->total_count) < ENCODER_RING_SIZE) {
-                                GST_ERROR ("Caching, please wait a while.");
-                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                                return 0;
-                        }
-#endif
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                         if (request_user_data == NULL) {
                                 GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
@@ -319,6 +296,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         g_free (buf);
                         return gst_util_get_timestamp () + GST_MSECOND;
                 }
+                break;
         case HTTP_CONTINUE:
                 request_user_data = request_data->user_data;
                 encoder_output = request_user_data->encoder_output;
