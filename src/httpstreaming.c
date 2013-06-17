@@ -305,71 +305,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         GST_DEBUG ("current:%llu == tail:%llu", request_user_data->current_send_position, encoder_output->tail_addr);
                         return gst_util_get_timestamp () + 500 * GST_MSECOND + g_random_int_range (1, 1000000);
                 }
-
                 return send_chunk (encoder_output, request_data);
-#if 0
-                encoder = request_user_data->encoder;
-                
-                if (encoder->state != GST_STATE_PLAYING) {
-                        /* encoder pipeline's state is not playing, return 0 */
-                        return 0;
-                }
-
-                i = request_user_data->current_send_position;
-                i %= ENCODER_RING_SIZE;
-                for (;;) {
-                        if (i == encoder->current_output_position) { // catch up encoder output.
-                                break;
-                        }
-                        chunksize = g_strdup_printf("%x\r\n", GST_BUFFER_SIZE (encoder->output_ring[i]));
-                        if (request_user_data->last_send_count < strlen (chunksize)) {
-                                iov[0].iov_base = chunksize + request_user_data->last_send_count;
-                                iov[0].iov_len = strlen (chunksize) - request_user_data->last_send_count;
-                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]);
-                                iov[1].iov_len = GST_BUFFER_SIZE (encoder->output_ring[i]);
-                                iov[2].iov_base = "\r\n";
-                                iov[2].iov_len = 2;
-                        } else if (request_user_data->last_send_count < (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
-                                iov[0].iov_base = NULL;
-                                iov[0].iov_len = 0;
-                                iov[1].iov_base = GST_BUFFER_DATA (encoder->output_ring[i]) + (request_user_data->last_send_count - strlen (chunksize));
-                                iov[1].iov_len = GST_BUFFER_SIZE (encoder->output_ring[i]) - (request_user_data->last_send_count - strlen (chunksize));
-                                iov[2].iov_base = "\r\n";
-                                iov[2].iov_len = 2;
-                        } else if (request_user_data->last_send_count == (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
-                                iov[0].iov_base = NULL;
-                                iov[0].iov_len = 0;
-                                iov[1].iov_base = NULL;
-                                iov[1].iov_len = 0;
-                                iov[2].iov_base = "\r\n";
-                                iov[2].iov_len = 2;
-                        } else if (request_user_data->last_send_count > (strlen (chunksize) + GST_BUFFER_SIZE (encoder->output_ring[i]))) {
-                                iov[0].iov_base = NULL;
-                                iov[0].iov_len = 0;
-                                iov[1].iov_base = NULL;
-                                iov[1].iov_len = 0;
-                                iov[2].iov_base = "\n";
-                                iov[2].iov_len = 1;
-                        }
-                        ret = writev (request_data->sock, iov, 3);
-                        if (ret == -1) {
-                                GST_DEBUG ("write error %s sock %d", g_strerror (errno), request_data->sock);
-                                g_free (chunksize);
-                                return GST_CLOCK_TIME_NONE;
-                        } else if (ret < (iov[0].iov_len + iov[1].iov_len + iov[2].iov_len)) {
-                                request_user_data->last_send_count += ret;
-                                request_data->bytes_send += ret;
-                                g_free (chunksize);
-                                return gst_clock_get_time (httpstreaming->itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
-                        }
-                        request_data->bytes_send += ret;
-                        g_free (chunksize);
-                        request_user_data->last_send_count = 0;
-                        i = (i + 1) % ENCODER_RING_SIZE;
-                        request_user_data->current_send_position = i;
-                }
-                return gst_clock_get_time (httpstreaming->itvencoder->system_clock) + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
-#endif
         case HTTP_FINISH:
                 g_free (request_data->user_data);
                 request_data->user_data = NULL;

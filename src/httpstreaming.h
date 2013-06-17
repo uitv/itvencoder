@@ -18,7 +18,6 @@ typedef struct _RequestDataUserData {
         gchar *chunk_size_str;
         gint chunk_size;
         gint send_count;
-        gpointer encoder;
         gpointer encoder_output;
 } RequestDataUserData;
 
