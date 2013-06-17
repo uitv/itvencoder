@@ -153,12 +153,9 @@ send_data (EncoderOutput *encoder_output, RequestData *request_data)
                 iov[2].iov_base = "\n";
                 iov[2].iov_len = 1;
         }
-        GST_ERROR ("%llu:%d; %llu:%d; %llu:%d", iov[0].iov_base, iov[0].iov_len, iov[1].iov_base, iov[1].iov_len, iov[2].iov_base, iov[2].iov_len);
         ret = writev (request_data->sock, iov, 3);
         if (ret == -1) {
                 GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
-        } else {
-                GST_ERROR ("send position %llu, send : %d ", request_user_data->current_send_position, ret);
         }
 
         return ret;
@@ -200,10 +197,8 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         if (encoder_output->tail_addr > request_user_data->current_send_position) {
                                 /* send to tail. */
                                 request_user_data->chunk_size = encoder_output->tail_addr - request_user_data->current_send_position;
-                GST_ERROR ("chunk size:%d,send position:%llu,end addr:%llu,current gop:%llu.", request_user_data->chunk_size, request_user_data->current_send_position, encoder_output->cache_end_addr, current_gop_end_addr);
                         } else {
                                 request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position + 1;
-                GST_ERROR ("chunk size:%d,send position:%llu,end addr:%llu,current gop:%llu.", request_user_data->chunk_size, request_user_data->current_send_position, encoder_output->cache_end_addr, current_gop_end_addr);
                         }
                 } else {
                         /* completely output gop. */
@@ -212,15 +207,12 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         if ((current_gop_end_addr - request_user_data->current_send_position) > 16384) {
                                 /* send 64k. */
                                 request_user_data->chunk_size = 16384;
-                GST_ERROR ("chunk size:%d,send position:%llu,end addr:%llu,current gop:%llu.", request_user_data->chunk_size, request_user_data->current_send_position, encoder_output->cache_end_addr, current_gop_end_addr);
                         } else if (current_gop_end_addr > request_user_data->current_send_position) {
                                 /* send to gop end. */
                                 request_user_data->chunk_size = current_gop_end_addr - request_user_data->current_send_position;
-                GST_ERROR ("chunk size:%d,send position:%llu,end addr:%llu,current gop:%llu.", request_user_data->chunk_size, request_user_data->current_send_position, encoder_output->cache_end_addr, current_gop_end_addr);
                         } else {
                                 /* send to cache end. */
                                 request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position + 1;
-                GST_ERROR ("chunk size:%d,send position:%llu,end addr:%llu,current gop:%llu.", request_user_data->chunk_size, request_user_data->current_send_position, encoder_output->cache_end_addr, current_gop_end_addr);
                         }
                 }
                 request_user_data->chunk_size_str = g_strdup_printf("%x\r\n", request_user_data->chunk_size);
