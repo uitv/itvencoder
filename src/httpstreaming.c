@@ -155,7 +155,7 @@ send_data (EncoderOutput *encoder_output, RequestData *request_data)
         }
         ret = writev (request_data->sock, iov, 3);
         if (ret == -1) {
-                GST_ERROR ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                GST_INFO ("write error %s sock %d", g_strerror (errno), request_data->sock);
         }
 
         return ret;
@@ -184,11 +184,17 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         gint32 ret;
 
         request_user_data = request_data->user_data;
-
-        if (request_user_data->send_count < request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
-                /* resend uncompleted data. */
-                current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
-        } else { /* send next chunk. */
+        current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
+        if (request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
+                /* completly send a chunk, prepare next. */
+                if (request_user_data->current_send_position == current_gop_end_addr) {
+                        request_user_data->current_rap_addr = current_gop_end_addr + 1;
+                        if (request_user_data->current_send_position + 12 < encoder_output->cache_end_addr) {
+                                request_user_data->current_send_position += 12;
+                        } else {
+                                request_user_data->current_send_position = encoder_output->cache_addr + (request_user_data->current_send_position + 12 - encoder_output->cache_end_addr);
+                        }
+                }
                 if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
                         /* current output gop. */
                         current_gop_end_addr = NULL;
@@ -203,10 +209,8 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         }
                 } else {
                         /* completely output gop. */
-                        current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
                         g_free (request_user_data->chunk_size_str);
                         if ((current_gop_end_addr - request_user_data->current_send_position) > 16384) {
-                                /* send 64k. */
                                 request_user_data->chunk_size = 16384;
                         } else if (current_gop_end_addr > request_user_data->current_send_position) {
                                 /* send to gop end. */
@@ -232,14 +236,6 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
                 if (request_user_data->current_send_position > encoder_output->cache_end_addr) {
                         request_user_data->current_send_position = encoder_output->cache_addr;
-                }
-                if (request_user_data->current_send_position == current_gop_end_addr) {
-                        request_user_data->current_rap_addr = current_gop_end_addr + 1;
-                        if (request_user_data->current_send_position + 12 < encoder_output->cache_end_addr) {
-                                request_user_data->current_send_position += 12;
-                        } else {
-                                request_user_data->current_send_position = encoder_output->cache_addr + (request_user_data->current_send_position + 12 - encoder_output->cache_end_addr);
-                        }
                 }
         } 
         return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
