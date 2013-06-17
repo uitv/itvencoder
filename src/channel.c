@@ -1135,17 +1135,20 @@ move_head (Encoder *encoder)
 {
         gint gop_size, n;
 
-        if (*(encoder->last_rap_addr) + 12 < encoder->cache_end_addr) {
-                memcpy (&gop_size, *(encoder->last_rap_addr) + 8, 4);
+        /* head gop size. */
+        if (*(encoder->head_addr) + 12 < encoder->cache_end_addr) {
+                memcpy (&gop_size, *(encoder->head_addr) + 8, 4);
         } else {
-                n = encoder->cache_end_addr - *(encoder->last_rap_addr) - 8;
-                memcpy (&gop_size, *(encoder->last_rap_addr), n);
+                n = encoder->cache_end_addr - *(encoder->head_addr) - 8;
+                memcpy (&gop_size, *(encoder->head_addr), n);
                 memcpy (&gop_size + n, encoder->cache_addr, 4 - n);
         }
+
+        /* move head. */
         if (*(encoder->head_addr) + gop_size < encoder->cache_end_addr) {
                 *(encoder->head_addr) += gop_size;
         } else {
-                *(encoder->head_addr) = encoder->cache_addr + (*(encoder->head_addr) - encoder->cache_addr + gop_size - *(encoder->cache_size));
+                *(encoder->head_addr) =  *(encoder->head_addr) + gop_size - *(encoder->cache_end_addr) + *(encoder->cache_addr);
         }
 }
 
