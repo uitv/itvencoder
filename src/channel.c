@@ -1165,7 +1165,7 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
                 size = encoder->cache_end_addr - *(encoder->last_rap_addr) + *(encoder->tail_addr) - encoder->cache_addr;
         }
         GST_ERROR ("new gop, last gop size: %d, new buffer size %d", size, GST_BUFFER_SIZE (buffer));
-        if (*(encoder->last_rap_addr) + 12 < encoder->cache_end_addr) {
+        if (*(encoder->last_rap_addr) + 12 <= encoder->cache_end_addr) {
                 memcpy (*(encoder->last_rap_addr) + 8, &size, 4);
         } else {
                 n = encoder->cache_end_addr - *(encoder->last_rap_addr) - 8;
@@ -1173,6 +1173,7 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
                 memcpy (encoder->cache_addr, &size + n, 4 - n);
         }
 
+        /* new gop timestamp, 4bytes reservation for gop size. */
         if (*(encoder->tail_addr) < encoder->cache_end_addr) {
                 *(encoder->last_rap_addr) = *(encoder->tail_addr) + 1;
         } else {
