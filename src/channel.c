@@ -1710,8 +1710,6 @@ channel_start (Channel *channel, gboolean daemon)
         Encoder *encoder;
         gint i;
 
-        channel->output = channel_output_new (channel->configure, daemon);
-
         /* channel enable? */
         enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
         if (g_strcmp0 (enable, "no") == 0) {
@@ -1722,6 +1720,8 @@ channel_start (Channel *channel, gboolean daemon)
                 GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
                 channel->enable = TRUE;
         }
+
+        channel->output = channel_output_new (channel->configure, daemon);
 
         /* initialize source */
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
