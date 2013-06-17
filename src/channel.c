@@ -1672,11 +1672,11 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
                         /* daemon, use share memory. */
-                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                        output->encoders[i].cache_addr = mmap (NULL, 4 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
                 } else {
-                        output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (4 * 1024 * 1024);
                 }
-                output->encoders[i].cache_size = 64 * 1024 * 1024;
+                output->encoders[i].cache_size = 4 * 1024 * 1024;
                 output->encoders[i].head_addr = output->encoders[i].cache_addr;
                 output->encoders[i].tail_addr = output->encoders[i].cache_addr;
                 output->encoders[i].last_rap_addr = output->encoders[i].cache_addr;
