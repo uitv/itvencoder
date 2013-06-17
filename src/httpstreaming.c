@@ -194,7 +194,9 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                         /* current output gop. */
                         current_gop_end_addr = NULL;
                         g_free (request_user_data->chunk_size_str);
-                        if (encoder_output->tail_addr > request_user_data->current_send_position) {
+                        if ((encoder_output->tail_addr - request_user_data->current_send_position) > 16384) {
+                                request_user_data->chunk_size = 16384;
+                        } else if (encoder_output->tail_addr > request_user_data->current_send_position) {
                                 /* send to tail. */
                                 request_user_data->chunk_size = encoder_output->tail_addr - request_user_data->current_send_position;
                         } else {
@@ -333,7 +335,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                 encoder_output = request_user_data->encoder_output;
                 if (request_user_data->current_send_position == encoder_output->tail_addr) {
                         /* no more stream, wait 10ms */
-                        GST_ERROR ("current:%llu == tail:%llu", request_user_data->current_send_position, encoder_output->tail_addr);
+                        GST_DEBUG ("current:%llu == tail:%llu", request_user_data->current_send_position, encoder_output->tail_addr);
                         return gst_util_get_timestamp () + 500 * GST_MSECOND + g_random_int_range (1, 1000000);
                 }
 
