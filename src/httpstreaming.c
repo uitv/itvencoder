@@ -186,31 +186,20 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         request_user_data = request_data->user_data;
         current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
         if (request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
-                /* completly send a chunk, prepare next. */
-                request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
-                if (request_user_data->current_send_position > encoder_output->cache_end_addr) {
-                        request_user_data->current_send_position = encoder_output->cache_addr;
-                }
-                if (request_user_data->current_send_position == current_gop_end_addr) {
-                        request_user_data->current_rap_addr = current_gop_end_addr + 1;
-                        if (request_user_data->current_send_position + 12 < encoder_output->cache_end_addr) {
-                                request_user_data->current_send_position += 12;
-                        } else {
-                                request_user_data->current_send_position = encoder_output->cache_addr + (request_user_data->current_send_position + 12 - encoder_output->cache_end_addr);
-                        }
-                }
                 if (request_user_data->current_rap_addr == encoder_output->last_rap_addr) {
                         /* current output gop. */
-                        current_gop_end_addr = NULL;
-                        g_free (request_user_data->chunk_size_str);
                         if ((encoder_output->tail_addr - request_user_data->current_send_position) > 16384) {
                                 request_user_data->chunk_size = 16384;
                         } else if (encoder_output->tail_addr > request_user_data->current_send_position) {
                                 /* send to tail. */
                                 request_user_data->chunk_size = encoder_output->tail_addr - request_user_data->current_send_position;
+                        } else if (encoder_output->tail_addr == request_user_data->current_send_position) {
+                                /* no data available, wait a while. */
+                                return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
                         } else {
                                 request_user_data->chunk_size = encoder_output->cache_end_addr - request_user_data->current_send_position + 1;
                         }
+                        g_free (request_user_data->chunk_size_str);
                 } else {
                         /* completely output gop. */
                         g_free (request_user_data->chunk_size_str);
@@ -235,6 +224,21 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         }
         request_user_data->send_count += ret;
         request_data->bytes_send += ret;
+        if (request_user_data->send_count == request_user_data->chunk_size + strlen (request_user_data->chunk_size_str) + 2) {
+                /* completly send a chunk, prepare next. */
+                request_user_data->current_send_position += request_user_data->send_count - strlen (request_user_data->chunk_size_str) - 2;
+                if (request_user_data->current_send_position > encoder_output->cache_end_addr) {
+                        request_user_data->current_send_position = encoder_output->cache_addr;
+                }
+                if (request_user_data->current_send_position == current_gop_end_addr) {
+                        request_user_data->current_rap_addr = current_gop_end_addr + 1;
+                        if (request_user_data->current_send_position + 12 < encoder_output->cache_end_addr) {
+                                request_user_data->current_send_position += 12;
+                        } else {
+                                request_user_data->current_send_position = encoder_output->cache_addr + (request_user_data->current_send_position + 12 - encoder_output->cache_end_addr);
+                        }
+                }
+        }
         return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
 }
 
