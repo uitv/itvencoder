@@ -1178,7 +1178,7 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
 
         /* new gop timestamp, 4bytes reservation for gop size. */
         if (*(encoder->tail_addr) < encoder->cache_end_addr) {
-                *(encoder->last_rap_addr) = *(encoder->tail_addr) + 1;
+                *(encoder->last_rap_addr) = *(encoder->tail_addr);
         } else {
                 *(encoder->last_rap_addr) = encoder->cache_addr;
         }
