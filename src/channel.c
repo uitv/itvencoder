@@ -1245,6 +1245,11 @@ GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
                 move_last_rap (encoder, buffer);
         }
 
+        if (*(encoder->head_addr) == *(encoder->tail_addr)) {
+                GST_ERROR ("Discard buffer before first IDR.");
+                return;
+        }
+
         /*
          * copy buffer to cache.
          * update tail_addr and last_rap_addr
