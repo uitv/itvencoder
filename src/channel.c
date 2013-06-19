@@ -1162,12 +1162,11 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
         gint32 size, n;
 
         /* calculate and write gop size. */
-        if (*(encoder->tail_addr) > *(encoder->last_rap_addr)) {
+        if (*(encoder->tail_addr) >= *(encoder->last_rap_addr)) {
                 size = *(encoder->tail_addr) - *(encoder->last_rap_addr);
         } else {
                 size = encoder->cache_end_addr - *(encoder->last_rap_addr) + *(encoder->tail_addr) - encoder->cache_addr;
         }
-        GST_ERROR ("new gop, last gop size: %d, new buffer size %d", size, GST_BUFFER_SIZE (buffer));
         if (*(encoder->last_rap_addr) + 12 <= encoder->cache_end_addr) {
                 memcpy (*(encoder->last_rap_addr) + 8, &size, 4);
         } else {
@@ -1212,8 +1211,8 @@ copy_buffer (Encoder *encoder, GstBuffer *buffer)
         }
 }
 
-static
-GstFlowReturn encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
+static GstFlowReturn
+encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
@@ -1681,11 +1680,11 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
                         /* daemon, use share memory. */
-                        output->encoders[i].cache_addr = mmap (NULL, 4 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                        output->encoders[i].cache_addr = mmap (NULL, 1024 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
                 } else {
-                        output->encoders[i].cache_addr = g_malloc (4 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (1024 * 1024 * 1024);
                 }
-                output->encoders[i].cache_size = 4 * 1024 * 1024;
+                output->encoders[i].cache_size = 1024 * 1024 * 1024;
                 output->encoders[i].head_addr = output->encoders[i].cache_addr;
                 output->encoders[i].tail_addr = output->encoders[i].cache_addr;
                 output->encoders[i].last_rap_addr = output->encoders[i].cache_addr;
