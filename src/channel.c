@@ -1259,7 +1259,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         }
 
         if (*(encoder->head_addr) == *(encoder->tail_addr)) {
-                GST_ERROR ("Discard buffer before first IDR.");
+                GST_WARNING ("Discard buffer before first IDR.");
                 return;
         }
 
@@ -1710,27 +1710,13 @@ channel_output_new (GstStructure *configure, gboolean daemon)
         return output;
 }
 
-/*
- * channel_start
- *
- * @channel: channel to be initialize.
- * @structure: configure data.
- *
- * Returns: TRUE on success, FALSE on failure.
- *
- */
-gboolean
-channel_start (Channel *channel, gboolean daemon)
+static gboolean
+launch_channel (Channel *channel, gboolean daemon)
 {
         GValue *value;
         GstStructure *structure;
         Encoder *encoder;
         gint i;
-
-        if (!channel->enable) {
-                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
-                return TRUE;
-        }
 
         channel->output = channel_output_new (channel->configure, daemon);
 
@@ -1761,6 +1747,26 @@ channel_start (Channel *channel, gboolean daemon)
         channel->output->state = GST_STATE_PLAYING;
 
         return TRUE;
+}
+
+/*
+ * channel_start
+ *
+ * @channel: channel to be initialize.
+ * @structure: configure data.
+ *
+ * Returns: TRUE on success, FALSE on failure.
+ *
+ */
+gboolean
+channel_start (Channel *channel, gboolean daemon)
+{
+        if (!channel->enable) {
+                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
+                return TRUE;
+        }
+
+        return launch_channel (channel, daemon);
 }
 
 void
