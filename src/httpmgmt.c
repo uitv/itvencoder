@@ -282,10 +282,14 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         channel_request (httpmgmt, request_data);
                 } else if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                         /* get mgmt, index.html */
-                        write (request_data->sock, index_html, strlen (index_html));
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (index_html), index_html);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/gui.css")) {
                         /* get gui.css */
-                        write (request_data->sock, gui_css, strlen (gui_css));
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/css", strlen (gui_css), gui_css);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* get version */
                         gchar *ver;
