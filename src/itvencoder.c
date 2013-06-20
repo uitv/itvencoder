@@ -227,6 +227,9 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                if (!channel->enable) {
+                        continue;
+                }
                 output = channel->output;
                 if (output->state != GST_STATE_PLAYING) {
                         continue;
