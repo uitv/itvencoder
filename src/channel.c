@@ -270,6 +270,19 @@ channel_init (Channel *channel)
 }
 
 static void
+set_enable_property (Channel *channel)
+{
+        gchar *enable;
+
+        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+        if (g_strcmp0 (enable, "no") == 0) {
+                channel->enable = FALSE;
+        } else if (g_strcmp0 (enable, "yes") == 0) {
+                channel->enable = TRUE;
+        }
+}
+
+static void
 channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CHANNEL(obj));
@@ -280,6 +293,7 @@ channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSp
                 break;
         case CHANNEL_PROP_CONFIGURE:
                 CHANNEL(obj)->configure = (GstStructure *)g_value_get_pointer (value); //TODO: should release dup string config_file_path?
+                set_enable_property (CHANNEL(obj));
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -1680,11 +1694,11 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
                         /* daemon, use share memory. */
-                        output->encoders[i].cache_addr = mmap (NULL, 1024 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
                 } else {
-                        output->encoders[i].cache_addr = g_malloc (1024 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
                 }
-                output->encoders[i].cache_size = 1024 * 1024 * 1024;
+                output->encoders[i].cache_size = 64 * 1024 * 1024;
                 output->encoders[i].head_addr = output->encoders[i].cache_addr;
                 output->encoders[i].tail_addr = output->encoders[i].cache_addr;
                 output->encoders[i].last_rap_addr = output->encoders[i].cache_addr;
@@ -1710,19 +1724,12 @@ channel_start (Channel *channel, gboolean daemon)
 {
         GValue *value;
         GstStructure *structure;
-        gchar *enable;
         Encoder *encoder;
         gint i;
 
-        /* channel enable? */
-        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
-        if (g_strcmp0 (enable, "no") == 0) {
-                channel->enable = FALSE;
-                GST_INFO ("Cant start hannel %s with enable set no.", channel->name);
+        if (!channel->enable) {
+                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
                 return TRUE;
-        } else if (g_strcmp0 (enable, "yes") == 0) {
-                GST_INFO ("Channel %s enabled is %s.", channel->name, enable);
-                channel->enable = TRUE;
         }
 
         channel->output = channel_output_new (channel->configure, daemon);
