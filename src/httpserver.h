@@ -34,7 +34,7 @@
 
 #define http_200 "HTTP/1.1 200 Ok\r\n" \
                  "Server: %s-%s\r\n" \
-                 "Content-Type: text/plain\r\n" \
+                 "Content-Type: %s\r\n" \
                  "Content-Length: %d\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "%s"
