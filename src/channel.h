@@ -183,6 +183,7 @@ struct _Channel {
         Source *source; 
         GArray *encoder_array;
         ChannelOutput *output;
+        GThread *worker_thread;
 };
 
 struct _ChannelClass {

@@ -1711,14 +1711,12 @@ channel_output_new (GstStructure *configure, gboolean daemon)
 }
 
 static gboolean
-launch_channel (Channel *channel, gboolean daemon)
+launch_channel (Channel *channel)
 {
         GValue *value;
         GstStructure *structure;
         Encoder *encoder;
         gint i;
-
-        channel->output = channel_output_new (channel->configure, daemon);
 
         /* initialize source */
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
@@ -1749,6 +1747,51 @@ launch_channel (Channel *channel, gboolean daemon)
         return TRUE;
 }
 
+static gpointer
+worker_thread (gpointer data)
+{
+        Channel *channel = (Channel *)data;
+        GMainLoop *loop;
+        pid_t process_id = 0;
+        gint status;
+        gint8 exit_status;
+
+        channel->output = channel_output_new (channel->configure, TRUE);
+        for (;;) {
+                process_id = fork ();
+                if (process_id > 0) {
+                        /* parent process */
+                        status = 0;
+                        for (;;) {
+                                wait (&status);
+                                exit_status = (gint8) WEXITSTATUS (status);
+                                if (WIFEXITED (status) && (exit_status != 0)) {
+                                        /* abnormal exit, restart */
+                                        GST_ERROR ("channel process restart.");
+                                        break;
+                                }
+                                if (WIFSIGNALED (status)) {
+                                        /* child exit on an unhandled signal, restart */
+                                        GST_ERROR ("channel process restart.");
+                                        break;
+                                }
+                                if (WIFEXITED (status) && (exit_status == 0)) {
+                                        /* exit code is 0, must exit. */
+                                        GST_ERROR ("Fatal error.");
+                                        exit (0);
+                                }
+                        }
+                } else {
+                        /* child process. */
+                        break;
+                }
+        }
+
+        loop = g_main_loop_new (NULL, FALSE);
+        launch_channel (channel);
+        g_main_loop_run (loop);
+}
+
 /*
  * channel_start
  *
@@ -1761,12 +1804,27 @@ launch_channel (Channel *channel, gboolean daemon)
 gboolean
 channel_start (Channel *channel, gboolean daemon)
 {
+        GError *e = NULL;
+
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
                 return TRUE;
         }
 
-        return launch_channel (channel, daemon);
+        if (daemon) {
+                channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);
+                if (e != NULL) {
+                        GST_ERROR ("Create channel worker thread error %s", e->message);
+                        g_error_free (e);
+                        return FALSE;
+                } else {
+                        GST_WARNING ("Creat channel worker success!");
+                        return TRUE;
+                }
+        } else {
+                channel->output = channel_output_new (channel->configure, FALSE);
+                return launch_channel (channel);
+        }
 }
 
 void
