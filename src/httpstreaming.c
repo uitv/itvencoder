@@ -302,6 +302,14 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         }
 
+                        if (encoder_output->head_addr == encoder_output->tail_addr) {
+                                GST_WARNING ("%s unready.", request_data->uri);
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Unready");
+                                write (request_data->sock, buf, strlen (buf));
+                                g_free (buf);
+                                return 0;
+                        }
+
                         /* let send_chunk send new chunk. */
                         request_user_data->chunk_size = 0;
                         request_user_data->send_count = 2;
