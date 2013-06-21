@@ -16,6 +16,7 @@ struct _Log {
 
         gchar *log_path;
         FILE *log_hd;
+        GstLogFunction func;
 };
 
 struct _LogClass {

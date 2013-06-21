@@ -152,6 +152,7 @@ log_set_log_handler (Log *log)
                 GST_ERROR ("Can't open or create log directory: %s.", dirname (dir));
                 return 1;
         }
+        log->func = log_func;
         log->log_hd = fopen (log->log_path, "a");
         if (log->log_hd == NULL) {
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
