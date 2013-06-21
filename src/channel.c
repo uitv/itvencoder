@@ -1812,6 +1812,7 @@ channel_start (Channel *channel, gboolean daemon)
         }
 
         if (daemon) {
+                /* run in forked child process. */
                 channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);
                 if (e != NULL) {
                         GST_ERROR ("Create channel worker thread error %s", e->message);
