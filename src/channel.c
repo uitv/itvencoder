@@ -12,6 +12,8 @@
 
 #include "channel.h"
 
+extern Log *_log;
+
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
 
@@ -1783,6 +1785,13 @@ worker_thread (gpointer data)
                         }
                 } else {
                         /* child process. */
+                        gst_debug_remove_log_function (_log->func);
+                        channel->log = log_new ("log_path", channel->log_path, NULL);
+                        if (log_set_log_handler (channel->log) != 0) {
+                                exit (0);
+                        }
+                        /* remove gstInfo default handler. */
+                        gst_debug_remove_log_function (gst_debug_log_default);
                         break;
                 }
         }

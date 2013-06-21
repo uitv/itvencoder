@@ -7,6 +7,7 @@
 #define __CHANNEL_H__
 
 #include <gst/gst.h>
+#include "log.h"
 
 #define SOURCE_RING_SIZE 1500
 #define ENCODER_RING_SIZE (4*250)
@@ -178,6 +179,8 @@ struct _Channel {
         GstClock *system_clock;
         gint id;
         gchar *name; // same as the name in channel config file
+        gchar *log_path;
+        Log *log;
         gboolean enable;
         GstStructure *configure;
         Source *source; 
