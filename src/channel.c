@@ -1785,17 +1785,16 @@ worker_thread (gpointer data)
                         }
                 } else {
                         /* child process. */
-                        gst_debug_remove_log_function (_log->func);
-                        channel->log = log_new ("log_path", channel->log_path, NULL);
-                        if (log_set_log_handler (channel->log) != 0) {
-                                exit (0);
-                        }
-                        /* remove gstInfo default handler. */
-                        gst_debug_remove_log_function (gst_debug_log_default);
                         break;
                 }
         }
 
+        gst_debug_remove_log_function (_log->func);
+        fclose (_log->log_hd);
+        channel->log = log_new ("log_path", channel->log_path, NULL);
+        if (log_set_log_handler (channel->log) != 0) {
+                exit (0);
+        }
         loop = g_main_loop_new (NULL, FALSE);
         launch_channel (channel);
         g_main_loop_run (loop);
