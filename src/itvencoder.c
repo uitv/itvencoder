@@ -25,7 +25,6 @@ static void itvencoder_get_property (GObject *obj, guint prop_id, GValue *value,
 static GTimeVal itvencoder_get_start_time_func (ITVEncoder *itvencoder);
 static void itvencoder_initialize_channels (ITVEncoder *itvencoder);
 static gboolean itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data);
-static void stat_report (ITVEncoder *itvencoder);
 
 static void
 itvencoder_class_init (ITVEncoderClass *itvencoderclass)
@@ -221,6 +220,43 @@ itvencoder_channel_stop (ITVEncoder *itvencoder, gint index)
         return TRUE;
 }
 
+static void
+stat_report (ITVEncoder *itvencoder, pid_t pid)
+{
+        gchar *stat_file, *stat, **stats, **cpustats;
+        gsize *length;
+        guint64 utime, stime, ctime; // process user time, process system time, total cpu time
+        guint64 rss; // Resident Set Size.
+        gint i;
+
+        stat_file = g_strdup_printf ("/proc/%d/stat", pid);
+        g_file_get_contents (stat_file, &stat, length, NULL);
+        stats = g_strsplit (stat, " ", 44);
+        utime = g_ascii_strtoull (stats[13],  NULL, 10); // seconds
+        stime = g_ascii_strtoull (stats[14], NULL, 10);
+        rss = g_ascii_strtoull (stats[23], NULL, 10) * sysconf (_SC_PAGESIZE);
+        g_free (stat_file);
+        g_free (stat);
+        g_strfreev (stats);
+        g_file_get_contents ("/proc/stat", &stat, length, NULL);
+        stats = g_strsplit (stat, "\n", 10);
+        cpustats = g_strsplit (stats[0], " ", 10);
+        ctime = 0;
+        for (i = 1; i < 8; i++) {
+                ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
+        }
+        g_free (stat);
+        g_strfreev (stats);
+        g_strfreev (cpustats);
+        GST_INFO ("average cpu: %d%%, cpu: %d%%, rss: %lluMB",
+                ((utime + stime) * 100) / (ctime - itvencoder->start_ctime),
+                ((utime - itvencoder->last_utime + stime - itvencoder->last_stime) * 100) / (ctime - itvencoder->last_ctime),
+                rss/1000000);
+        itvencoder->last_ctime = ctime;
+        itvencoder->last_utime = utime;
+        itvencoder->last_stime = stime;
+}
+
 static gboolean
 itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
 {
@@ -331,9 +367,12 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 } else {
                         output->source.sync_error_times = 0;
                 }
+
+                if (itvencoder->daemon) {
+                        stat_report (itvencoder, channel->worker_process_pid);
+                }
         }
 
-        stat_report (itvencoder);
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
@@ -384,43 +423,6 @@ itvencoder_start (ITVEncoder *itvencoder)
         }
 
         return 0;
-}
-
-static void
-stat_report (ITVEncoder *itvencoder)
-{
-        gchar *stat_file, *stat, **stats, **cpustats;
-        gsize *length;
-        guint64 utime, stime, ctime; // process user time, process system time, total cpu time
-        guint64 rss; // Resident Set Size.
-        gint i;
-
-        stat_file = g_strdup_printf ("/proc/%d/stat", getpid ());
-        g_file_get_contents (stat_file, &stat, length, NULL);
-        stats = g_strsplit (stat, " ", 44);
-        utime = g_ascii_strtoull (stats[13],  NULL, 10); // seconds
-        stime = g_ascii_strtoull (stats[14], NULL, 10);
-        rss = g_ascii_strtoull (stats[23], NULL, 10) * sysconf (_SC_PAGESIZE);
-        g_free (stat_file);
-        g_free (stat);
-        g_strfreev (stats);
-        g_file_get_contents ("/proc/stat", &stat, length, NULL);
-        stats = g_strsplit (stat, "\n", 10);
-        cpustats = g_strsplit (stats[0], " ", 10);
-        ctime = 0;
-        for (i = 1; i < 8; i++) {
-                ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
-        }
-        g_free (stat);
-        g_strfreev (stats);
-        g_strfreev (cpustats);
-        GST_INFO ("average cpu: %d%%, cpu: %d%%, rss: %lluMB",
-                ((utime + stime) * 100) / (ctime - itvencoder->start_ctime),
-                ((utime - itvencoder->last_utime + stime - itvencoder->last_stime) * 100) / (ctime - itvencoder->last_ctime),
-                rss/1000000);
-        itvencoder->last_ctime = ctime;
-        itvencoder->last_utime = utime;
-        itvencoder->last_stime = stime;
 }
 
 gint
