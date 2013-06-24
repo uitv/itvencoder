@@ -500,6 +500,10 @@ configure_encoder_parse (gchar *name, gchar *data)
                 if (encoder == NULL) {
                         return NULL;
                 }
+                if (gst_structure_has_field (structure, p[i])) {
+                        GST_ERROR ("Encoder name conflict: %s", p[i]);
+                        return NULL;
+                }
                 gst_structure_set (structure, p[i], GST_TYPE_STRUCTURE, encoder, NULL);
                 gst_structure_free (encoder);
                 g_free (v);
@@ -672,6 +676,10 @@ configure_file_parse (Configure *configure)
                 v = g_key_file_get_value (gkeyfile, "channels", p[i], &e);
                 if (!is_valid_name (p[i])) {
                         g_print ("Invalid channel configure: %s\n", p[i]);
+                        return 1;
+                }
+                if (gst_structure_has_field (structure, p[i])) {
+                        GST_ERROR ("Channel name conflict: %s", p[i]);
                         return 1;
                 }
                 channels = configure_channel_parse (p[i], v);
