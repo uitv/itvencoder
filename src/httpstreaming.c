@@ -167,7 +167,7 @@ get_current_gop_end (EncoderOutput *encoder_output, RequestDataUserData *request
 
         memcpy (&current_gop_size, request_user_data->current_rap_addr + 8, 4);
         if (current_gop_size == 0) {
-                /* thre current output gop. */
+                /* current output gop. */
                 return NULL;
         }
         current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
