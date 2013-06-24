@@ -187,6 +187,7 @@ struct _Channel {
         GArray *encoder_array;
         ChannelOutput *output;
         GThread *worker_thread;
+        pid_t worker_process_pid;
 };
 
 struct _ChannelClass {

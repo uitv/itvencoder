@@ -1763,6 +1763,7 @@ worker_thread (gpointer data)
                 process_id = fork ();
                 if (process_id > 0) {
                         /* parent process */
+                        channel->worker_process_pid = process_id;
                         status = 0;
                         for (;;) {
                                 wait (&status);
@@ -1839,7 +1840,8 @@ channel_start (Channel *channel, gboolean daemon)
 void
 channel_stop (Channel *channel)
 {
-        exit (1);
+        GST_ERROR ("stop %d", channel->worker_process_pid);
+        kill (channel->worker_process_pid, SIGKILL) ;
 }
 
 Encoder *
