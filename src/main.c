@@ -84,12 +84,10 @@ main (int argc, char *argv[])
         HTTPMgmt *httpmgmt;
         HTTPStreaming *httpstreaming;
         GMainLoop *loop;
-        pid_t process_id = 0;
-        gint status;
-        gint8 exit_status;
         gint ret;
         GOptionContext *ctx;
         GError *err = NULL;
+        gchar *log_dir, *log_path, *pid_file;
 
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);
@@ -124,77 +122,43 @@ main (int argc, char *argv[])
                         exit (0);
                 }
 
-                for (;;) {
-                        process_id = fork ();
-                        if (process_id > 0) {
-                                /* parent process */
-                                status = 0;
-                                for (;;) {
-                                        wait (&status);
-                                        exit_status = (gint8) WEXITSTATUS (status);
-                                        if (WIFEXITED (status) && (exit_status != 0)) {
-                                                /* abnormal exit, restart */
-                                                break;
-                                        }
-                                        if (WIFSIGNALED (status)) {
-                                                /* child exit on an unhandled signal, restart */
-                                                break;
-                                        }
-                                        if (WIFEXITED (status) && (exit_status == 0)) {
-                                                /* exit code is 0, must exit. */
-                                                exit (0);
-                                        }
-                                }
-                        } else if (process_id == 0) {
-                                /* children process, itvencoder server */
-                                gchar *log_dir;
-                                gchar *log_path;
-                                gchar *pid_file;
-
-                                if (config_path) {
-                                        /* config command line option */
-                                        configure = configure_new ("configure_path", config_path, NULL);
-                                        if (configure_load_from_file (configure) != 0) {
-                                                g_print ("Load configure file %s error, exit ...\n", config_path);
-                                                return 1;
-                                        }
-                                } else {
-                                        /* default config path */
-                                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
-                                        if (configure_load_from_file (configure) != 0) {
-                                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
-                                                return 1;
-                                        }
-                                }
-
-                                value = configure_get_param (configure, "/server/logdir");
-                                log_dir = (gchar *)g_value_get_string (value);
-                                if (log_dir[strlen(log_dir) - 1] == '/') {
-                                        log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
-                                } else {
-                                        log_path = g_strdup_printf ("%s/itvencoder.log", log_dir);
-                                }
-                                _log = log_new ("log_path", log_path, NULL);
-                                g_free (log_path);
-                                ret = log_set_log_handler (_log);
-                                if (ret != 0) {
-                                        exit (ret);
-                                }
-
-                                /* remove gstInfo default handler. */
-                                gst_debug_remove_log_function (gst_debug_log_default);
-
-                                value = configure_get_param (configure, "/server/pidfile");
-                                pid_file = (gchar *)g_value_get_string (value);
-                                if (create_pid_file (pid_file) != 0) { //FIXME remove when process exit
-                                        exit (1);
-                                }
-                                break;
+                if (config_path) {
+                        /* config command line option */
+                        configure = configure_new ("configure_path", config_path, NULL);
+                        if (configure_load_from_file (configure) != 0) {
+                                g_print ("Load configure file %s error, exit ...\n", config_path);
+                                return 1;
+                        }
+                } else {
+                        /* default config path */
+                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
+                        if (configure_load_from_file (configure) != 0) {
+                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
+                                return 1;
                         }
                 }
-                if (process_id != 0) {
-                        /* parent exit */
-                        exit (0);
+
+                value = configure_get_param (configure, "/server/logdir");
+                log_dir = (gchar *)g_value_get_string (value);
+                if (log_dir[strlen(log_dir) - 1] == '/') {
+                        log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
+                } else {
+                        log_path = g_strdup_printf ("%s/itvencoder.log", log_dir);
+                }
+                _log = log_new ("log_path", log_path, NULL);
+                g_free (log_path);
+                ret = log_set_log_handler (_log);
+                if (ret != 0) {
+                        exit (ret);
+                }
+
+                /* remove gstInfo default handler. */
+                gst_debug_remove_log_function (gst_debug_log_default);
+
+                value = configure_get_param (configure, "/server/pidfile");
+                pid_file = (gchar *)g_value_get_string (value);
+                if (create_pid_file (pid_file) != 0) { //FIXME remove when process exit
+                        exit (1);
                 }
         } else {
                 if (config_path) {
