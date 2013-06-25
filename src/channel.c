@@ -270,6 +270,9 @@ channel_init (Channel *channel)
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
         channel->age = 0;
+        channel->worker_thread = NULL;
+        channel->worker_mutex = g_mutex_new ();
+        channel->worker_cond = g_cond_new ();
 }
 
 static void
@@ -1794,8 +1797,10 @@ worker_thread (gpointer data)
                                 }
                                 if (WIFEXITED (status) && (exit_status == 0)) {
                                         /* exit code is 0, must exit. */
-                                        GST_ERROR ("stop channel.");
-                                        return NULL;
+                                        g_mutex_lock (channel->worker_mutex);
+                                        g_cond_wait (channel->worker_cond, channel->worker_mutex);
+                                        g_mutex_unlock (channel->worker_mutex);
+                                        break;
                                 }
                         }
                 } else {
@@ -1838,7 +1843,14 @@ channel_start (Channel *channel, gboolean daemon)
         }
 
         if (daemon) {
-                /* run in forked child process. */
+                if (channel->worker_thread != NULL) {
+                        /**/
+                        g_mutex_lock (channel->worker_mutex);
+                        g_cond_signal (channel->worker_cond);
+                        g_mutex_unlock (channel->worker_mutex);
+                        return TRUE;
+                }
+                /* first time start channel, create worker thread. */
                 channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);
                 if (e != NULL) {
                         GST_ERROR ("Create channel worker thread error %s", e->message);
@@ -1858,6 +1870,7 @@ void
 channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("stop %d", channel->worker_process_pid);
+        channel->output->state = GST_STATE_NULL;
         kill (channel->worker_process_pid, sig) ;
 }
 

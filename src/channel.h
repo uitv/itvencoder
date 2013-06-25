@@ -188,6 +188,9 @@ struct _Channel {
         ChannelOutput *output;
         GThread *worker_thread;
         gint64 age; // (re)start times of the channel.
+
+        GMutex *worker_mutex;
+        GCond *worker_cond;
         pid_t worker_process_pid;
 };
 
