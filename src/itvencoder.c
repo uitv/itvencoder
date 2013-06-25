@@ -210,12 +210,12 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 }
 
 gboolean
-itvencoder_channel_stop (ITVEncoder *itvencoder, gint index)
+itvencoder_channel_stop (ITVEncoder *itvencoder, gint index, gint sig)
 {
         Channel *channel;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        channel_stop (channel);
+        channel_stop (channel, sig);
 
         return TRUE;
 }
@@ -291,7 +291,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         channel->name,
                                         output->source.streams[j].name,
                                         time_diff);
-                                channel_stop (channel);
+                                channel_stop (channel, SIGUSR2);
                         } else {
                                 GST_INFO ("%s.source.%s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
@@ -319,7 +319,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].name,
                                                 output->encoders[j].streams[k].name,
                                                 time_diff);
-                                        channel_stop (channel);
+                                        channel_stop (channel, SIGUSR2);
                                 } else {
                                         GST_INFO ("%s.encoders.%s.%s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -362,7 +362,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         output->source.sync_error_times += 1;
                         if (output->source.sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart %s", output->source.sync_error_times, channel->name);
-                                channel_stop (channel);
+                                channel_stop (channel, SIGUSR2);
                         }
                 } else {
                         output->source.sync_error_times = 0;

@@ -205,7 +205,7 @@ struct _ChannelClass {
 
 GType channel_get_type (void);
 gboolean channel_start (Channel *channel, gboolean daemon);
-void channel_stop (Channel *channel);
+void channel_stop (Channel *channel, gint sig);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 
 #endif /* __CHANNEL_H__ */

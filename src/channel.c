@@ -1753,9 +1753,11 @@ launch_channel (Channel *channel)
 static void
 sighandler (gint number)
 {
-        if (number == SIGKILL) {
+        if (number == SIGUSR1) {
+                /* stop. */
                 exit (0);
-        } else {
+        } else if (number == SIGUSR2) {
+                /* restart. */
                 exit (1);
         }
 }
@@ -1778,22 +1780,22 @@ worker_thread (gpointer data)
                         channel->worker_process_pid = process_id;
                         status = 0;
                         for (;;) {
-                                wait (&status);
+                                waitpid (process_id, &status, 0);
                                 exit_status = (gint8) WEXITSTATUS (status);
                                 if (WIFEXITED (status) && (exit_status != 0)) {
                                         /* abnormal exit, restart */
-                                        GST_ERROR ("channel process restart.");
+                                        GST_ERROR ("abnormal exit, restart.");
                                         break;
                                 }
                                 if (WIFSIGNALED (status)) {
                                         /* child exit on an unhandled signal, restart */
-                                        GST_ERROR ("channel process restart.");
+                                        GST_ERROR ("child exit on an unhandled signal, restart.");
                                         break;
                                 }
                                 if (WIFEXITED (status) && (exit_status == 0)) {
                                         /* exit code is 0, must exit. */
-                                        GST_ERROR ("Fatal error.");
-                                        exit (0);
+                                        GST_ERROR ("stop channel.");
+                                        return NULL;
                                 }
                         }
                 } else {
@@ -1803,6 +1805,8 @@ worker_thread (gpointer data)
         }
 
         signal (SIGUSR1, sighandler);
+        signal (SIGUSR2, sighandler);
+
         gst_debug_remove_log_function (_log->func);
         fclose (_log->log_hd);
         channel->log = log_new ("log_path", channel->log_path, NULL);
@@ -1851,10 +1855,10 @@ channel_start (Channel *channel, gboolean daemon)
 }
 
 void
-channel_stop (Channel *channel)
+channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("stop %d", channel->worker_process_pid);
-        kill (channel->worker_process_pid, SIGKILL) ;
+        kill (channel->worker_process_pid, sig) ;
 }
 
 Encoder *

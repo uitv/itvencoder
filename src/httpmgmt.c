@@ -171,7 +171,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         g_free (buf);
                 } else if (g_str_has_suffix (request_data->uri, "/stop")) {
                         GST_WARNING ("Stop channel %d", index);
-                        if (itvencoder_channel_stop (httpmgmt->itvencoder, index)) {
+                        if (itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR1)) {
                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
@@ -194,7 +194,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 } else if (g_str_has_suffix (request_data->uri, "/restart")) {
                         GST_WARNING ("Restart channel %d", index);
                         index = itvencoder_url_channel_index (request_data->uri);
-                        if (itvencoder_channel_stop (httpmgmt->itvencoder, index)) {
+                        if (itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2)) {
                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
