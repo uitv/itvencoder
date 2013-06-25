@@ -1750,6 +1750,16 @@ launch_channel (Channel *channel)
         return TRUE;
 }
 
+static void
+sighandler (gint number)
+{
+        if (number == SIGKILL) {
+                exit (0);
+        } else {
+                exit (1);
+        }
+}
+
 static gpointer
 worker_thread (gpointer data)
 {
@@ -1761,6 +1771,7 @@ worker_thread (gpointer data)
 
         channel->output = channel_output_new (channel->configure, TRUE);
         for (;;) {
+                channel->age += 1;
                 process_id = fork ();
                 if (process_id > 0) {
                         /* parent process */
@@ -1791,6 +1802,7 @@ worker_thread (gpointer data)
                 }
         }
 
+        signal (SIGUSR1, sighandler);
         gst_debug_remove_log_function (_log->func);
         fclose (_log->log_hd);
         channel->log = log_new ("log_path", channel->log_path, NULL);
@@ -1821,7 +1833,6 @@ channel_start (Channel *channel, gboolean daemon)
                 return TRUE;
         }
 
-        channel->age += 1;
         if (daemon) {
                 /* run in forked child process. */
                 channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);
