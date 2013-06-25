@@ -269,6 +269,7 @@ channel_init (Channel *channel)
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
+        channel->age = 0;
 }
 
 static void
@@ -1820,6 +1821,7 @@ channel_start (Channel *channel, gboolean daemon)
                 return TRUE;
         }
 
+        channel->age += 1;
         if (daemon) {
                 /* run in forked child process. */
                 channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);

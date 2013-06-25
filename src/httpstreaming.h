@@ -13,6 +13,7 @@
 #include "itvencoder.h"
 
 typedef struct _RequestDataUserData {
+        gint64 channel_age;
         gchar *current_rap_addr;
         gchar *current_send_position;
         gint chunk_size;

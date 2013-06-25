@@ -112,6 +112,18 @@ httpstreaming_get_type (void)
         return type;
 }
 
+static Channel *
+get_channel (HTTPStreaming *httpstreaming, RequestData *request_data)
+{
+        gint channel_index;
+        Channel *channel;
+
+        channel_index = itvencoder_url_channel_index (request_data->uri);
+        channel = g_array_index (httpstreaming->itvencoder->channel_array, gpointer, channel_index);
+
+        return channel;
+}
+
 static EncoderOutput *
 get_encoder_output (HTTPStreaming *httpstreaming, RequestData *request_data)
 {
@@ -280,6 +292,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         Channel *channel;
         RequestDataUserData *request_user_data;
 
+        channel = get_channel (httpstreaming, request_data);
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
@@ -318,6 +331,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         request_user_data->encoder_output = encoder_output;
                         request_user_data->current_rap_addr = encoder_output->last_rap_addr;
                         request_user_data->current_send_position = encoder_output->last_rap_addr + 12;
+                        request_user_data->channel_age = channel->age;
                         request_data->user_data = request_user_data;
                         request_data->bytes_send = 0;
                         buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
@@ -328,6 +342,11 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                 break;
         case HTTP_CONTINUE:
                 request_user_data = request_data->user_data;
+                if (request_user_data->channel_age != channel->age) {
+                        g_free (request_data->user_data);
+                        request_data->user_data = NULL;
+                        return 0;
+                }
                 encoder_output = request_user_data->encoder_output;
                 if (request_user_data->current_send_position == encoder_output->tail_addr) {
                         /* no more stream, wait 10ms */
