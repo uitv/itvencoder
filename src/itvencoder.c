@@ -396,14 +396,9 @@ gint
 itvencoder_start (ITVEncoder *itvencoder)
 {
         gint i;
-        Channel *channel;
         GstClockID id;
         GstClockTime t;
         GstClockReturn ret;
-        GValue *value;
-        GstStructure *structure;
-        gchar *p, **pp;
-        gint port;
 
         /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
