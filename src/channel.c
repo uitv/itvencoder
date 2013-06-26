@@ -1871,7 +1871,11 @@ channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("stop %d", channel->worker_process_pid);
         channel->output->state = GST_STATE_NULL;
-        kill (channel->worker_process_pid, sig) ;
+        if (channel->worker_thread) {
+                kill (channel->worker_process_pid, sig);
+        } else {
+                exit (0);
+        }
 }
 
 Encoder *
