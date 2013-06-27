@@ -1600,7 +1600,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 /*
  * return pointer of a serialized ChannelOutput.
  */
-static ChannelOutput *
+ChannelOutput *
 channel_output_new (GstStructure *configure, gboolean daemon)
 {
         ChannelOutput *output;
@@ -1774,7 +1774,6 @@ worker_thread (gpointer data)
         gint status;
         gint8 exit_status;
 
-        channel->output = channel_output_new (channel->configure, TRUE);
         for (;;) {
                 channel->age += 1;
                 process_id = fork ();
@@ -1861,7 +1860,6 @@ channel_start (Channel *channel, gboolean daemon)
                         return TRUE;
                 }
         } else {
-                channel->output = channel_output_new (channel->configure, FALSE);
                 return launch_channel (channel);
         }
 }
