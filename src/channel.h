@@ -179,8 +179,6 @@ struct _Channel {
         GstClock *system_clock;
         gint id;
         gchar *name; // same as the name in channel config file
-        gchar *log_path;
-        Log *log;
         gboolean enable;
         GstStructure *configure;
         Source *source; 

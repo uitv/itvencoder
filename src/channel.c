@@ -9,10 +9,7 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
-
 #include "channel.h"
-
-extern Log *_log;
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
@@ -1811,12 +1808,6 @@ worker_thread (gpointer data)
         signal (SIGUSR1, sighandler);
         signal (SIGUSR2, sighandler);
 
-        gst_debug_remove_log_function (_log->func);
-        fclose (_log->log_hd);
-        channel->log = log_new ("log_path", channel->log_path, NULL);
-        if (log_set_log_handler (channel->log) != 0) {
-                exit (0);
-        }
         loop = g_main_loop_new (NULL, FALSE);
         launch_channel (channel);
         g_main_loop_run (loop);

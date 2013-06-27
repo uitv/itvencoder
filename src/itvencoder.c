@@ -185,17 +185,10 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 configure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", configure, NULL);
                 channel->id = i;
-                value = configure_get_param (itvencoder->configure, "/server/logdir");
-                log_dir = (gchar *)g_value_get_string (value);
-                if (log_dir[strlen(log_dir) - 1] == '/') {
-                        channel->log_path = g_strdup_printf ("%s%s/itvencoder.log", (gchar *)g_value_get_string (value), name);
-                } else {
-                        channel->log_path = g_strdup_printf ("%s/%s/itvencoder.log", (gchar *)g_value_get_string (value), name);
-                }
                 channel->output = channel_output_new (channel->configure, itvencoder->daemon);
 
                 g_array_append_val (itvencoder->channel_array, channel);
-                GST_INFO ("Channel %s added, log_path:%s", name, channel->log_path);
+                GST_INFO ("Channel %s added.", name);
         }
 
         return TRUE;
