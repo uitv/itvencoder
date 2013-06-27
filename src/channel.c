@@ -1713,7 +1713,7 @@ channel_output_new (GstStructure *configure, gboolean daemon)
         return output;
 }
 
-static gboolean
+gboolean
 launch_channel (Channel *channel)
 {
         GValue *value;
