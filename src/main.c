@@ -135,7 +135,7 @@ main (int argc, char *argv[])
                 /* run in background. */
                 if (channel_id == -1) {
                         if (daemon (0, 0) != 0) {
-                                GST_ERROR ("Failed to daemonize");
+                                g_print ("Failed to daemonize");
                                 exit (0);
                         }
                 }
