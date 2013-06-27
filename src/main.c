@@ -60,8 +60,9 @@ print_version_info ()
                 nano_str = "(Prerelease)";
         else
                 nano_str = "";
-        GST_WARNING ("%s version : %s", PACKAGE_NAME, PACKAGE_VERSION);
-        GST_WARNING ("gstreamer version : %d.%d.%d %s", major, minor, micro, nano_str);
+        g_print ("iTVEncoder version: %s\n", VERSION);
+        g_print ("iTVEncoder build: %s %s\n", __DATE__, __TIME__);
+        g_print ("gstreamer version : %d.%d.%d %s\n", major, minor, micro, nano_str);
 }
 
 static gboolean foreground = FALSE;
@@ -103,8 +104,7 @@ main (int argc, char *argv[])
         GST_DEBUG_CATEGORY_INIT (ITVENCODER, "itvencoder", 0, "itvencoder log");
 
         if (version) {
-                g_print ("iTVEncoder version: %s\n", VERSION);
-                g_print ("iTVEncoder build: %s %s\n", __DATE__, __TIME__);
+                print_version_info ();
                 exit (0);
         }
 
@@ -182,7 +182,6 @@ main (int argc, char *argv[])
         signal (SIGUSR1, sighandler);
 
         GST_WARNING ("Started ...");
-        print_version_info ();
 
         loop = g_main_loop_new (NULL, FALSE);
 
