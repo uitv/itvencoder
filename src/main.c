@@ -65,6 +65,24 @@ print_version_info ()
         g_print ("gstreamer version : %d.%d.%d %s\n", major, minor, micro, nano_str);
 }
 
+static gint
+init_log (gchar *log_path)
+{
+        gint ret;
+
+        _log = log_new ("log_path", log_path, NULL);
+        g_free (log_path);
+        ret = log_set_log_handler (_log);
+        if (ret != 0) {
+                return ret;
+        }
+
+        /* remove gstInfo default handler. */
+        gst_debug_remove_log_function (gst_debug_log_default);
+
+        return 0;
+}
+
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config_path = NULL;
@@ -131,13 +149,26 @@ main (int argc, char *argv[])
                 }
         }
 
+        if (channel_id != -1) {
+                /* launch a channel. */
+                value = configure_get_param (configure, "/server/logdir");
+                log_dir = (gchar *)g_value_get_string (value);
+                if (log_dir[strlen(log_dir) - 1] == '/') {
+                        log_path = g_strdup_printf ("%schannel%d/itvencoder.log", channel_id, log_dir);
+                } else {
+                        log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", channel_id, log_dir);
+                }
+                ret = init_log (log_path);
+                if (ret != 0) {
+                        exit (1);
+                }
+        }
+
         if (!foreground) {
                 /* run in background. */
-                if (channel_id == -1) {
-                        if (daemon (0, 0) != 0) {
-                                g_print ("Failed to daemonize");
-                                exit (0);
-                        }
+                if (daemon (0, 0) != 0) {
+                        g_print ("Failed to daemonize");
+                        exit (0);
                 }
 
                 value = configure_get_param (configure, "/server/logdir");
@@ -147,15 +178,11 @@ main (int argc, char *argv[])
                 } else {
                         log_path = g_strdup_printf ("%s/itvencoder.log", log_dir);
                 }
-                _log = log_new ("log_path", log_path, NULL);
-                g_free (log_path);
-                ret = log_set_log_handler (_log);
+                ret = init_log (log_path);
                 if (ret != 0) {
-                        exit (ret);
+                        g_print ("Init log error, ret %d.\n", ret);
+                        exit (1);
                 }
-
-                /* remove gstInfo default handler. */
-                gst_debug_remove_log_function (gst_debug_log_default);
 
                 value = configure_get_param (configure, "/server/pidfile");
                 pid_file = (gchar *)g_value_get_string (value);
