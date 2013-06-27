@@ -68,8 +68,10 @@ print_version_info ()
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config_path = NULL;
+static gint channel_id = -1;
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
+        {"channel", 'n', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &channel_id, NULL, NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
@@ -117,9 +119,11 @@ main (int argc, char *argv[])
         /* run in background? */
         if (!foreground) {
                 /* daemon */
-                if (daemon (0, 0) != 0) {
-                        GST_ERROR ("Failed to daemonize");
-                        exit (0);
+                if (channel_id == -1) {
+                        if (daemon (0, 0) != 0) {
+                                GST_ERROR ("Failed to daemonize");
+                                exit (0);
+                        }
                 }
 
                 if (config_path) {
