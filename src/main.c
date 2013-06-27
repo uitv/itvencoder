@@ -3,6 +3,8 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <sys/types.h>
+#include <sys/shm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <gst/gst.h>
@@ -87,10 +89,12 @@ static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config_path = NULL;
 static gint channel_id = -1;
+static gint output = -1; // share memory id.
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
         {"channel", 'n', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &channel_id, NULL, NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
+        {"output", 'o', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &output, NULL, NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
 };
@@ -150,18 +154,36 @@ main (int argc, char *argv[])
         }
 
         if (channel_id != -1) {
+                GValue *value;
+                GstStructure *structure;
+                gchar *name;
+                Channel *channel;
+
                 /* launch a channel. */
                 value = configure_get_param (configure, "/server/logdir");
                 log_dir = (gchar *)g_value_get_string (value);
                 if (log_dir[strlen(log_dir) - 1] == '/') {
-                        log_path = g_strdup_printf ("%schannel%d/itvencoder.log", channel_id, log_dir);
+                        log_path = g_strdup_printf ("%schannel%d/itvencoder.log", log_dir, channel_id);
                 } else {
-                        log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", channel_id, log_dir);
+                        log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", log_dir, channel_id);
                 }
                 ret = init_log (log_path);
                 if (ret != 0) {
                         exit (1);
                 }
+
+                value = (GValue *)gst_structure_get_value (configure->data, "channels");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                name = (gchar *)gst_structure_nth_field_name (structure, channel_id);
+                value = (GValue *)gst_structure_get_value (structure, name);
+                structure = (GstStructure *)gst_value_get_structure (value);
+                channel = channel_new ("name", name, "configure", structure, NULL);
+                channel->id = channel_id;
+                channel->output = (ChannelOutput *)shmat (output, NULL, 0);
+                loop = g_main_loop_new (NULL, FALSE);
+                launch_channel (channel);
+                g_main_loop_run (loop);
+                return 0;
         }
 
         if (!foreground) {
