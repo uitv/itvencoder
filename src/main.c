@@ -114,31 +114,29 @@ main (int argc, char *argv[])
                 gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         }
 
-        signal (SIGPIPE, SIG_IGN);
+        /* configure. */
+        if (config_path) {
+                /* config command line option */
+                configure = configure_new ("configure_path", config_path, NULL);
+                if (configure_load_from_file (configure) != 0) {
+                        g_print ("Load configure file %s error, exit ...\n", config_path);
+                        return 1;
+                }
+        } else {
+                /* default config path */
+                configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
+                if (configure_load_from_file (configure) != 0) {
+                        g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
+                        return 1;
+                }
+        }
 
-        /* run in background? */
         if (!foreground) {
-                /* daemon */
+                /* run in background. */
                 if (channel_id == -1) {
                         if (daemon (0, 0) != 0) {
                                 GST_ERROR ("Failed to daemonize");
                                 exit (0);
-                        }
-                }
-
-                if (config_path) {
-                        /* config command line option */
-                        configure = configure_new ("configure_path", config_path, NULL);
-                        if (configure_load_from_file (configure) != 0) {
-                                g_print ("Load configure file %s error, exit ...\n", config_path);
-                                return 1;
-                        }
-                } else {
-                        /* default config path */
-                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
-                        if (configure_load_from_file (configure) != 0) {
-                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
-                                return 1;
                         }
                 }
 
@@ -164,28 +162,11 @@ main (int argc, char *argv[])
                 if (create_pid_file (pid_file) != 0) { //FIXME remove when process exit
                         exit (1);
                 }
-        } else {
-                if (config_path) {
-                        /* config command line option */
-                        configure = configure_new ("configure_path", config_path, NULL);
-                        if (configure_load_from_file (configure) != 0) {
-                                g_print ("Load configure file %s error, exit ...\n", config_path);
-                                return 1;
-                        }
-                } else {
-                        /* default config path */
-                        configure = configure_new ("configure_path", "/etc/itvencoder/itvencoder.conf", NULL);
-                        if (configure_load_from_file (configure) != 0) {
-                                g_print ("Load configure file /etc/itvencoder/itvencoder.conf error, exit ...\n");
-                                return 1;
-                        }
-                }
         }
 
         signal (SIGPIPE, SIG_IGN);
         signal (SIGUSR1, sighandler);
-
-        GST_WARNING ("Started ...");
+        GST_WARNING ("iTVEncoder started ...");
 
         loop = g_main_loop_new (NULL, FALSE);
 
