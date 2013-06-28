@@ -153,7 +153,7 @@ log_set_log_handler (Log *log)
                 return 1;
         }
         log->func = log_func;
-        log->log_hd = fopen (log->log_path, "a");
+        log->log_hd = fopen (log->log_path, "ae");
         if (log->log_hd == NULL) {
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
                 return -1;
