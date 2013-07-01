@@ -4,7 +4,6 @@
  */
 
 #include <sys/types.h>
-#include <sys/shm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <gst/gst.h>
@@ -89,12 +88,10 @@ static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 static gchar *config_path = NULL;
 static gint channel_id = -1;
-static gint output = -1; // share memory id.
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
         {"channel", 'n', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &channel_id, NULL, NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
-        {"output", 'o', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &output, NULL, NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
 };
@@ -179,7 +176,7 @@ main (int argc, char *argv[])
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
-                channel->output = (ChannelOutput *)shmat (output, NULL, 0);
+                channel->output = channel_output_new (structure, TRUE);
                 loop = g_main_loop_new (NULL, FALSE);
                 launch_channel (channel);
                 g_main_loop_run (loop);

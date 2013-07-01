@@ -1775,11 +1775,18 @@ static gpointer
 worker_thread (gpointer data)
 {
         Channel *channel = (Channel *)data;
-        GMainLoop *loop;
         pid_t process_id = 0;
         gint status;
         gint8 exit_status;
+        gchar path[100];
+        gchar *argv[4];
 
+        memset (path, '\0', sizeof (path));
+        readlink ("/proc/self/exe", path, sizeof (path));
+        argv[0] = path;
+        argv[1] = "-n";
+        argv[2] = g_strdup_printf ("%d", channel->id);
+        argv[3] = (gchar *)NULL;
         for (;;) {
                 channel->age += 1;
                 process_id = fork ();
@@ -1814,12 +1821,7 @@ worker_thread (gpointer data)
                 }
         }
 
-        signal (SIGUSR1, sighandler);
-        signal (SIGUSR2, sighandler);
-
-        loop = g_main_loop_new (NULL, FALSE);
-        launch_channel (channel);
-        g_main_loop_run (loop);
+        execv (path, argv);
 }
 
 /*
