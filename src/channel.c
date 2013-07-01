@@ -4,6 +4,8 @@
  */
 
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
 #include <gst/gst.h>
@@ -1602,7 +1604,7 @@ channel_output_new (GstStructure *configure, gboolean daemon)
 {
         ChannelOutput *output;
         gsize size;
-        gint i, j, n, k, sscount, escount;
+        gint i, j, n, k, sscount, escount, fd;
         GstStructure *structure, *encoder, *bins, *bin;
         GValue *value;
         gchar *name, *option, *definition, *p;
@@ -1675,7 +1677,10 @@ channel_output_new (GstStructure *configure, gboolean daemon)
 
         if (daemon) {
                 /* daemon, use share memory */
-                p = mmap (NULL, size, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);
+                name = (gchar *)gst_structure_get_name (configure);
+                fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                ftruncate (fd, size);
+                p = mmap (NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         } else {
                 p = g_malloc (size);
         }
@@ -1697,7 +1702,11 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
                         /* daemon, use share memory. */
-                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED, -1, 0);;
+                        name = g_strdup_printf ("%s.%d", (gchar *)gst_structure_get_name (configure), i);
+                        fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+                        ftruncate (fd, 64 * 1024 * 1024);
+                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                        g_free (name);
                 } else {
                         output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
                 }
