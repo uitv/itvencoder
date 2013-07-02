@@ -184,12 +184,9 @@ struct _Channel {
         Source *source; 
         GArray *encoder_array;
         ChannelOutput *output;
-        GThread *worker_thread;
         gint64 age; // (re)start times of the channel.
 
-        GMutex *worker_mutex;
-        GCond *worker_cond;
-        pid_t worker_process_pid;
+        pid_t worker_pid;
 };
 
 struct _ChannelClass {

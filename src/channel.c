@@ -268,10 +268,8 @@ channel_init (Channel *channel)
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
+        channel->worker_pid = 0;
         channel->age = 0;
-        channel->worker_thread = NULL;
-        channel->worker_mutex = g_mutex_new ();
-        channel->worker_cond = g_cond_new ();
 }
 
 static void
@@ -1760,68 +1758,10 @@ launch_channel (Channel *channel)
 }
 
 static void
-sighandler (gint number)
+child_watch_cb (GPid pid, gint status, Channel *channel)
 {
-        if (number == SIGUSR1) {
-                /* stop. */
-                exit (0);
-        } else if (number == SIGUSR2) {
-                /* restart. */
-                exit (1);
-        }
-}
-
-static gpointer
-worker_thread (gpointer data)
-{
-        Channel *channel = (Channel *)data;
-        pid_t process_id = 0;
-        gint status;
-        gint8 exit_status;
-        gchar path[100];
-        gchar *argv[4];
-
-        memset (path, '\0', sizeof (path));
-        readlink ("/proc/self/exe", path, sizeof (path));
-        argv[0] = path;
-        argv[1] = "-n";
-        argv[2] = g_strdup_printf ("%d", channel->id);
-        argv[3] = (gchar *)NULL;
-        for (;;) {
-                channel->age += 1;
-                process_id = fork ();
-                if (process_id > 0) {
-                        /* parent process */
-                        channel->worker_process_pid = process_id;
-                        status = 0;
-                        for (;;) {
-                                waitpid (process_id, &status, 0);
-                                exit_status = (gint8) WEXITSTATUS (status);
-                                if (WIFEXITED (status) && (exit_status != 0)) {
-                                        /* abnormal exit, restart */
-                                        GST_ERROR ("abnormal exit, restart.");
-                                        break;
-                                }
-                                if (WIFSIGNALED (status)) {
-                                        /* child exit on an unhandled signal, restart */
-                                        GST_ERROR ("child exit on an unhandled signal, restart.");
-                                        break;
-                                }
-                                if (WIFEXITED (status) && (exit_status == 0)) {
-                                        /* exit code is 0, must exit. */
-                                        g_mutex_lock (channel->worker_mutex);
-                                        g_cond_wait (channel->worker_cond, channel->worker_mutex);
-                                        g_mutex_unlock (channel->worker_mutex);
-                                        break;
-                                }
-                        }
-                } else {
-                        /* child process. */
-                        break;
-                }
-        }
-
-        execv (path, argv);
+        /* Close pid */
+        g_spawn_close_pid (pid);
 }
 
 /*
@@ -1837,6 +1777,8 @@ gboolean
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *e = NULL;
+        gchar *argv[4], path[512];
+        GPid pid;
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
@@ -1844,23 +1786,17 @@ channel_start (Channel *channel, gboolean daemon)
         }
 
         if (daemon) {
-                if (channel->worker_thread != NULL) {
-                        /**/
-                        g_mutex_lock (channel->worker_mutex);
-                        g_cond_signal (channel->worker_cond);
-                        g_mutex_unlock (channel->worker_mutex);
-                        return TRUE;
+                memset (path, '\0', sizeof (path));
+                readlink ("/proc/self/exe", path, sizeof (path));
+                argv[0] = path;
+                argv[1] = "-n";
+                argv[2] = "0";
+                argv[3] = NULL;
+                if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                 }
-                /* first time start channel, create worker thread. */
-                channel->worker_thread = g_thread_create (worker_thread, channel, TRUE, &e);
-                if (e != NULL) {
-                        GST_ERROR ("Create channel worker thread error %s", e->message);
-                        g_error_free (e);
-                        return FALSE;
-                } else {
-                        GST_WARNING ("Creat channel worker success!");
-                        return TRUE;
-                }
+                channel->worker_pid = pid;
+                g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
+                return TRUE;
         } else {
                 return launch_channel (channel);
         }
@@ -1869,10 +1805,11 @@ channel_start (Channel *channel, gboolean daemon)
 void
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("stop %d", channel->worker_process_pid);
+        GST_ERROR ("stop %d", channel->worker_pid);
         channel->output->state = GST_STATE_NULL;
-        if (channel->worker_thread) {
-                kill (channel->worker_process_pid, sig);
+        if (channel->worker_pid != 0) {
+                kill (channel->worker_pid, sig);
+                channel->worker_pid = 0;
         } else {
                 exit (0);
         }

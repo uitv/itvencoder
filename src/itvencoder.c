@@ -363,7 +363,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 }
 
                 if (itvencoder->daemon) {
-                        stat_report (itvencoder, channel->worker_process_pid);
+                        stat_report (itvencoder, channel->worker_pid);
                 }
         }
 
