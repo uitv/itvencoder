@@ -1595,29 +1595,27 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 }
 
 /*
- * return pointer of a serialized ChannelOutput.
+ * parse configure.
  */
-ChannelOutput *
-channel_output_new (GstStructure *configure, gboolean daemon)
+gint
+channel_configure_parse (Channel *channel)
 {
-        ChannelOutput *output;
-        gsize size;
-        gint i, j, n, k, sscount, escount, fd;
+        GstStructure *configure = channel->configure;
+        gint i, j, n, k, escount;
         GstStructure *structure, *encoder, *bins, *bin;
         GValue *value;
-        gchar *name, *option, *definition, *p;
+        gchar *name, *option, *definition;
         GRegex *regex;
         GMatchInfo *match_info;
-        GArray *escountlist;
 
         /* calculate corespond output size of the configure. */
-        size = sizeof (ChannelOutput);
+        channel->shm_size = sizeof (ChannelOutput);
         value = (GValue *)gst_structure_get_value (configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "bins");
         structure = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure);
-        sscount = 0;
+        channel->sscount = 0;
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 value = (GValue *)gst_structure_get_value (structure, name);
@@ -1632,20 +1630,20 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                 g_regex_match (regex, definition, 0, &match_info);
                 g_regex_unref (regex);
                 if (g_match_info_matches (match_info)) {
-                        sscount += 1;
-                        size += sizeof (struct _SourceStreamState);
+                        channel->sscount += 1;
+                        channel->shm_size += sizeof (struct _SourceStreamState);
                 }
         }
 
         value = (GValue *)gst_structure_get_value (configure, "encoders");
         structure = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure);
-        escountlist = g_array_new (FALSE, FALSE, sizeof (gint));
+        channel->escountlist = g_array_new (FALSE, FALSE, sizeof (gint));
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (structure, i);
                 value = (GValue *)gst_structure_get_value (structure, name);
                 encoder = (GstStructure *)gst_value_get_structure (value);
-                size += sizeof (struct _EncoderOutput);
+                channel->shm_size += sizeof (struct _EncoderOutput);
                 value = (GValue *)gst_structure_get_value (encoder, "bins");
                 bins = (GstStructure *)gst_value_get_structure (value);
                 k = gst_structure_n_fields (bins);
@@ -1665,37 +1663,49 @@ channel_output_new (GstStructure *configure, gboolean daemon)
                         g_regex_unref (regex);
                         if (g_match_info_matches (match_info)) {
                                 GST_ERROR ("encoder stream");
-                                size += sizeof (struct _EncoderStreamState);
+                                channel->shm_size += sizeof (struct _EncoderStreamState);
                                 escount += 1;
                         }
                 }
-                g_array_append_val (escountlist, escount);
+                g_array_append_val (channel->escountlist, escount);
         }
-        GST_INFO ("Channel sscount %d, encoder count %d, out put size is : %d", sscount, escountlist->len, size);
+        GST_INFO ("Channel sscount %d, encoder count %d, out put size is : %d", channel->sscount, channel->escountlist->len, channel->shm_size);
+}
+
+/*
+ * return pointer of a serialized ChannelOutput.
+ */
+ChannelOutput *
+channel_output_new (Channel *channel, gboolean daemon)
+{
+        GstStructure *configure = channel->configure;
+        gint i, fd;
+        ChannelOutput *output;
+        gchar *name, *p;
 
         if (daemon) {
                 /* daemon, use share memory */
                 name = (gchar *)gst_structure_get_name (configure);
                 fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-                ftruncate (fd, size);
-                p = mmap (NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                ftruncate (fd, channel->shm_size);
+                p = mmap (NULL, channel->shm_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         } else {
-                p = g_malloc (size);
+                p = g_malloc (channel->shm_size);
         }
         output = (ChannelOutput *)p;
         p += sizeof (ChannelOutput);
         output->source.sync_error_times = 0;
-        output->source.stream_count = sscount;
+        output->source.stream_count = channel->sscount;
         output->source.streams = (struct _SourceStreamState *)p;
-        for (i = 0; i < sscount; i++) {
+        for (i = 0; i < channel->sscount; i++) {
                 output->source.streams[i].type = ST_UNKNOWN;
         }
-        p += sscount * sizeof (struct _SourceStreamState);
-        output->encoder_count = escountlist->len;
+        p += channel->sscount * sizeof (struct _SourceStreamState);
+        output->encoder_count = channel->escountlist->len;
         output->encoders = (struct _EncoderOutput *)p;
-        p += escountlist->len * sizeof (struct _EncoderOutput);
-        for (i = 0; i < escountlist->len; i++) {
-                output->encoders[i].stream_count = g_array_index (escountlist, gint, i);
+        p += channel->escountlist->len * sizeof (struct _EncoderOutput);
+        for (i = 0; i < channel->escountlist->len; i++) {
+                output->encoders[i].stream_count = g_array_index (channel->escountlist, gint, i);
                 output->encoders[i].streams = (struct _EncoderStreamState *)p;
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {

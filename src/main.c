@@ -176,7 +176,8 @@ main (int argc, char *argv[])
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
-                channel->output = channel_output_new (structure, TRUE);
+                channel_configure_parse (channel);
+                channel->output = channel_output_new (channel, TRUE);
                 loop = g_main_loop_new (NULL, FALSE);
                 launch_channel (channel);
                 g_main_loop_run (loop);
