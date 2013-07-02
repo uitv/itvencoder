@@ -1673,7 +1673,7 @@ channel_configure_parse (Channel *channel)
 }
 
 /*
- * return pointer of a serialized ChannelOutput.
+ * Interface to (share) memory for producing.
  */
 ChannelOutput *
 channel_output_new (Channel *channel, gboolean daemon)
