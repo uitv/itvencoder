@@ -183,7 +183,7 @@ struct _Channel {
         GstStructure *configure;
         Source *source; 
         GArray *encoder_array;
-        ChannelOutput *output;
+        ChannelOutput *output; // Interface for worker producing.
         gint64 age; // (re)start times of the channel.
 
         pid_t worker_pid;
