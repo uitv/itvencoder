@@ -17,8 +17,10 @@ typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
 typedef struct _EncoderClass EncoderClass;
-typedef struct _ChannelOutput ChannelOutput;
 typedef struct _EncoderOutput EncoderOutput;
+typedef struct _ChannelOutput ChannelOutput;
+typedef struct _EncoderConsumption EncoderConsumption;
+typedef struct _ChannelConsumption ChannelConsumption;
 typedef struct _Channel Channel;
 typedef struct _ChannelClass ChannelClass;
 
@@ -173,6 +175,22 @@ struct _ChannelOutput {
         EncoderOutput *encoders;
 };
 
+struct _ChannelConsumption {
+        guint64 *state;
+        struct _SourceConsumptionState {
+                guint64 *sync_error_times;
+                gint64 *stream_count;
+                struct _SourceConstumptionStreamState {
+                        gchar *name;
+                        guint64 *type;
+                        GstClockTime *current_timestamp;
+                        GstClockTime *last_heartbeat;
+                } *streams;
+        } source;
+        gint64 *encoder_count;
+        EncoderConsumption *encoders;
+};
+
 struct _Channel {
         GObject parent;
 
@@ -183,7 +201,8 @@ struct _Channel {
         GstStructure *configure;
         Source *source; 
         GArray *encoder_array;
-        ChannelOutput *output; // Interface for worker producing.
+        ChannelOutput *output; // Interface for producing.
+        ChannelConsumption *consumption; // Interface for consuming.
         gint64 age; // (re)start times of the channel.
 
         pid_t worker_pid;
