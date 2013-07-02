@@ -177,7 +177,7 @@ main (int argc, char *argv[])
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
                 channel_configure_parse (channel);
-                channel->output = channel_output_new (channel, TRUE);
+                channel_output_init (channel, TRUE);
                 loop = g_main_loop_new (NULL, FALSE);
                 launch_channel (channel);
                 g_main_loop_run (loop);

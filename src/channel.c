@@ -1675,8 +1675,8 @@ channel_configure_parse (Channel *channel)
 /*
  * Interface to (share) memory for producing.
  */
-ChannelOutput *
-channel_output_new (Channel *channel, gboolean daemon)
+gint
+channel_output_init (Channel *channel, gboolean daemon)
 {
         GstStructure *configure = channel->configure;
         gint i, fd;
@@ -1725,9 +1725,11 @@ channel_output_new (Channel *channel, gboolean daemon)
                 output->encoders[i].cache_end_addr = output->encoders[i].cache_addr + output->encoders[i].cache_size;
                 output->encoders[i].total_count = 0;
         }
-        GST_LOG ("output : %llu, p: %llu", output, p);
 
-        return output;
+        GST_LOG ("output : %llu, p: %llu", output, p);
+        channel->output = output;
+
+        return 0;
 }
 
 gboolean
@@ -1808,6 +1810,7 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return TRUE;
         } else {
+                channel_output_init (channel, daemon);
                 return launch_channel (channel);
         }
 }

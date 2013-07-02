@@ -225,7 +225,7 @@ struct _ChannelClass {
 GType channel_get_type (void);
 gboolean channel_start (Channel *channel, gboolean daemon);
 gint channel_configure_parse (Channel *channel);
-ChannelOutput * channel_output_new (Channel *channel, gboolean daemon);
+gint channel_output_new (Channel *channel, gboolean daemon);
 gboolean launch_channel (Channel *channel);
 void channel_stop (Channel *channel, gint sig);
 Encoder * channel_get_encoder (gchar *uri, GArray *channel);
