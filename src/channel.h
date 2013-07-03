@@ -113,7 +113,7 @@ struct _Encoder {
         GArray *streams;
 
         GstBuffer *output_ring[ENCODER_RING_SIZE];
-        gint current_output_position; // encoder output position
+        gint output_position; // encoder output position
         gchar *cache_addr;
         gchar *cache_end_addr;
         gint64 *cache_size; // total output packet counts
