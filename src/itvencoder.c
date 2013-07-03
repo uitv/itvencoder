@@ -186,6 +186,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 channel = channel_new ("name", name, "configure", configure, NULL);
                 channel->id = i;
                 channel_configure_parse (channel);
+                channel_output_init (channel, daemon);
 
                 g_array_append_val (itvencoder->channel_array, channel);
                 GST_INFO ("Channel %s added.", name);

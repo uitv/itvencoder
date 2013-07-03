@@ -1493,7 +1493,7 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
 
         source = channel->source;
         source->configure = configure;
-        source->name = (gchar *)gst_structure_get_name (configure);GST_STATE_PLAYING;
+        source->name = (gchar *)gst_structure_get_name (configure);
         source->channel = channel;
         channel_source_extract_streams (source);
 
@@ -1670,6 +1670,8 @@ channel_configure_parse (Channel *channel)
                 g_array_append_val (channel->escountlist, escount);
         }
         GST_INFO ("Channel sscount %d, encoder count %d, out put size is : %d", channel->sscount, channel->escountlist->len, channel->shm_size);
+
+        return 0;
 }
 
 /*
@@ -1810,7 +1812,6 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return TRUE;
         } else {
-                channel_output_init (channel, daemon);
                 return launch_channel (channel);
         }
 }

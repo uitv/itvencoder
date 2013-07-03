@@ -175,22 +175,6 @@ struct _ChannelOutput {
         EncoderOutput *encoders;
 };
 
-struct _ChannelConsumption {
-        guint64 *state;
-        struct _SourceConsumptionState {
-                guint64 *sync_error_times;
-                gint64 *stream_count;
-                struct _SourceConstumptionStreamState {
-                        gchar *name;
-                        guint64 *type;
-                        GstClockTime *current_timestamp;
-                        GstClockTime *last_heartbeat;
-                } *streams;
-        } source;
-        gint64 *encoder_count;
-        EncoderConsumption *encoders;
-};
-
 struct _Channel {
         GObject parent;
 
@@ -201,10 +185,9 @@ struct _Channel {
         GstStructure *configure;
         gint sscount, shm_size;
         GArray *escountlist;
+        ChannelOutput *output; // Interface for producing.
         Source *source; 
         GArray *encoder_array;
-        ChannelOutput *output; // Interface for producing.
-        ChannelConsumption *consumption; // Interface for consuming.
         gint64 age; // (re)start times of the channel.
 
         pid_t worker_pid;
