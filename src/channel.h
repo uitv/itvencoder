@@ -116,7 +116,7 @@ struct _Encoder {
         gint output_position; // encoder output position
         gchar *cache_addr;
         //gchar *cache_end_addr;
-        guint64 *cache_size; // total output packet counts
+        guint64 cache_size; // total output packet counts
         guint64 *total_count; // total output packet counts
         guint64 *head_addr;
         guint64 *tail_addr;
