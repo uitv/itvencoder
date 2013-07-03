@@ -1734,20 +1734,35 @@ channel_output_init (Channel *channel, gboolean daemon)
         return 0;
 }
 
-gboolean
-launch_channel (Channel *channel)
+static void
+child_watch_cb (GPid pid, gint status, Channel *channel)
+{
+        /* Close pid */
+        g_spawn_close_pid (pid);
+}
+
+gint
+channel_setup (Channel *channel, gboolean daemon)
 {
         GValue *value;
         GstStructure *structure;
-        Encoder *encoder;
-        gint i;
+
+        if (channel_configure_parse (channel) != 0) {
+                GST_ERROR ("Configure parse error.");
+                return 1;
+        }
+
+        if (channel_output_init (channel, daemon) != 0) {
+                GST_ERROR ("Output init error.");
+                return 2;
+        }
 
         /* initialize source */
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel source error.");
-                return FALSE;
+                return 3;
         }
 
         /* initialize encoders */
@@ -1755,28 +1770,12 @@ launch_channel (Channel *channel)
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");
-                return FALSE;
+                return 4;
         }
 
-        /* set pipelines as PLAYING state */
-        gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
-        channel->source->state = GST_STATE_PLAYING;
-        for (i = 0; i < channel->encoder_array->len; i++) {
-                encoder = g_array_index (channel->encoder_array, gpointer, i);
-                gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
-                encoder->state = GST_STATE_PLAYING;
-        }
-        channel->output->state = GST_STATE_PLAYING;
-
-        return TRUE;
+        return 0;
 }
 
-static void
-child_watch_cb (GPid pid, gint status, Channel *channel)
-{
-        /* Close pid */
-        g_spawn_close_pid (pid);
-}
 
 /*
  * channel_start
@@ -1793,6 +1792,8 @@ channel_start (Channel *channel, gboolean daemon)
         GError *e = NULL;
         gchar *argv[4], path[512];
         GPid pid;
+        Encoder *encoder;
+        gint i;
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
@@ -1812,7 +1813,16 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return TRUE;
         } else {
-                return launch_channel (channel);
+                /* set pipelines as PLAYING state */
+                gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
+                channel->source->state = GST_STATE_PLAYING;
+                for (i = 0; i < channel->encoder_array->len; i++) {
+                        encoder = g_array_index (channel->encoder_array, gpointer, i);
+                        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+                        encoder->state = GST_STATE_PLAYING;
+                }
+                channel->output->state = GST_STATE_PLAYING;
+                return TRUE;
         }
 }
 
