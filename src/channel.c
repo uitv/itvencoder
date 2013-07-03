@@ -1721,12 +1721,16 @@ channel_output_init (Channel *channel, gboolean daemon)
                 }
                 output->encoders[i].cache_size = 64 * 1024 * 1024;
                 output->encoders[i].head_addr = (guint64 *)p;
+                *(output->encoders[i].head_addr) = 0;
                 p += sizeof (guint64);
                 output->encoders[i].tail_addr = (guint64 *)p;
+                *(output->encoders[i].tail_addr) = 0;
                 p += sizeof (guint64);
                 output->encoders[i].last_rap_addr = (guint64 *)p;
+                *(output->encoders[i].last_rap_addr) = 0;
                 p += sizeof (guint64);
                 output->encoders[i].total_count = (guint64 *)p;
+                *(output->encoders[i].total_count) = 0;
                 p += sizeof (guint64);
         }
 
