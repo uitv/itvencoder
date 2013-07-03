@@ -362,7 +362,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         output->source.sync_error_times = 0;
                 }
 
-                if (itvencoder->daemon) {
+                if (itvencoder->daemon && (channel->worker_pid != 0)) {
                         stat_report (itvencoder, channel->worker_pid);
                 }
         }

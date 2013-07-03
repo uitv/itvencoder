@@ -1741,6 +1741,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
 {
         /* Close pid */
         g_spawn_close_pid (pid);
+        channel->worker_pid = 0;
 }
 
 gint
