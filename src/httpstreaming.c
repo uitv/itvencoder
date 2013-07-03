@@ -343,7 +343,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         case HTTP_CONTINUE:
                 request_user_data = request_data->user_data;
                 if ((request_user_data->channel_age != channel->age) ||
-                    (channel->output->state != GST_STATE_PLAYING)) {
+                    (*(channel->output->state) != GST_STATE_PLAYING)) {
                         g_free (request_data->user_data);
                         request_data->user_data = NULL;
                         return 0;

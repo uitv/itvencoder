@@ -154,7 +154,7 @@ struct _EncoderOutput {
 };
 
 struct _ChannelOutput {
-        guint64 state;
+        guint64 *state;
         struct _SourceState {
                 /*  sync error cause sync_error_times inc, 
                  *  sync normal cause sync_error_times reset to zero,

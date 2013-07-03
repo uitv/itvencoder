@@ -269,7 +269,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         continue;
                 }
                 output = channel->output;
-                if (output->state != GST_STATE_PLAYING) {
+                if (*(output->state) != GST_STATE_PLAYING) {
                         continue;
                 }
 

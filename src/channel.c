@@ -1608,7 +1608,7 @@ channel_configure_parse (Channel *channel)
         GMatchInfo *match_info;
 
         /* calculate corespond output size of the configure. */
-        channel->shm_size = sizeof (ChannelOutput);
+        channel->shm_size = sizeof (guint64); // state
         value = (GValue *)gst_structure_get_value (configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, "bins");
@@ -1693,8 +1693,9 @@ channel_output_init (Channel *channel, gboolean daemon)
         } else {
                 p = g_malloc (channel->shm_size);
         }
-        output = (ChannelOutput *)p;
-        p += sizeof (ChannelOutput);
+        output = (ChannelOutput *)g_malloc (sizeof (ChannelOutput));
+        output->state = (guint64 *)p;
+        p += sizeof (guint64);
         output->source.sync_error_times = 0;
         output->source.stream_count = channel->sscount;
         output->source.streams = (struct _SourceStreamState *)p;
@@ -1819,7 +1820,7 @@ channel_start (Channel *channel, gboolean daemon)
                         gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
                         encoder->state = GST_STATE_PLAYING;
                 }
-                channel->output->state = GST_STATE_PLAYING;
+                *(channel->output->state) = GST_STATE_PLAYING;
                 return TRUE;
         }
 }
@@ -1828,7 +1829,7 @@ void
 channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("stop %d", channel->worker_pid);
-        channel->output->state = GST_STATE_NULL;
+        *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
                 channel->worker_pid = 0;
