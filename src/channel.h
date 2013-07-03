@@ -147,10 +147,10 @@ struct _EncoderOutput {
         } *streams;
         gchar *cache_addr;
         guint64 cache_size;
-        guint64 total_count; // total output packet counts
-        guint64 head_addr;
-        guint64 tail_addr;
-        guint64 last_rap_addr; // last random access point address
+        guint64 *total_count; // total output packet counts
+        guint64 *head_addr;
+        guint64 *tail_addr;
+        guint64 *last_rap_addr; // last random access point address
 };
 
 struct _ChannelOutput {

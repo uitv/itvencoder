@@ -198,7 +198,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         gint32 ret;
 
         request_user_data = request_data->user_data;
-        tail_addr = encoder_output->tail_addr;
+        tail_addr = *(encoder_output->tail_addr);
         current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
 
         if (request_user_data->send_count == request_user_data->chunk_size + request_user_data->chunk_size_str_len + 2) {
@@ -329,8 +329,8 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         request_user_data->chunk_size_str = g_strdup ("");
                         request_user_data->chunk_size_str_len = 0;
                         request_user_data->encoder_output = encoder_output;
-                        request_user_data->current_rap_addr = encoder_output->last_rap_addr;
-                        request_user_data->current_send_position = encoder_output->last_rap_addr + 12;
+                        request_user_data->current_rap_addr = *(encoder_output->last_rap_addr);
+                        request_user_data->current_send_position = *(encoder_output->last_rap_addr) + 12;
                         request_user_data->channel_age = channel->age;
                         request_data->user_data = request_user_data;
                         request_data->bytes_send = 0;
@@ -349,7 +349,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 }
                 encoder_output = request_user_data->encoder_output;
-                if (request_user_data->current_send_position == encoder_output->tail_addr) {
+                if (request_user_data->current_send_position == *(encoder_output->tail_addr)) {
                         /* no more stream, wait 10ms */
                         GST_DEBUG ("current:%llu == tail:%llu", request_user_data->current_send_position, encoder_output->tail_addr);
                         return gst_util_get_timestamp () + 500 * GST_MSECOND + g_random_int_range (1, 1000000);

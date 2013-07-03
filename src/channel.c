@@ -1544,10 +1544,10 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
                 encoder->cache_addr = channel->output->encoders[i].cache_addr;
                 encoder->cache_size = &(channel->output->encoders[i].cache_size);
-                encoder->total_count = &(channel->output->encoders[i].total_count);
-                encoder->head_addr = &(channel->output->encoders[i].head_addr);
-                encoder->tail_addr = &(channel->output->encoders[i].tail_addr);
-                encoder->last_rap_addr = &(channel->output->encoders[i].last_rap_addr);
+                encoder->total_count = channel->output->encoders[i].total_count;
+                encoder->head_addr = channel->output->encoders[i].head_addr;
+                encoder->tail_addr = channel->output->encoders[i].tail_addr;
+                encoder->last_rap_addr = channel->output->encoders[i].last_rap_addr;
                 encoder->configure = structure;
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
@@ -1704,8 +1704,7 @@ channel_output_init (Channel *channel, gboolean daemon)
         }
         p += channel->sscount * sizeof (struct _SourceStreamState);
         output->encoder_count = channel->escountlist->len;
-        output->encoders = (struct _EncoderOutput *)p;
-        p += channel->escountlist->len * sizeof (struct _EncoderOutput);
+        output->encoders = (struct _EncoderOutput *)g_malloc (channel->escountlist->len * sizeof (struct _EncoderOutput));
         for (i = 0; i < channel->escountlist->len; i++) {
                 output->encoders[i].stream_count = g_array_index (channel->escountlist, gint, i);
                 output->encoders[i].streams = (struct _EncoderStreamState *)p;
@@ -1721,10 +1720,14 @@ channel_output_init (Channel *channel, gboolean daemon)
                         output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
                 }
                 output->encoders[i].cache_size = 64 * 1024 * 1024;
-                output->encoders[i].head_addr = 0;
-                output->encoders[i].tail_addr = 0;
-                output->encoders[i].last_rap_addr = 0;
-                output->encoders[i].total_count = 0;
+                output->encoders[i].head_addr = (guint64 *)p;
+                p += sizeof (guint64);
+                output->encoders[i].tail_addr = (guint64 *)p;
+                p += sizeof (guint64);
+                output->encoders[i].last_rap_addr = (guint64 *)p;
+                p += sizeof (guint64);
+                output->encoders[i].total_count = (guint64 *)p;
+                p += sizeof (guint64);
         }
 
         GST_LOG ("output : %llu, p: %llu", output, p);
