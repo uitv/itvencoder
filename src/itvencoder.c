@@ -224,7 +224,10 @@ stat_report (ITVEncoder *itvencoder, pid_t pid)
         gint i;
 
         stat_file = g_strdup_printf ("/proc/%d/stat", pid);
-        g_file_get_contents (stat_file, &stat, length, NULL);
+        if (!g_file_get_contents (stat_file, &stat, length, NULL)) {
+                GST_ERROR ("Read process %d's stat failure.");
+                return;
+        }
         stats = g_strsplit (stat, " ", 44);
         utime = g_ascii_strtoull (stats[13],  NULL, 10); // seconds
         stime = g_ascii_strtoull (stats[14], NULL, 10);
