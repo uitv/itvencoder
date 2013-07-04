@@ -472,7 +472,7 @@ listen_thread (gpointer data)
         hints.ai_flags = AI_PASSIVE; /* All interfaces */
         ret = getaddrinfo (NULL, port, &hints, &result);
         if (ret != 0) {
-                GST_ERROR ("getaddrinfo: %s\n", gai_strerror(ret));
+                GST_ERROR ("getaddrinfo: %s\n", g_strerror (errno));
                 return NULL; // FIXME
         }
 
@@ -488,6 +488,9 @@ listen_thread (gpointer data)
                         /* We managed to bind successfully! */
                         GST_INFO ("listen socket %d", listen_sock);
                         break;
+                } else if (ret == -1) {
+                        GST_ERROR ("Bind socket %d error: %s", listen_sock, g_strerror (errno));
+                        exit (0);
                 }
                 close_socket_gracefully (listen_sock);
         }
