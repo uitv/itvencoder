@@ -266,15 +266,15 @@ log_rotate (ITVEncoder *itvencoder)
 
         /* itvencoder log. */
         g_stat (itvencoder->log_path, &st);
-        if (st.st_size > 200*1024) {
-                name = g_strdup_printf ("%s-%llu", itvencoder->log_path, gst_util_get_timestamp());
+        if (st.st_size > LOG_SIZE) {
+                name = g_strdup_printf ("%s-%llu", itvencoder->log_path, gst_clock_get_time (itvencoder->system_clock));
                 g_rename (itvencoder->log_path, name);
                 g_free (name);
                 kill (getpid(), SIGUSR1);
                 name = g_strdup_printf ("%s-*", itvencoder->log_path);
                 glob (name, 0, NULL, &pglob);
-                if (pglob.gl_pathc >= 4) {
-                        for (i = 4; i < pglob.gl_pathc; i++) {
+                if (pglob.gl_pathc > LOG_ROTATE) {
+                        for (i = 0; i < pglob.gl_pathc - LOG_ROTATE; i++) {
                                 g_remove (pglob.gl_pathv[i]);
                         }
                 }

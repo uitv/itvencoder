@@ -12,10 +12,12 @@
 
 #include "configure.h"
 #include "channel.h"
-//#include "httpstreaming.h"
 
 #define SYNC_THRESHHOLD 3000000000 /* 1000ms */
 #define HEARTBEAT_THRESHHOLD 7000000000 /* 2000ms */
+
+#define LOG_SIZE 2*1024*1024
+#define LOG_ROTATE 100
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;
