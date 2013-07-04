@@ -1752,6 +1752,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         }
         if (WIFSIGNALED(status)) {
                 GST_ERROR ("Exit on an unhandled signal. restart.");
+                channel->age += 1;
                 channel_start (channel, TRUE);
                 return;
         }
@@ -1824,6 +1825,8 @@ channel_start (Channel *channel, gboolean daemon)
                 argv[2] = "0";
                 argv[3] = NULL;
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
+                        GST_ERROR ("Start channel %s error!!!", channel->name);
+                        return FALSE;
                 }
                 channel->worker_pid = pid;
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
