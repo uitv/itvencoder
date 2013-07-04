@@ -14,8 +14,8 @@
 
 typedef struct _RequestDataUserData {
         gint64 channel_age;
-        guint64 current_rap_addr;
-        guint64 current_send_position;
+        gint64 current_rap_addr;
+        gint64 current_send_position;
         gint chunk_size;
         gchar *chunk_size_str;
         gint chunk_size_str_len;

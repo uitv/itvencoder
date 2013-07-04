@@ -194,7 +194,7 @@ static GstClockTime
 send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
 {
         RequestDataUserData *request_user_data;
-        guint64 current_gop_end_addr, tail_addr;
+        gint64 current_gop_end_addr, tail_addr;
         gint32 ret;
 
         request_user_data = request_data->user_data;
