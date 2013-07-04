@@ -1746,6 +1746,15 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         /* Close pid */
         g_spawn_close_pid (pid);
         channel->worker_pid = 0;
+        if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
+                GST_ERROR ("Normaly exit, status is %d", WEXITSTATUS(status));
+                return;
+        }
+        if (WIFSIGNALED(status)) {
+                GST_ERROR ("Exit on an unhandled signal. restart.");
+                channel_start (channel, TRUE);
+                return;
+        }
 }
 
 gint
