@@ -25,29 +25,6 @@ static void sighandler (gint number)
         log_reopen (_log);
 }
 
-static gint create_pid_file (gchar *pid_file)
-{
-        pid_t pid;
-        FILE *fd;
-
-        pid = getpid ();
-        fd = fopen (pid_file, "w");
-        if (fd == NULL) {
-                perror ("open /var/run/itvencoder.pid file error\n");
-                return 1;
-        }
-        fprintf (fd, "%d\n", pid);
-        fclose (fd);
-
-        return 0;
-}
-
-static gint
-remove_pid_file ()
-{
-        unlink ("/var/run/itvencoder.pid");
-}
-
 static void
 print_version_info ()
 {
@@ -72,7 +49,6 @@ init_log (gchar *log_path)
         gint ret;
 
         _log = log_new ("log_path", log_path, NULL);
-        g_free (log_path);
         ret = log_set_log_handler (_log);
         if (ret != 0) {
                 return ret;
@@ -109,7 +85,7 @@ main (int argc, char *argv[])
         gint ret;
         GOptionContext *ctx;
         GError *err = NULL;
-        gchar *log_dir, *log_path, *pid_file;
+        gchar *log_dir, *log_path;
 
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);
@@ -202,12 +178,6 @@ main (int argc, char *argv[])
                         g_print ("Init log error, ret %d.\n", ret);
                         exit (1);
                 }
-
-                value = configure_get_param (configure, "/server/pidfile");
-                pid_file = (gchar *)g_value_get_string (value);
-                if (create_pid_file (pid_file) != 0) { //FIXME remove when process exit
-                        exit (1);
-                }
         }
 
         signal (SIGPIPE, SIG_IGN);
@@ -222,6 +192,7 @@ main (int argc, char *argv[])
         } else {
                 itvencoder = itvencoder_new ("daemon", !foreground, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
+        itvencoder->log_path = log_path;
         if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");
                 return 1;

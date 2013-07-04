@@ -34,6 +34,7 @@ struct _ITVEncoder {
 
         gchar *configure_file;
         Configure *configure;
+        gchar *log_path;
         GArray *channel_array;
 };
 

@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <glob.h>
+
 #include "itvencoder.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -254,6 +256,32 @@ stat_report (ITVEncoder *itvencoder, pid_t pid)
         itvencoder->last_stime = stime;
 }
 
+static void
+log_rotate (ITVEncoder *itvencoder)
+{
+        struct stat st;
+        gchar *name;
+        glob_t pglob;
+        gint i;
+
+        /* itvencoder log. */
+        g_stat (itvencoder->log_path, &st);
+        if (st.st_size > 200*1024) {
+                name = g_strdup_printf ("%s-%llu", itvencoder->log_path, gst_util_get_timestamp());
+                g_rename (itvencoder->log_path, name);
+                g_free (name);
+                kill (getpid(), SIGUSR1);
+                name = g_strdup_printf ("%s-*", itvencoder->log_path);
+                glob (name, 0, NULL, &pglob);
+                if (pglob.gl_pathc >= 4) {
+                        for (i = 4; i < pglob.gl_pathc; i++) {
+                                g_remove (pglob.gl_pathv[i]);
+                        }
+                }
+                globfree (&pglob);
+        }
+}
+
 static gboolean
 itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, gpointer user_data)
 {
@@ -365,8 +393,14 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         output->source.sync_error_times = 0;
                 }
 
+                /* stat report. */
                 if (itvencoder->daemon && (channel->worker_pid != 0)) {
                         stat_report (itvencoder, channel->worker_pid);
+                }
+
+                /* log rotate. */
+                if (itvencoder->daemon) {
+                        log_rotate (itvencoder);
                 }
         }
 
