@@ -264,12 +264,27 @@ channel_class_init (ChannelClass *channelclass)
 static void
 channel_init (Channel *channel)
 {
+        gchar *stat, **stats, **cpustats;
+        gint i;
+
         channel->system_clock = gst_system_clock_obtain ();
         g_object_set (channel->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         channel->source = source_new (0, NULL); // TODO free!
         channel->encoder_array = g_array_new (FALSE, FALSE, sizeof(gpointer)); //TODO: free!
         channel->worker_pid = 0;
         channel->age = 0;
+
+        g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
+        stats = g_strsplit (stat, "\n", 10);
+        cpustats = g_strsplit (stats[0], " ", 10);
+        channel->start_ctime = 0;
+        for (i = 1; i < 8; i++) {
+                channel->start_ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
+        }
+        channel->last_ctime = 0;
+        channel->last_utime = 0;
+        channel->last_stime = 0;
+        g_free (stat);
 }
 
 static void

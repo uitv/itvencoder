@@ -60,22 +60,11 @@ itvencoder_class_init (ITVEncoderClass *itvencoderclass)
 static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
-        gchar *stat, **stats, **cpustats;
-        gsize *length;
-        gint i;
-
         itvencoder->configure = NULL;
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
         itvencoder->start_time = gst_clock_get_time (itvencoder->system_clock);
-        g_file_get_contents ("/proc/stat", &stat, length, NULL);
-        stats = g_strsplit (stat, "\n", 10);
-        cpustats = g_strsplit (stats[0], " ", 10);
-        itvencoder->start_ctime = 0;
-        for (i = 1; i < 8; i++) {
-                itvencoder->start_ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
-        }
 }
 
 static GObject *
@@ -217,7 +206,7 @@ itvencoder_channel_stop (ITVEncoder *itvencoder, gint index, gint sig)
 }
 
 static void
-stat_report (ITVEncoder *itvencoder, pid_t pid)
+stat_report (Channel *channel)
 {
         gchar *stat_file, *stat, **stats, **cpustats;
         gsize *length;
@@ -225,7 +214,7 @@ stat_report (ITVEncoder *itvencoder, pid_t pid)
         guint64 rss; // Resident Set Size.
         gint i;
 
-        stat_file = g_strdup_printf ("/proc/%d/stat", pid);
+        stat_file = g_strdup_printf ("/proc/%d/stat", channel->worker_pid);
         if (!g_file_get_contents (stat_file, &stat, length, NULL)) {
                 GST_ERROR ("Read process %d's stat failure.");
                 return;
@@ -247,13 +236,14 @@ stat_report (ITVEncoder *itvencoder, pid_t pid)
         g_free (stat);
         g_strfreev (stats);
         g_strfreev (cpustats);
-        GST_INFO ("average cpu: %d%%, cpu: %d%%, rss: %lluMB",
-                ((utime + stime) * 100) / (ctime - itvencoder->start_ctime),
-                ((utime - itvencoder->last_utime + stime - itvencoder->last_stime) * 100) / (ctime - itvencoder->last_ctime),
+        GST_INFO ("Channel %s's average cpu: %d%%, cpu: %d%%, rss: %lluMB",
+                channel->name,
+                ((utime + stime) * 100) / (ctime - channel->start_ctime),
+                ((utime - channel->last_utime + stime - channel->last_stime) * 100) / (ctime - channel->last_ctime),
                 rss/1000000);
-        itvencoder->last_ctime = ctime;
-        itvencoder->last_utime = utime;
-        itvencoder->last_stime = stime;
+        channel->last_ctime = ctime;
+        channel->last_utime = utime;
+        channel->last_stime = stime;
 }
 
 static void
@@ -416,7 +406,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
                 /* stat report. */
                 if (itvencoder->daemon && (channel->worker_pid != 0)) {
-                        stat_report (itvencoder, channel->worker_pid);
+                        stat_report (channel);
                 }
 
                 /* log rotate. */
