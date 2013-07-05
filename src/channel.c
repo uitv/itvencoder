@@ -1822,7 +1822,7 @@ channel_start (Channel *channel, gboolean daemon)
                 readlink ("/proc/self/exe", path, sizeof (path));
                 argv[0] = path;
                 argv[1] = "-n";
-                argv[2] = "0";
+                argv[2] = g_strdup_printf ("%d", channel->id);
                 argv[3] = NULL;
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                         GST_ERROR ("Start channel %s error!!!", channel->name);
