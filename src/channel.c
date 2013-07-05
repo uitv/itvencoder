@@ -1818,7 +1818,7 @@ channel_setup (Channel *channel, gboolean daemon)
  * Returns: TRUE on success, FALSE on failure.
  *
  */
-gboolean
+gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *e = NULL;
@@ -1829,7 +1829,12 @@ channel_start (Channel *channel, gboolean daemon)
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
-                return TRUE;
+                return 1;
+        }
+
+        if (channel->worker_pid != 0) {
+                GST_WARNING ("Start channel %s, but it's already started.", channel->name);
+                return 2;
         }
 
         if (daemon) {
@@ -1845,7 +1850,7 @@ channel_start (Channel *channel, gboolean daemon)
                 }
                 channel->worker_pid = pid;
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
-                return TRUE;
+                return 0;
         } else {
                 /* set pipelines as PLAYING state */
                 gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
@@ -1856,20 +1861,21 @@ channel_start (Channel *channel, gboolean daemon)
                         encoder->state = GST_STATE_PLAYING;
                 }
                 *(channel->output->state) = GST_STATE_PLAYING;
-                return TRUE;
+                return 0;
         }
 }
 
-void
+gint
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("stop %d", channel->worker_pid);
+        GST_ERROR ("Stop channel %s", channel->name);
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
                 channel->worker_pid = 0;
+                return 0;
         } else {
-                exit (0);
+                return 1; // stop a stoped channel.
         }
 }
 

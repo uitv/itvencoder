@@ -25,6 +25,11 @@ static void sighandler (gint number)
         log_reopen (_log);
 }
 
+static void stopchannel (gint number)
+{
+        exit (0);
+}
+
 static void
 print_version_info ()
 {
@@ -158,6 +163,7 @@ main (int argc, char *argv[])
 
                 signal (SIGPIPE, SIG_IGN);
                 signal (SIGUSR1, sighandler);
+                signal (SIGUSR2, stopchannel);
                 GST_WARNING ("Channel %s starting ...", channel->name);
 
                 loop = g_main_loop_new (NULL, FALSE);

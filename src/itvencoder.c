@@ -185,7 +185,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         return TRUE;
 }
 
-gboolean
+gint
 itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 {
         Channel *channel;
@@ -194,15 +194,13 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         return channel_start (channel, itvencoder->daemon);
 }
 
-gboolean
+gint
 itvencoder_channel_stop (ITVEncoder *itvencoder, gint index, gint sig)
 {
         Channel *channel;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        channel_stop (channel, sig);
-
-        return TRUE;
+        return channel_stop (channel, sig);
 }
 
 static void
@@ -444,7 +442,7 @@ itvencoder_start (ITVEncoder *itvencoder)
 
         /* start channels */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
-                if (!itvencoder_channel_start (itvencoder, i)) {
+                if (itvencoder_channel_start (itvencoder, i) != 0) {
                         return 1;
                 }
         }
