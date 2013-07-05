@@ -257,21 +257,19 @@ stat_report (ITVEncoder *itvencoder, pid_t pid)
 }
 
 static void
-log_rotate (ITVEncoder *itvencoder)
+rotate_log (ITVEncoder *itvencoder, gchar *log_path, pid_t pid)
 {
         struct stat st;
-        gchar *name, *log_path;
+        gchar *name;
         glob_t pglob;
         gint i;
 
-        /* itvencoder log. */
-        log_path = g_strdup_printf ("%sitvencoder.log", itvencoder->log_dir);
         g_stat (log_path, &st);
         if (st.st_size > LOG_SIZE) {
                 name = g_strdup_printf ("%s-%llu", log_path, gst_clock_get_time (itvencoder->system_clock));
                 g_rename (log_path, name);
                 g_free (name);
-                kill (getpid(), SIGUSR1);
+                kill (pid, SIGUSR1); /* reopen log file. */
                 name = g_strdup_printf ("%s-*", log_path);
                 glob (name, 0, NULL, &pglob);
                 if (pglob.gl_pathc > LOG_ROTATE) {
@@ -282,7 +280,27 @@ log_rotate (ITVEncoder *itvencoder)
                 globfree (&pglob);
                 g_free (name);
         }
+}
+
+static void
+log_rotate (ITVEncoder *itvencoder)
+{
+        gchar *log_path;
+        gint i;
+        Channel *channel;
+
+        /* itvencoder log rotate. */
+        log_path = g_strdup_printf ("%sitvencoder.log", itvencoder->log_dir);
+        rotate_log (itvencoder, log_path, getpid());
         g_free (log_path);
+
+        /* channels log rotate. */
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", itvencoder->log_dir, i);
+                rotate_log (itvencoder, log_path, channel->worker_pid);
+                g_free (log_path);
+        }
 }
 
 static gboolean

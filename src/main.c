@@ -155,6 +155,11 @@ main (int argc, char *argv[])
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
+
+                signal (SIGPIPE, SIG_IGN);
+                signal (SIGUSR1, sighandler);
+                GST_WARNING ("Channel %s starting ...", channel->name);
+
                 loop = g_main_loop_new (NULL, FALSE);
                 channel_setup (channel, TRUE);
                 channel_start (channel, FALSE);
