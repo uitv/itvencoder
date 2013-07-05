@@ -77,3 +77,33 @@ tsplay
 ======
 
 tsplay是tstools工具集中的一个，用于把ts流通过udp、tcp协议或者标准输出推送出去，可以循环推送一个文件。
+
+ffprobe
+=======
+
+ffprobe是ffmpeg项目的一个工具，可以用它来解析源的媒体类型::
+
+    [zhangping@iTVencoder itvencoder]$ ffprobe udp://239.100.194.2:1234
+    FFprobe version 0.6.5, Copyright (c) 2007-2010 the FFmpeg developers
+      built on Jan 29 2012 17:52:15 with gcc 4.4.5 20110214 (Red Hat 4.4.5-6)
+      configuration: --prefix=/usr --libdir=/usr/lib64 --shlibdir=/usr/lib64 --mandir=/usr/share/man --incdir=/usr/include --disable-avisynth --extra-cflags='-O2 -g -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions -fstack-protector --param=ssp-buffer-size=4 -m64 -mtune=generic -fPIC' --enable-avfilter --enable-avfilter-lavf --enable-libdc1394 --enable-libdirac --enable-libfaac --enable-libfaad --enable-libfaadbin --enable-libgsm --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-librtmp --enable-libschroedinger --enable-libspeex --enable-libtheora --enable-libx264 --enable-gpl --enable-nonfree --enable-postproc --enable-pthreads --enable-shared --enable-swscale --enable-vdpau --enable-version3 --enable-x11grab
+      libavutil     50.15. 1 / 50.15. 1
+      libavcodec    52.72. 2 / 52.72. 2
+      libavformat   52.64. 2 / 52.64. 2
+      libavdevice   52. 2. 0 / 52. 2. 0
+      libavfilter    1.19. 0 /  1.19. 0
+      libswscale     0.11. 0 /  0.11. 0
+      libpostproc   51. 2. 0 / 51. 2. 0
+    [mpegts @ 0x7a8460]Estimating duration from bitrate, this may be inaccurate
+    Input #0, mpegts, from 'udp://239.100.194.2:1234':
+      Duration: N/A, start: 78550.836567, bitrate: 17884 kb/s
+      Program 633 �㽭���Ӹ���
+        Metadata:
+          name            : �㽭���Ӹ���
+          provider_name   : BGCTV
+      Program 632 �������Ӹ���
+        Metadata:
+          name            : �������Ӹ���
+          provider_name   : BGCTV
+        Stream #0.0[0x18b0]: Video: mpeg2video, yuv420p, 1920x1080 [PAR 1:1 DAR 16:9], 17500 kb/s, 25 fps, 25 tbr, 90k tbn, 50 tbc
+        Stream #0.1[0x18b1](eng): Audio: mp2, 48000 Hz, 2 channels, s16, 384 kb/s
