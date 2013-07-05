@@ -260,18 +260,19 @@ static void
 log_rotate (ITVEncoder *itvencoder)
 {
         struct stat st;
-        gchar *name;
+        gchar *name, *log_path;
         glob_t pglob;
         gint i;
 
         /* itvencoder log. */
-        g_stat (itvencoder->log_path, &st);
+        log_path = g_strdup_printf ("%sitvencoder.log", itvencoder->log_dir);
+        g_stat (log_path, &st);
         if (st.st_size > LOG_SIZE) {
-                name = g_strdup_printf ("%s-%llu", itvencoder->log_path, gst_clock_get_time (itvencoder->system_clock));
-                g_rename (itvencoder->log_path, name);
+                name = g_strdup_printf ("%s-%llu", log_path, gst_clock_get_time (itvencoder->system_clock));
+                g_rename (log_path, name);
                 g_free (name);
                 kill (getpid(), SIGUSR1);
-                name = g_strdup_printf ("%s-*", itvencoder->log_path);
+                name = g_strdup_printf ("%s-*", log_path);
                 glob (name, 0, NULL, &pglob);
                 if (pglob.gl_pathc > LOG_ROTATE) {
                         for (i = 0; i < pglob.gl_pathc - LOG_ROTATE; i++) {
@@ -279,7 +280,9 @@ log_rotate (ITVEncoder *itvencoder)
                         }
                 }
                 globfree (&pglob);
+                g_free (name);
         }
+        g_free (log_path);
 }
 
 static gboolean

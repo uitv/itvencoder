@@ -85,7 +85,7 @@ main (int argc, char *argv[])
         gint ret;
         GOptionContext *ctx;
         GError *err = NULL;
-        gchar *log_dir, *log_path;
+        gchar *p, *log_dir, *log_path;
 
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);
@@ -126,6 +126,14 @@ main (int argc, char *argv[])
                 }
         }
 
+        value = configure_get_param (configure, "/server/logdir");
+        p = (gchar *)g_value_get_string (value);
+        if (p[strlen(p) - 1] == '/') {
+                log_dir = g_strdup_printf ("%s", p);
+        } else {
+                log_dir = g_strdup_printf ("%s/", p);
+        }
+
         if (channel_id != -1) {
                 GValue *value;
                 GstStructure *structure;
@@ -133,14 +141,9 @@ main (int argc, char *argv[])
                 Channel *channel;
 
                 /* launch a channel. */
-                value = configure_get_param (configure, "/server/logdir");
-                log_dir = (gchar *)g_value_get_string (value);
-                if (log_dir[strlen(log_dir) - 1] == '/') {
-                        log_path = g_strdup_printf ("%schannel%d/itvencoder.log", log_dir, channel_id);
-                } else {
-                        log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", log_dir, channel_id);
-                }
+                log_path = g_strdup_printf ("%schannel%d/itvencoder.log", log_dir, channel_id);
                 ret = init_log (log_path);
+                g_free (log_path);
                 if (ret != 0) {
                         exit (1);
                 }
@@ -166,14 +169,9 @@ main (int argc, char *argv[])
                         exit (0);
                 }
 
-                value = configure_get_param (configure, "/server/logdir");
-                log_dir = (gchar *)g_value_get_string (value);
-                if (log_dir[strlen(log_dir) - 1] == '/') {
-                        log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
-                } else {
-                        log_path = g_strdup_printf ("%s/itvencoder.log", log_dir);
-                }
+                log_path = g_strdup_printf ("%sitvencoder.log", log_dir);
                 ret = init_log (log_path);
+                g_free (log_path);
                 if (ret != 0) {
                         g_print ("Init log error, ret %d.\n", ret);
                         exit (1);
@@ -192,7 +190,7 @@ main (int argc, char *argv[])
         } else {
                 itvencoder = itvencoder_new ("daemon", !foreground, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
-        itvencoder->log_path = log_path;
+        itvencoder->log_dir = log_dir;
         if (!itvencoder_channel_initialize (itvencoder)) {
                 GST_ERROR ("exit ...");
                 return 1;
