@@ -1278,6 +1278,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
          * update tail_addr and last_rap_addr
          */
         copy_buffer (encoder, buffer);
+        gst_buffer_unref (buffer);
 }
 
 static void
