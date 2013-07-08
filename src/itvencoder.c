@@ -345,7 +345,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         channel->name,
                                         output->source.streams[j].name,
                                         time_diff);
-                                channel_stop (channel, SIGUSR2);
+                                channel_stop (channel, SIGKILL);
                         } else {
                                 GST_INFO ("%s.source.%s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
@@ -373,7 +373,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].name,
                                                 output->encoders[j].streams[k].name,
                                                 time_diff);
-                                        channel_stop (channel, SIGUSR2);
+                                        channel_stop (channel, SIGKILL);
                                 } else {
                                         GST_INFO ("%s.encoders.%s.%s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -416,7 +416,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         output->source.sync_error_times += 1;
                         if (output->source.sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart %s", output->source.sync_error_times, channel->name);
-                                channel_stop (channel, SIGUSR2);
+                                channel_stop (channel, SIGKILL);
                         }
                 } else {
                         output->source.sync_error_times = 0;
