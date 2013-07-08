@@ -9,7 +9,7 @@
 #include <gst/gst.h>
 #include "log.h"
 
-#define SOURCE_RING_SIZE 1500
+#define SOURCE_RING_SIZE 250
 #define STREAM_NAME_LEN 32
 
 typedef struct _Source Source;
