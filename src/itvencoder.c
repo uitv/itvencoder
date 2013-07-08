@@ -148,6 +148,25 @@ itvencoder_load_configure (ITVEncoder *itvencoder)
         configure_load_from_file (itvencoder->configure);
 }
 
+static void
+remove_semaphore (Channel *channel)
+{
+        gchar *name, *sem_name;
+        GValue *value;
+        GstStructure *structure;
+        gint i, n;
+
+        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        n = gst_structure_n_fields (structure);
+        for (i = 0; i < n; i++) {
+                name = (gchar *)gst_structure_nth_field_name (structure, i);
+                sem_name = g_strdup_printf ("/%s%s", channel->name, name);
+                sem_unlink (sem_name);
+                g_free (sem_name);
+        }
+}
+
 /*
  * itvencoder_channel_initialize
  *
@@ -175,6 +194,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 value = (GValue *)gst_structure_get_value (structure, name);
                 configure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", configure, NULL);
+                remove_semaphore (channel);
                 channel->id = i;
                 channel_setup (channel, itvencoder->daemon);
 

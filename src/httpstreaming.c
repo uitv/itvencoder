@@ -171,11 +171,11 @@ send_data (EncoderOutput *encoder_output, RequestData *request_data)
         return ret;
 }
 
-static guint64
+static gint64
 get_current_gop_end (EncoderOutput *encoder_output, RequestDataUserData *request_user_data)
 {
         gint32 current_gop_size;
-        guint64 current_gop_end_addr;
+        gint64 current_gop_end_addr;
 
         memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, 4);
         if (current_gop_size == 0) {
@@ -198,6 +198,8 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         gint32 ret;
 
         request_user_data = request_data->user_data;
+
+        sem_wait (request_user_data->encoder->mutex);
         tail_addr = *(encoder_output->tail_addr);
         current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
 
@@ -222,6 +224,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
                 }
                 current_gop_end_addr = get_current_gop_end (encoder_output, request_user_data);
         }
+        sem_post (request_user_data->encoder->mutex);
 
         if (request_user_data->chunk_size == 0) {
                 if (current_gop_end_addr == 0) {
@@ -296,7 +299,6 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         switch (request_data->status) {
         case HTTP_REQUEST:
                 GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
-                //encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
                 encoder_output = get_encoder_output (httpstreaming, request_data);
                 if (encoder_output == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -324,6 +326,8 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         }
 
                         /* let send_chunk send new chunk. */
+                        encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
+                        request_user_data->encoder = encoder;
                         request_user_data->chunk_size = 0;
                         request_user_data->send_count = 2;
                         request_user_data->chunk_size_str = g_strdup ("");

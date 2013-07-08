@@ -1248,9 +1248,9 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 {
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
-        gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        sem_wait (encoder->mutex);
         (*(encoder->total_count)) += GST_BUFFER_SIZE (buffer);
 
         /* update head_addr, free enough memory for current buffer. */
@@ -1270,6 +1270,8 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 
         if (*(encoder->head_addr) == *(encoder->tail_addr)) {
                 GST_WARNING ("Discard buffer before first IDR.");
+                sem_post (encoder->mutex);
+                gst_buffer_unref (buffer);
                 return;
         }
 
@@ -1278,6 +1280,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
          * update tail_addr and last_rap_addr
          */
         copy_buffer (encoder, buffer);
+        sem_post (encoder->mutex);
         gst_buffer_unref (buffer);
 }
 
@@ -1557,6 +1560,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->tail_addr = channel->output->encoders[i].tail_addr;
                 encoder->last_rap_addr = channel->output->encoders[i].last_rap_addr;
                 encoder->configure = structure;
+                name = g_strdup_printf ("/%s%s", channel->name, encoder->name);
+                encoder->mutex = sem_open (name, O_CREAT, 0600, 1);
+                g_free (name);
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
                         return 1;

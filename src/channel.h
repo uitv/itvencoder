@@ -7,6 +7,7 @@
 #define __CHANNEL_H__
 
 #include <gst/gst.h>
+#include <semaphore.h>
 #include "log.h"
 
 #define SOURCE_RING_SIZE 250
@@ -111,6 +112,7 @@ struct _Encoder {
         
         GArray *streams;
 
+        sem_t *mutex; // access of encoder output should be exclusive.
         gchar *cache_addr;
         guint64 cache_size; // total output packet counts
         guint64 *total_count; // total output packet counts
