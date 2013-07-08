@@ -1251,16 +1251,8 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         gint i;
 
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
-        GST_DEBUG ("%s current position %d, buffer duration: %d", encoder->name, encoder->output_position, GST_BUFFER_DURATION(buffer));
-        i = encoder->output_position + 1;
-        i = i % ENCODER_RING_SIZE;
-        encoder->output_position = i;
-        if (encoder->output_ring[i] != NULL) {
-                gst_buffer_unref (encoder->output_ring[i]);
-        }
-        encoder->output_ring[i] = buffer;
-        (*(encoder->total_count))++;
-        
+        (*(encoder->total_count)) += GST_BUFFER_SIZE (buffer);
+
         /* update head_addr, free enough memory for current buffer. */
         while (cache_free (encoder) < GST_BUFFER_SIZE (buffer) + 12) { /* timestamp + gop size = 12 */
                 move_head (encoder);
@@ -1589,10 +1581,6 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
                                 return -1;
                         }
-                }
-
-                for (j = 0; j < ENCODER_RING_SIZE; j++) {
-                        encoder->output_ring[j] = NULL;
                 }
 
                 encoder->bins = get_bins (structure);

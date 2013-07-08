@@ -10,7 +10,6 @@
 #include "log.h"
 
 #define SOURCE_RING_SIZE 1500
-#define ENCODER_RING_SIZE (4*250)
 #define STREAM_NAME_LEN 32
 
 typedef struct _Source Source;
@@ -112,10 +111,7 @@ struct _Encoder {
         
         GArray *streams;
 
-        GstBuffer *output_ring[ENCODER_RING_SIZE];
-        gint output_position; // encoder output position
         gchar *cache_addr;
-        //gchar *cache_end_addr;
         guint64 cache_size; // total output packet counts
         guint64 *total_count; // total output packet counts
         guint64 *head_addr;
