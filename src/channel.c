@@ -1206,13 +1206,10 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
                 memcpy (encoder->cache_addr + *(encoder->last_rap_addr), &size, n);
                 memcpy (encoder->cache_addr, &size + n, 4 - n);
         }
+GST_ERROR ("pre gop size: %d", size);
 
         /* new gop timestamp, 4bytes reservation for gop size. */
-        if (*(encoder->tail_addr) < encoder->cache_size) {
-                *(encoder->last_rap_addr) = *(encoder->tail_addr);
-        } else {
-                *(encoder->last_rap_addr) = 0;
-        }
+        *(encoder->last_rap_addr) = *(encoder->tail_addr);
         memcpy (buf, &(GST_BUFFER_TIMESTAMP (buffer)), 8);
         size = 0;
         memcpy (buf + 8, &size, 4);
@@ -1225,6 +1222,7 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
                 memcpy (encoder->cache_addr, buf + n, 12 - n);
                 *(encoder->tail_addr) = 12 - n;
         }
+GST_ERROR ("last rap addr: %llu", *(encoder->last_rap_addr));
 }
 
 static void
@@ -1255,6 +1253,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
 
         /* update head_addr, free enough memory for current buffer. */
         while (cache_free (encoder) < GST_BUFFER_SIZE (buffer) + 12) { /* timestamp + gop size = 12 */
+GST_ERROR (">>>>>>move head");
                 move_head (encoder);
         }
 
