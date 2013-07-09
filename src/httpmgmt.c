@@ -252,16 +252,6 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         g_free (ver);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                } else if (g_str_has_prefix (request_data->uri, "/kill")) {
-                        /* kill self */
-                        if (!httpmgmt->itvencoder->daemon) {
-                                GST_WARNING ("Can't restart when run in foreground.");
-                                buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                                write (request_data->sock, buf, strlen (buf));
-                                g_free (buf);
-                        } else {
-                                exit (1);
-                        }
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
