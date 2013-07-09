@@ -170,21 +170,75 @@ HTTP Response::
     
     Ok
 
-重新启动iTVEncoder
-==================
+重新启动通道
+============
 
 HTTP Request::
 
-    GET /kill HTTP/1.1
+    GET /channel/0/restart HTTP/1.1
     Host: 192.168.2.9:20118
     Connection: keep-alive
-    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36
-    Accept: */*
-    Referer: http://192.168.2.9:20118/mgmt/
+    Cache-Control: max-age=0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36
     Accept-Encoding: gzip,deflate,sdch
     Accept-Language: zh-CN,zh;q=0.8
 
-重新启动的请求没有应答，可以通过尝试连接管理接口来判断是否已经启动完成。
+HTTP Response::
+
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.0
+    Content-Type: text/plain
+    Content-Length: 7
+    Connection: Close
+    
+    Success
+
+停止通道
+========
+
+HTTP Request::
+
+    GET /channel/0/stop HTTP/1.1
+    Host: 192.168.2.9:20118
+    Connection: keep-alive
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+    
+HTTP Response::
+
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.0
+    Content-Type: text/plain
+    Content-Length: 7
+    Connection: Close
+    
+    Success
+
+启动通道
+========
+
+HTTP Request::
+
+    GET /channel/0/start HTTP/1.1
+    Host: 192.168.2.9:20118
+    Connection: keep-alive
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.116 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+    
+HTTP Response::
+
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.0
+    Content-Type: text/plain
+    Content-Length: 7
+    Connection: Close
+    
+    Success
 
 查询当前iTVEncoder版本信息
 ==========================
