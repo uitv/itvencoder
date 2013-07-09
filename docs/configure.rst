@@ -41,6 +41,7 @@ channels配置的格式如下::
 
     channel_name_x = {
         enable = yes
+        debug = debug option
         source = {
            ...
         }
@@ -55,6 +56,8 @@ channels配置的格式如下::
     }
 
 enable取值为yes或者no，yes表示启用这个通道，no表示不启用这个通道。
+
+debug取值为一个字符串，用于配置channel进程的debug选项，具体可以参照gst-launch手册页的--gst-debug=STRING。
 
 source表示编码通道的源，encoders表示编码通道的编码器，一个通道可以有多路编码器，编码器的名字是字母数字和下划线的组合。
 
