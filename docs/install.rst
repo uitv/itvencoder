@@ -60,9 +60,12 @@ itvencoder采用了gstreamer的命令行选项::
 
     itvencoder --gst-debug=itvencoder:3
 
+itvencoder针对每一个channel有一个log文件，针对channel的log文件在/log/path/channel-name/itvencoder.log。
+
+itvencoder内置了logrotate功能，默认log文件大小是2MBytes，rotate个数是100。
+
 启动多个itvencoder
 ==================
-
 
 由于gstreamer的pipeline在运行状态下关闭并重新启动存在如下问题，第一是有时候关闭成功需要较长时间，根据以往的log信息发现最长时间需要半个小时。
 第二是有时候关闭并重新启动一个pipeline存在内存泄露。
