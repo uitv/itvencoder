@@ -171,20 +171,30 @@ send_data (EncoderOutput *encoder_output, RequestData *request_data)
         return ret;
 }
 
+/*
+ * return -1 means the gop is current output gop.
+ */
 static gint64
 get_current_gop_end (EncoderOutput *encoder_output, RequestDataUserData *request_user_data)
 {
-        gint32 current_gop_size;
+        gint32 current_gop_size, n;
         gint64 current_gop_end_addr;
 
-        memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, 4);
+        /* read gop size. */
+        if (request_user_data->current_rap_addr + 12 < encoder_output->cache_size) {
+                memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, 4);
+        } else {
+                n = encoder_output->cache_size - request_user_data->current_rap_addr - 8;
+                memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, n);
+                memcpy (&current_gop_size + n, encoder_output->cache_addr, 4 - n);
+        }
         if (current_gop_size == 0) {
                 /* current output gop. */
-                return 0;
+                return -1;
         }
         current_gop_end_addr = request_user_data->current_rap_addr + current_gop_size;
         if (current_gop_end_addr > encoder_output->cache_size) {
-                current_gop_end_addr = current_gop_end_addr - encoder_output->cache_size;
+                current_gop_end_addr -= encoder_output->cache_size;
         }
 
         return current_gop_end_addr;
@@ -227,7 +237,7 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         sem_post (request_user_data->encoder->mutex);
 
         if (request_user_data->chunk_size == 0) {
-                if (current_gop_end_addr == 0) {
+                if (current_gop_end_addr == -1) {
                         /* current output gop. */
                         if ((tail_addr - request_user_data->current_send_position) > 16384) {
                                 request_user_data->chunk_size = 16384;
