@@ -18,6 +18,7 @@ logdir = /var/log/itvencoder
 [channels]
 test = {
     enable = <var name="enable" type="option">yes</var>
+    debug = mpegtsmux:2
 
     # source pipeline defination
     source = {
