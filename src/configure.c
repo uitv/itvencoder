@@ -545,6 +545,11 @@ configure_channel_parse (gchar *name, gchar *data)
                         g_value_unset (&value);
                         g_regex_unref (regex);
                         g_free (v1);
+                } else if (g_strcmp0 (p[i], "debug") == 0) {
+                        g_value_init (&value, G_TYPE_STRING);
+                        g_value_set_static_string (&value, v);
+                        gst_structure_set_value (structure, p[i], &value);
+                        g_value_unset (&value);
                 } else if (g_strcmp0 (p[i], "source") == 0) {
                         source = configure_pipeline_parse (p[i], v);
                         if (source == NULL) {

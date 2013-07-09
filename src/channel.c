@@ -1813,7 +1813,7 @@ gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *e = NULL;
-        gchar *argv[4], path[512];
+        gchar *argv[4], path[512], *p;
         GPid pid;
         Encoder *encoder;
         gint i;
@@ -1834,7 +1834,13 @@ channel_start (Channel *channel, gboolean daemon)
                 argv[0] = path;
                 argv[1] = "-n";
                 argv[2] = g_strdup_printf ("%d", channel->id);
-                argv[3] = NULL;
+                p = (gchar *)gst_structure_get_string (channel->configure, "debug");
+                if (p != NULL) {
+                        argv[3] = g_strdup_printf ("--gst-debug=%s", p);
+                        argv[4] = NULL;
+                } else {
+                        argv[3] = NULL;
+                }
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                         GST_ERROR ("Start channel %s error!!!", channel->name);
                         return FALSE;
