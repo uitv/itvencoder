@@ -6,12 +6,32 @@
   <p>{%trans%}
     iTVEncoder是一个基于gstreamer的实时编码器，利用iTVEncoder能够很方便的在gstreamer环境中
     实现自己的编码器。通过编写gstreamer的插件可以对iTVEncoder进行定制，比如支持新的编码，
-    支持新的硬件采集设备等。这样的实现方式使得iTVEncoder的扩展和定制变得非常灵活{%endtrans%}</p>
+    支持新的硬件采集设备等。这样的实现方式使得iTVEncoder的扩展和定制变得非常灵活
+  {%endtrans%}</p>
   <p>{%trans%}
     iTVEncoder本身不做编码等工作，具体的音视频编解码以及mux等工作由gstreamer的element实现，
-    iTVEncoder的当前开发版本是0.3.0，有以下主要改进：
+  {%endtrans%}</p>
+  <p>{%trans%}
+    itvencoder的当前版本是0.3.1，有如下改进和需要注意的地方：
+  {%endtrans%}</p>
+  <ul>
+    <li>{%trans%}<b>channel在单独的进程中运行</b>在后台运行的时候，每个channel启动一个进程，从而更好的解决channel死掉以及内存泄露等问题。{%endtrans%}</li>
+    <li>{%trans%}<b>channel日志与itvencoder日志分离</b>在后台运行时，itvencoder的日志文件与channel的日志文件分开，channel的日志文件在/log/dir/channel-name/itvencoder.log。{%endtrans%}</li>
+    <li>{%trans%}<b>内置了日志滚动</b>不需要通过logrotate实现日志滚动。{%endtrans%}</li>
+    <li>{%trans%}<b>可以对channel的日志进行配置</b>参见文档的debug配置项。{%endtrans%}</li>
+    <li>{%trans%}<b>不再需要配置在supervisord下：</b>配置在supervisord下可能会由于信号量重名造成系统运行问题。确需在supervisord下运行，要确保channel的名字不重复。{%endtrans%}</li>
+  </ul>
+  <p>{%trans%}
+    对于底层gstreamer的element，这段时间的主要改进包括：
     {%endtrans%}
   </p>
+  <ul>
+    <li>{%trans%}<b>视频质量:</b> 视频质量有较大改进。{%endtrans%}</li>
+    <li>{%trans%}<b>码率控制:</b> 码率控制方面有较大改进。{%endtrans%}</li>
+  </ul>
+  <p>{%trans%}
+    0.3.0版本，有以下主要改进：
+    {%endtrans%}</p>
   <ul>
     <li>{%trans%}<b>支持自定义格式的配置文件:</b> 放弃采用json格式的配置文件，采用自定义的配置文件格式，自定义配置文件格式的可读性更好，更适合实现多音轨以及web管理接口的支持等。{%endtrans%}</li>
     <li>{%trans%}<b>支持多音轨:</b> 对多音轨的支持，相应的底层element：mpegtsmux也支持多音轨。{%endtrans%}</li>
