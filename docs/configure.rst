@@ -14,12 +14,10 @@ server部分包括如下内容:::
     httpstreaming = 0.0.0.0:20119
     httpmgmt = 0.0.0.0:20118
     logdir = /var/log/itvencoder
-    pidfile = /var/run/itvencoder.pid
 
 httpstreaming是推流服务绑定的地址。
 httpmgmt是管理接口绑定的地址。
 logdir是log写入的目录。
-pidfile是存储iTVEncoder进程pid的文件。
 
 channels
 ========
