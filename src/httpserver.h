@@ -35,7 +35,7 @@
 #define http_200 "HTTP/1.1 200 Ok\r\n" \
                  "Server: %s-%s\r\n" \
                  "Content-Type: %s\r\n" \
-                 "Content-Length: %d\r\n" \
+                 "Content-Length: %zu\r\n" \
                  "Connection: Close\r\n\r\n" \
                  "%s"
 
@@ -50,7 +50,7 @@
 #define itvencoder_ver "HTTP/1.1 200 OK\r\n" \
                        "Server: %s-%s\r\n" \
                        "Content-Type: text/plain\r\n" \
-                       "Content-Length: %d\r\n" \
+                       "Content-Length: %zu\r\n" \
                        "Connection: Close\r\n\r\n" \
                        "%s"
 

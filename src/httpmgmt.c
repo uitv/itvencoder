@@ -146,7 +146,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else {
-                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 }
@@ -171,9 +171,9 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         GST_WARNING ("Stop channel %d", index);
                         ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
                         if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
                         } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 21, "Stop a stoped channel");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)21, "Stop a stoped channel");
                         } else {
                                 buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                         }
@@ -181,11 +181,11 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         GST_WARNING ("Start channel %d", index);
                         ret = itvencoder_channel_start (httpmgmt->itvencoder, index);
                         if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
                         } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 24, "Start a disabled channel");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Start a disabled channel");
                         } else if (ret == 2) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 31, "Start a already started channel");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)31, "Start a already started channel");
                         } else {
                                 buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                         }
@@ -194,9 +194,9 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         index = itvencoder_url_channel_index (request_data->uri);
                         ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGKILL);
                         if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
                         } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 24, "Restart a stoped channel");
+                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Restart a stoped channel");
                         } else {
                                 buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
                         }
