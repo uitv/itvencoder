@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "channel.h"
 #include "httpstreaming.h"
