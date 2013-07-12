@@ -242,7 +242,7 @@ configure_property_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
@@ -301,7 +301,7 @@ configure_element_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
@@ -357,7 +357,7 @@ configure_bin_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s parse, number is %d\n", name, number);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 if (!is_valid_name (p[i])) {
                         g_print ("Invalid bin configure: %s\n", p[i]);
@@ -395,7 +395,7 @@ configure_bins_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("\n\n\n%s element parse, number is %d\n", name, number);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
@@ -428,8 +428,8 @@ configure_pipeline_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("number is %d\n", number);
-        structure = gst_structure_empty_new (name);
-        elements = gst_structure_empty_new ("elements");
+        structure = gst_structure_new_empty (name);
+        elements = gst_structure_new_empty ("elements");
         regex = g_regex_new ("<[^>]*>([^<]*)", 0, 0, NULL);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
@@ -492,7 +492,7 @@ configure_encoder_parse (gchar *name, gchar *data)
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
         //g_print ("number is %d\n", number);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 //g_print ("%s : %s\n", p[i], v);
@@ -528,7 +528,7 @@ configure_channel_parse (gchar *name, gchar *data)
 
         gkeyfile = ini_data_parse (name, data);
         p = g_key_file_get_keys (gkeyfile, name, &number, &e);
-        structure = gst_structure_empty_new (name);
+        structure = gst_structure_new_empty (name);
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, name, p[i], &e);
                 if (g_strcmp0 (p[i], "enable") == 0) {
@@ -657,7 +657,7 @@ configure_file_parse (Configure *configure)
                 g_error_free (e);
                 return 1;
         }
-        structure = gst_structure_empty_new ("server");
+        structure = gst_structure_new_empty ("server");
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, "server", p[i], &e);
                 g_value_init (&value, G_TYPE_STRING);
@@ -676,7 +676,7 @@ configure_file_parse (Configure *configure)
 
         /* parse channels group */
         p = g_key_file_get_keys (gkeyfile, "channels", &number, &e);
-        structure = gst_structure_empty_new ("channels");
+        structure = gst_structure_new_empty ("channels");
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, "channels", p[i], &e);
                 if (!is_valid_name (p[i])) {
@@ -929,7 +929,7 @@ configure_reset (Configure *configure)
         if (configure->data != NULL) {
                 gst_structure_free (configure->data);
         }
-        configure->data = gst_structure_empty_new ("configure");
+        configure->data = gst_structure_new_empty ("configure");
 
         configure_release_lines (configure->lines);
         configure_release_variables (configure->variables);

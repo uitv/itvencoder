@@ -31,8 +31,8 @@ AC_PROG_LIBTOOL
 # Checks for libraries.
 # AC_CHECK_LIB([pthread], [pthread_create], HAVE_PTHREAD=yes, HAVE_PTHREAD=no)
 
-PKG_CHECK_MODULES([gstreamer], [gstreamer-0.10])
-PKG_CHECK_MODULES([gstreamerapp], [gstreamer-app-0.10])
+PKG_CHECK_MODULES([gstreamer], [gstreamer-1.0])
+PKG_CHECK_MODULES([gstreamerapp], [gstreamer-app-1.0])
 
 # Checks for header files.
 

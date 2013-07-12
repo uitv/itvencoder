@@ -5,6 +5,7 @@
 
 #include <unistd.h>
 #include <gst/gst.h>
+#include <glib/gstdio.h>
 #include <string.h>
 #include <glob.h>
 
@@ -196,7 +197,9 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 channel = channel_new ("name", name, "configure", configure, NULL);
                 remove_semaphore (channel);
                 channel->id = i;
-                channel_setup (channel, itvencoder->daemon);
+                if (channel_setup (channel, itvencoder->daemon) != 0) {
+                        return FALSE;
+                }
 
                 g_array_append_val (itvencoder->channel_array, channel);
                 GST_INFO ("Channel %s added.", name);
@@ -267,7 +270,7 @@ stat_report (Channel *channel)
 static void
 rotate_log (ITVEncoder *itvencoder, gchar *log_path, pid_t pid)
 {
-        struct stat st;
+        GStatBuf st;
         gchar *name;
         glob_t pglob;
         gint i;
@@ -436,7 +439,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released
-        ret = gst_clock_id_wait_async (nextid, itvencoder_channel_monitor, itvencoder);
+        ret = gst_clock_id_wait_async (nextid, itvencoder_channel_monitor, itvencoder, NULL);
         gst_clock_id_unref (nextid);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Register itvencoder monitor failure");
@@ -470,7 +473,7 @@ itvencoder_start (ITVEncoder *itvencoder)
         /* regist itvencoder monitor */
         t = gst_clock_get_time (itvencoder->system_clock)  + 5000 * GST_MSECOND;
         id = gst_clock_new_single_shot_id (itvencoder->system_clock, t); 
-        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder);
+        ret = gst_clock_id_wait_async (id, itvencoder_channel_monitor, itvencoder, NULL);
         gst_clock_id_unref (id);
         if (ret != GST_CLOCK_OK) {
                 GST_WARNING ("Regist itvencoder monitor failure");

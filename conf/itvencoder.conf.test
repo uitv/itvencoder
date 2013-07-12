@@ -23,9 +23,9 @@ test = {
     # source pipeline defination
     source = {
 
-        videotestsrc = {
-            caps = video/x-raw-yuv,width=720,height=576,framerate=25/1
-        }
+        #videotestsrc = {
+        #    caps = video/x-raw-yuv,width=720,height=576,framerate=25/1
+        #}
 
         audiotestsrc = {
             property = {
@@ -37,7 +37,7 @@ test = {
         bins = {
             audio = {
                 definition = audiotestsrc ! queue ! appsink
-                option = <var name="audio source" type="option">yes</var>
+                option = <var name="audio source" type="option">no</var>
             }
             video = {
                 definition = videotestsrc ! appsink
@@ -60,7 +60,6 @@ test = {
                     byte-stream = TRUE
                     threads = <var name="threads" type="number">4</var>
                     bframes = <var name="b frames" type="number">3</var>
-                    profile = <var name="profile" type="[baseline, main, high]">high</var>
                 }
             }
 
@@ -87,12 +86,12 @@ test = {
 
             bins = {
                 video = {
-                    definition = appsrc name=video ! queue ! ffmpegcolorspace ! x264enc ! queue ! muxer.
+                    definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
                     option = <var name="video encoder" type="option">yes</var>
                 }
                 audio = {
-                    definition = appsrc name=audio ! faac ! muxer.
-                    option = <var name="audio encoder" type="option">yes</var>
+                    definition = appsrc name=audio ! avenc_aac ! muxer.
+                    option = <var name="audio encoder" type="option">no</var>
                 }
                 muxer = {
                     definition = mpegtsmux name=muxer ! queue ! appsink

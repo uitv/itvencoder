@@ -92,9 +92,9 @@ main (int argc, char *argv[])
         GError *err = NULL;
         gchar *p, *log_dir, *log_path;
 
-        if (!g_thread_supported ()) {
-                g_thread_init (NULL);
-        }
+        //if (!g_thread_supported ()) {
+        //        g_thread_init (NULL);
+        //}
         ctx = g_option_context_new (NULL);
         g_option_context_add_main_entries (ctx, options, NULL);
         g_option_context_add_group (ctx, gst_init_get_option_group ());

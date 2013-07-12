@@ -5,6 +5,7 @@
 
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -382,9 +383,9 @@ print_one_tag (const GstTagList * list, const gchar * tag, gpointer user_data)
                 } else if (G_VALUE_HOLDS_BOOLEAN (val)) {
                         GST_INFO ("%20s : %s", tag, (g_value_get_boolean (val)) ? "true" : "false");
                 } else if (GST_VALUE_HOLDS_BUFFER (val)) {
-                        GST_INFO ("%20s : buffer of size %u", tag, GST_BUFFER_SIZE (gst_value_get_buffer (val)));
-                } else if (GST_VALUE_HOLDS_DATE (val)) {
-                        GST_INFO ("%20s : date (year=%u,...)", tag, g_date_get_year (gst_value_get_date (val)));
+                        //GST_INFO ("%20s : buffer of size %u", tag, gst_buffer_get_size (gst_value_get_buffer (val)));
+                //} else if (GST_VALUE_HOLDS_DATE (val)) {
+                        //GST_INFO ("%20s : date (year=%u,...)", tag, g_date_get_year (gst_value_get_date (val)));
                 } else {
                         GST_INFO ("%20s : tag of type '%s'", tag, G_VALUE_TYPE_NAME (val));
                 }
@@ -565,6 +566,10 @@ create_element (GstStructure *pipeline, gchar *param)
         g_regex_unref (regex);
         g_free (p);
         element = gst_element_factory_make (factory, NULL);
+        if (element == NULL) {
+                GST_ERROR ("Create element error: %s", factory);
+                return NULL;
+        }
 
         /* extract element configure. */
         regex = g_regex_new (" .*", 0, 0, NULL);
@@ -686,7 +691,7 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
                 links = links->next;
         }
 
-        caps = gst_pad_get_caps (pad);
+        caps = gst_pad_get_current_caps (pad);
         GST_INFO ("caps: %s", gst_caps_to_string (caps));
         if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
@@ -970,10 +975,11 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         GstCaps *caps;
         gchar *str;
 
-        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        buffer = gst_app_sink_pull_sample (GST_APP_SINK (elt));
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
         if (stream->current_position == -1) {
                 /* set stream type */
+#if 0
                 caps = GST_BUFFER_CAPS (buffer);
                 str = gst_caps_to_string (caps);
                 if (g_str_has_prefix (str, "video")) {
@@ -982,6 +988,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
                         *(stream->type) = ST_AUDIO;
                 }
                 g_free (str);
+#endif
         }
         stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
@@ -1227,16 +1234,19 @@ static void
 copy_buffer (Encoder *encoder, GstBuffer *buffer)
 {
         gint size;
+        GstMapInfo info;
 
-        if (*(encoder->tail_addr) + GST_BUFFER_SIZE (buffer) < encoder->cache_size) {
-                memcpy (encoder->cache_addr + *(encoder->tail_addr), GST_BUFFER_DATA (buffer), GST_BUFFER_SIZE (buffer));
-                *(encoder->tail_addr) = *(encoder->tail_addr) + GST_BUFFER_SIZE (buffer);
+        gst_buffer_map (buffer, &info, 0);
+        if (*(encoder->tail_addr) + gst_buffer_get_size (buffer) < encoder->cache_size) {
+                memcpy (encoder->cache_addr + *(encoder->tail_addr), info.data, gst_buffer_get_size (buffer));
+                *(encoder->tail_addr) = *(encoder->tail_addr) + gst_buffer_get_size (buffer);
         } else {
                 size = encoder->cache_size - *(encoder->tail_addr);
-                memcpy (encoder->cache_addr + *(encoder->tail_addr), GST_BUFFER_DATA (buffer), size);
-                memcpy (encoder->cache_addr, GST_BUFFER_DATA (buffer) + size, GST_BUFFER_SIZE (buffer) - size);
-                *(encoder->tail_addr) = GST_BUFFER_SIZE (buffer) - size;
+                memcpy (encoder->cache_addr + *(encoder->tail_addr), info.data, size);
+                memcpy (encoder->cache_addr, info.data + size, gst_buffer_get_size (buffer) - size);
+                *(encoder->tail_addr) = gst_buffer_get_size (buffer) - size;
         }
+        gst_buffer_unmap (buffer, &info);
 }
 
 static GstFlowReturn
@@ -1245,12 +1255,12 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
 
-        buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
+        buffer = gst_app_sink_pull_sample (GST_APP_SINK (elt));
         sem_wait (encoder->mutex);
-        (*(encoder->total_count)) += GST_BUFFER_SIZE (buffer);
+        (*(encoder->total_count)) += gst_buffer_get_size (buffer);
 
         /* update head_addr, free enough memory for current buffer. */
-        while (cache_free (encoder) < GST_BUFFER_SIZE (buffer) + 12) { /* timestamp + gop size = 12 */
+        while (cache_free (encoder) < gst_buffer_get_size (buffer) + 12) { /* timestamp + gop size = 12 */
                 move_head (encoder);
         }
 
@@ -1278,7 +1288,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
 {
         EncoderStream *stream = (EncoderStream *)user_data;
         gint current_position;
-        GstCaps *caps;
+        //GstCaps *caps;
 
         current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
         for (;;) {
@@ -1290,14 +1300,14 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                         g_usleep (50000); /* wiating 50ms */
                         continue;
                 }
-
+#if 0
                 /* first buffer, set caps. */
                 if (stream->current_position == -1) {
                         caps = GST_BUFFER_CAPS (stream->source->ring[0]);
                         gst_app_src_set_caps (src, caps);
                         GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (caps));
                 }
-
+#endif
                 GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                         stream->name,   
                         stream->current_position,

@@ -122,7 +122,7 @@ static void log_func (GstDebugCategory *category,
                       GstDebugMessage *message,
                       gpointer user_data)
 {
-        FILE *log_hd = *(FILE **)user_data;
+        gint log_hd = user_data;
         time_t t;
         struct tm *tm;
         gchar date[26];
@@ -158,19 +158,20 @@ log_set_log_handler (Log *log)
                 GST_ERROR ("Error open log file %s, %s.", log->log_path, g_strerror (errno));
                 return -1;
         } else {
-                gst_debug_add_log_function (log_func, &(log->log_hd));
+                gst_debug_add_log_function (log_func, &(log->log_hd), NULL);
                 return 0;
         }
 
         g_free (dir);
 }
 
+#if 0
 gint
 log_set_stdout_handler ()
 {
-        gst_debug_add_log_function (log_func, &stdout);
+        gst_debug_add_log_function (log_func, &stdout, NULL);
 }
-
+#endif
 gint
 log_reopen (Log *log)
 {
