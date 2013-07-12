@@ -975,7 +975,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         GstCaps *caps;
         gchar *str;
 
-        buffer = gst_app_sink_pull_sample (GST_APP_SINK (elt));
+        buffer = gst_sample_get_buffer (gst_app_sink_pull_sample (GST_APP_SINK (elt)));
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
         if (stream->current_position == -1) {
                 /* set stream type */
@@ -1255,7 +1255,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
 
-        buffer = gst_app_sink_pull_sample (GST_APP_SINK (elt));
+        buffer = gst_sample_get_buffer (gst_app_sink_pull_sample (GST_APP_SINK (elt)));
         sem_wait (encoder->mutex);
         (*(encoder->total_count)) += gst_buffer_get_size (buffer);
 
@@ -1689,7 +1689,7 @@ gint
 channel_output_init (Channel *channel, gboolean daemon)
 {
         GstStructure *configure = channel->configure;
-        gint i, fd;
+        gint i, fd, ret;
         ChannelOutput *output;
         gchar *name, *p;
 
@@ -1697,7 +1697,11 @@ channel_output_init (Channel *channel, gboolean daemon)
                 /* daemon, use share memory */
                 name = (gchar *)gst_structure_get_name (configure);
                 fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-                ftruncate (fd, channel->shm_size);
+                ret = ftruncate (fd, channel->shm_size);
+                if (ret == -1) {
+                        GST_ERROR ("ftruncate error: %s", g_strerror (errno));
+                        return -1;
+                }
                 p = mmap (NULL, channel->shm_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         } else {
                 p = g_malloc (channel->shm_size);
@@ -1722,7 +1726,11 @@ channel_output_init (Channel *channel, gboolean daemon)
                         /* daemon, use share memory. */
                         name = g_strdup_printf ("%s.%d", (gchar *)gst_structure_get_name (configure), i);
                         fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-                        ftruncate (fd, 64 * 1024 * 1024);
+                        ret = ftruncate (fd, 64 * 1024 * 1024);
+                        if (ret == -1) {
+                                GST_ERROR ("ftruncate error: %s", g_strerror (errno));
+                                return -1;
+                        }
                         output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
                         g_free (name);
                 } else {
@@ -1820,6 +1828,7 @@ channel_start (Channel *channel, gboolean daemon)
         GPid pid;
         Encoder *encoder;
         gint i;
+        size_t size;
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
@@ -1833,7 +1842,7 @@ channel_start (Channel *channel, gboolean daemon)
 
         if (daemon) {
                 memset (path, '\0', sizeof (path));
-                readlink ("/proc/self/exe", path, sizeof (path));
+                size = readlink ("/proc/self/exe", path, sizeof (path));
                 argv[0] = path;
                 argv[1] = "-n";
                 argv[2] = g_strdup_printf ("%d", channel->id);
