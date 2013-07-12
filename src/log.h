@@ -6,6 +6,7 @@
 #ifndef __LOG_H__
 #define __LOG_H__
 
+#include <stdio.h>
 #include <gst/gst.h>
 
 typedef struct _Log      Log;
@@ -15,7 +16,7 @@ struct _Log {
         GObject parent;
 
         gchar *log_path;
-        gint log_hd;
+        FILE *log_hd;
         GstLogFunction func;
 };
 
