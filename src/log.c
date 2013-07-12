@@ -122,7 +122,7 @@ static void log_func (GstDebugCategory *category,
                       GstDebugMessage *message,
                       gpointer user_data)
 {
-        gint log_hd = user_data;
+        FILE *log_hd = (FILE *)user_data;
         time_t t;
         struct tm *tm;
         gchar date[26];
