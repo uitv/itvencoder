@@ -218,7 +218,7 @@ ini_data_parse (gchar *name, gchar *data)
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (gkeyfile, ini_data, strlen(ini_data), flags, &e)) {
                 g_free (ini_data);
-                g_error (e->message);
+                GST_ERROR ("load %s error: %s", name, e->message);
                 g_error_free (e);
                 return NULL;
         }
@@ -644,7 +644,7 @@ configure_file_parse (Configure *configure)
         flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
         if (!g_key_file_load_from_data (gkeyfile, ini, strlen (ini), flags, &e)) {
                 g_free (ini);
-                g_error (e->message);
+                GST_ERROR ("configure file parse error: %s", e->message);
                 g_error_free (e);
                 return 1;
         }
@@ -653,7 +653,7 @@ configure_file_parse (Configure *configure)
         /* parse server group */
         p = g_key_file_get_keys (gkeyfile, "server", &number, &e);
         if (e != NULL) {
-                g_error (e->message);
+                GST_ERROR ("parse server group error: %s", e->message);
                 g_error_free (e);
                 return 1;
         }
@@ -743,7 +743,7 @@ configure_extract_lines (Configure *configure)
                                         index++;
                                         p3 = p2;
                                 } else {
-                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d position %d: %s, parse error\n", line_number, (gint)(p3 - p1), p1);
                                         return 1;
                                 }
                                 break;
@@ -836,7 +836,7 @@ configure_extract_lines (Configure *configure)
                                         index++;
                                         p4 = p3;
                                 } else {
-                                        g_print ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d, position %d: %s, parse error\n", line_number, (gint)(p3 - p1), p1);
                                         return 1;
                                 }
                                 break;
@@ -852,7 +852,7 @@ configure_extract_lines (Configure *configure)
                                         /* close variable define */
                                         var_status = 'v';
                                 } else {
-                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d position %d: %s, parse error\n", line_number, (gint)(p3 - p1), p1);
                                         return 1;
                                 }
                                 break;
