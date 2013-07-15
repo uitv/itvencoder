@@ -987,7 +987,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
                 if (stream->caps == NULL) {
                         GST_ERROR ("Can't get caps!");
                 }
-                GST_ERROR ("caps is %s.", gst_caps_to_string (stream->caps));
+                GST_INFO ("caps is %s.", gst_caps_to_string (stream->caps));
                 /* set stream type */
 #if 0
                 caps = GST_BUFFER_CAPS (buffer);
@@ -1016,7 +1016,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
                 gst_buffer_unref (stream->ring[stream->current_position]);
         }
         stream->ring[stream->current_position] = buffer;
-        *(stream->current_timestamp) = GST_BUFFER_TIMESTAMP (buffer);
+        *(stream->current_timestamp) = GST_BUFFER_PTS (buffer);
 }
 
 /**
@@ -1226,7 +1226,7 @@ move_last_rap (Encoder *encoder, GstBuffer *buffer)
 
         /* new gop timestamp, 4bytes reservation for gop size. */
         *(encoder->last_rap_addr) = *(encoder->tail_addr);
-        memcpy (buf, &(GST_BUFFER_TIMESTAMP (buffer)), 8);
+        memcpy (buf, &(GST_BUFFER_PTS (buffer)), 8);
         size = 0;
         memcpy (buf + 8, &size, 4);
         if (*(encoder->tail_addr) + 12 < encoder->cache_size) {
@@ -1321,13 +1321,13 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                         stream->name,   
                         stream->current_position,
-                        GST_TIME_ARGS (GST_BUFFER_TIMESTAMP (stream->source->ring[stream->current_position])),
+                        GST_TIME_ARGS (GST_BUFFER_PTS (stream->source->ring[stream->current_position])),
                         stream->source->current_position);
 
                 if (gst_app_src_push_buffer (src, gst_buffer_ref (stream->source->ring[current_position])) != GST_FLOW_OK) {
                         GST_ERROR ("%s, gst_app_src_push_buffer failure.", stream->name);
                 }
-                *(stream->current_timestamp) = GST_BUFFER_TIMESTAMP (stream->source->ring[current_position]);
+                *(stream->current_timestamp) = GST_BUFFER_PTS (stream->source->ring[current_position]);
                 break;
         }
         stream->current_position = current_position;
