@@ -55,6 +55,7 @@ typedef struct _Bin {
 typedef struct _SourceStream {
         gchar *name;
         guint64 *type;
+        GstCaps *caps;
         GstBuffer *ring[SOURCE_RING_SIZE];
         gint current_position; // source output position
         GstClockTime *current_timestamp;

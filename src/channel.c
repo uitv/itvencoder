@@ -968,6 +968,7 @@ source_get_stream (Source *source, gchar *name)
 static GstFlowReturn
 source_appsink_callback (GstAppSink *elt, gpointer user_data)
 {
+        GstSample *sample;
         GstBuffer *buffer;
         SourceStream *stream = (SourceStream *)user_data;
         EncoderStream *encoder;
@@ -975,9 +976,18 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         GstCaps *caps;
         gchar *str;
 
-        buffer = gst_sample_get_buffer (gst_app_sink_pull_sample (GST_APP_SINK (elt)));
+        sample = gst_app_sink_pull_sample (GST_APP_SINK (elt));
+        buffer = gst_sample_get_buffer (sample);
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
         if (stream->current_position == -1) {
+                stream->caps = gst_app_sink_get_caps (GST_APP_SINK (elt));
+                if (stream->caps == NULL) {
+                        stream->caps = gst_sample_get_caps (sample);
+                }
+                if (stream->caps == NULL) {
+                        GST_ERROR ("Can't get caps!");
+                }
+                GST_ERROR ("caps is %s.", gst_caps_to_string (stream->caps));
                 /* set stream type */
 #if 0
                 caps = GST_BUFFER_CAPS (buffer);
@@ -1300,14 +1310,14 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                         g_usleep (50000); /* wiating 50ms */
                         continue;
                 }
-#if 0
+
                 /* first buffer, set caps. */
                 if (stream->current_position == -1) {
-                        caps = GST_BUFFER_CAPS (stream->source->ring[0]);
-                        gst_app_src_set_caps (src, caps);
-                        GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (caps));
+                        //caps = GST_BUFFER_CAPS (stream->source->ring[0]);
+                        gst_app_src_set_caps (src, stream->source->caps);
+                        GST_INFO ("set stream %s caps: %s", stream->name, gst_caps_to_string (stream->source->caps));
                 }
-#endif
+
                 GST_DEBUG ("%s encoder position %d; timestamp %" GST_TIME_FORMAT " source position %d",
                         stream->name,   
                         stream->current_position,

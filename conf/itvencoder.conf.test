@@ -49,6 +49,12 @@ test = {
     # encoder pipeline defination
     encoders = {
         encoder1 = {
+            appsrc = {
+                property = {
+                    format = time
+                }
+            }
+
             videoscale = {
                 caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
             }
