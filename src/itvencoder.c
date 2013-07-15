@@ -3,6 +3,7 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <gst/gst.h>
 #include <glib/gstdio.h>
