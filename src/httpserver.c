@@ -593,7 +593,7 @@ listen_thread (gpointer data)
 typedef struct _ForeachFuncData {
         GSList **wakeup_list; /* point to list of wakeuped */
         HTTPServer *http_server;
-        GTimeVal wakeup_time;
+        gint64 wakeup_time;
 } ForeachFuncData;
 
 static gboolean
@@ -609,8 +609,7 @@ gtree_foreach_func (gpointer key, gpointer value, gpointer data)
                 *wakeup_list = g_slist_append (*wakeup_list, value);
                 return FALSE;
         } else {
-                func_data->wakeup_time.tv_sec = (*(GstClockTime *)key) / 1000000000;
-                func_data->wakeup_time.tv_usec = ((*(GstClockTime *)key) % 1000000000) / 1000;
+                func_data->wakeup_time = (*(GstClockTime *)key) / 1000000;
                 return TRUE;
         }
 }
@@ -645,17 +644,16 @@ idle_thread (gpointer data)
                 while (g_tree_nnodes (http_server->idle_queue) == 0) {
                         g_cond_wait (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex));
                 }
-                func_data.wakeup_time.tv_sec = 0;
+                func_data.wakeup_time = 0;
                 g_tree_foreach (http_server->idle_queue, gtree_foreach_func, &func_data);
                 if (wakeup_list != NULL) {
                         g_slist_foreach (wakeup_list, gslist_foreach_func, http_server);
                         g_slist_free (wakeup_list);
                         wakeup_list = NULL;
                 }
-                if (func_data.wakeup_time.tv_sec != 0) {
+                if (func_data.wakeup_time != 0) {
                         /* more than one idle request in the idle queue, wait until. */
-                        g_cond_timed_wait (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex), &(func_data.wakeup_time));
-                        //g_cond_wait_until (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex), func_data.wakeup_time);
+                        g_cond_wait_until (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex), func_data.wakeup_time);
                 }
                 g_mutex_unlock (&(http_server->idle_queue_mutex));
         }
@@ -685,13 +683,12 @@ static gpointer
 block_thread (gpointer data)
 {
         HTTPServer *http_server = (HTTPServer *)data;
-        GTimeVal timeout_time;
+        gint64 wakeup_time;
 
         for (;;) {
                 g_mutex_lock (&(http_server->block_queue_mutex));
-                g_get_current_time (&timeout_time);
-                g_time_val_add (&timeout_time, 10000);
-                g_cond_timed_wait (&(http_server->block_queue_cond), &(http_server->block_queue_mutex), &timeout_time);
+                wakeup_time = g_get_monotonic_time () + G_TIME_SPAN_SECOND;
+                g_cond_wait_until (&(http_server->block_queue_cond), &(http_server->block_queue_mutex), wakeup_time);
                 g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
                 g_mutex_unlock (&(http_server->block_queue_mutex));
         }
