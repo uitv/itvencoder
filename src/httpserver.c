@@ -878,25 +878,8 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
         http_server->user_data = user_data;
 
         http_server->listen_thread = g_thread_new ("listen_thread", listen_thread, http_server);
-        if (e != NULL) {
-                GST_ERROR ("Create httpserver thread error %s", e->message);
-                g_error_free (e);
-                return -1;
-        }
-
         http_server->idle_thread = g_thread_new ("idle_thread", idle_thread, http_server);
-        if (e != NULL) {
-                GST_ERROR ("Create idle thread error %s", e->message);
-                g_error_free (e);
-                return -1;
-        }
-
         http_server->block_thread = g_thread_new ("block_thread", block_thread, http_server);
-        if (e != NULL) {
-                GST_ERROR ("Create block thread error %s", e->message);
-                g_error_free (e);
-                return -1;
-        }
 
         return 0;
 }
