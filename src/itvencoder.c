@@ -278,7 +278,7 @@ rotate_log (ITVEncoder *itvencoder, gchar *log_path, pid_t pid)
 
         g_stat (log_path, &st);
         if (st.st_size > LOG_SIZE) {
-                name = g_strdup_printf ("%s-%llu", log_path, gst_clock_get_time (itvencoder->system_clock));
+                name = g_strdup_printf ("%s-%jd", log_path, g_get_monotonic_time ());
                 g_rename (log_path, name);
                 g_free (name);
                 kill (pid, SIGUSR1); /* reopen log file. */
