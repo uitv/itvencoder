@@ -3,6 +3,7 @@
  *  Author Zhang Ping <zhangping@itv.cn>
  */
 
+#include <stdlib.h>
 #include <sys/epoll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -13,6 +14,7 @@
 #include <gst/gst.h>
 #include <string.h>
 #include <errno.h>
+
 #include "httpserver.h"
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -89,22 +91,22 @@ httpserver_init (HTTPServer *http_server)
 
         http_server->listen_thread = NULL;
         http_server->thread_pool = NULL;
-        http_server->request_data_queue_mutex = g_mutex_new ();
+        g_mutex_init (&(http_server->request_data_queue_mutex));
         http_server->request_data_queue = g_queue_new ();
         for (i=0; i<kMaxRequests; i++) {
                 request_data = (RequestData *)g_malloc (sizeof (RequestData));
-                request_data->events_mutex = g_mutex_new ();
+                g_mutex_init (&(request_data->events_mutex));
                 request_data->id = i;
                 http_server->request_data_pointers[i] = request_data;
                 g_queue_push_head (http_server->request_data_queue, &http_server->request_data_pointers[i]);
         }
 
-        http_server->idle_queue_mutex = g_mutex_new (); //FIXME: release, deprecated api in new version of glib.
-        http_server->idle_queue_cond = g_cond_new ();
+        g_mutex_init (&(http_server->idle_queue_mutex));
+        g_cond_init (&(http_server->idle_queue_cond));
         http_server->idle_queue = g_tree_new ((GCompareFunc)compare_func);
 
-        http_server->block_queue_mutex = g_mutex_new ();
-        http_server->block_queue_cond = g_cond_new ();
+        g_mutex_init (&(http_server->block_queue_mutex));
+        g_cond_init (&(http_server->block_queue_cond));
         http_server->block_queue = g_queue_new ();
 
         http_server->total_click = 0;
@@ -318,7 +320,7 @@ parse_request (RequestData *request_data)
         /* parse headers */
         i = 0;
         for (;;) {
-                if ((g_strncasecmp (buf, "\n\n", 2) == 0) || (g_strncasecmp (buf, "\r\n\r\n", 4) == 0)) {
+                if ((g_ascii_strncasecmp (buf, "\n\n", 2) == 0) || (g_ascii_strncasecmp (buf, "\r\n\r\n", 4) == 0)) {
                         break;
                 }
 
@@ -406,9 +408,9 @@ accept_socket (HTTPServer *http_server)
                                 break;
                         }
                 }
-                g_mutex_lock (http_server->request_data_queue_mutex);
+                g_mutex_lock (&(http_server->request_data_queue_mutex));
                 request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
-                g_mutex_unlock (http_server->request_data_queue_mutex);
+                g_mutex_unlock (&(http_server->request_data_queue_mutex));
                 if (request_data_queue_len == 0) {
                         GST_ERROR ("event queue empty");
                         close_socket_gracefully (accepted_sock);
@@ -418,9 +420,9 @@ accept_socket (HTTPServer *http_server)
                         int on = 1;
                         setsockopt (accepted_sock, SOL_TCP, TCP_CORK, &on, sizeof(on));
                         setNonblocking (accepted_sock);
-                        g_mutex_lock (http_server->request_data_queue_mutex);
+                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                         request_data_pointer = g_queue_pop_tail (http_server->request_data_queue);
-                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                         if (request_data_pointer == NULL) {
                                 GST_WARNING ("No NONE request, refuse this request.");
                                 close_socket_gracefully (accepted_sock);
@@ -441,10 +443,10 @@ accept_socket (HTTPServer *http_server)
                                         GST_ERROR ("epoll_ctl add error  %s sock %d", g_strerror (errno), accepted_sock);
                                         close_socket_gracefully (accepted_sock);
                                         request_data->status = HTTP_NONE;
-                                        g_mutex_lock (http_server->request_data_queue_mutex);
+                                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                                         request_data->events = 0;
                                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                                         return;
                                 } else {
                                         GST_DEBUG ("pop request data, sock %d", request_data->sock);
@@ -536,9 +538,9 @@ listen_thread (gpointer data)
                                 accept_socket (http_server);
                         } else {
                                 RequestData *request_data = *(RequestData **)(event_list[i].data.ptr);
-                                g_mutex_lock (request_data->events_mutex);
+                                g_mutex_lock (&(request_data->events_mutex));
                                 request_data->events |= event_list[i].events;
-                                g_mutex_unlock (request_data->events_mutex);
+                                g_mutex_unlock (&(request_data->events_mutex));
                                 if ((event_list[i].events & EPOLLIN) && (request_data->status == HTTP_CONNECTED)) {
                                         GST_DEBUG ("event on sock %d events %d", request_data->sock, request_data->events);
                                         request_data->status = HTTP_REQUEST;
@@ -550,9 +552,9 @@ listen_thread (gpointer data)
                                 } 
                                 if (event_list[i].events & (EPOLLOUT | EPOLLIN | EPOLLHUP | EPOLLERR)) {
                                         if (request_data->status == HTTP_BLOCK) {
-                                                g_mutex_lock (http_server->block_queue_mutex);
-                                                g_cond_signal (http_server->block_queue_cond);
-                                                g_mutex_unlock (http_server->block_queue_mutex);        
+                                                g_mutex_lock (&(http_server->block_queue_mutex));
+                                                g_cond_signal (&(http_server->block_queue_cond));
+                                                g_mutex_unlock (&(http_server->block_queue_mutex));
                                         }
                                 }
 
@@ -639,9 +641,9 @@ idle_thread (gpointer data)
         func_data.http_server = http_server;
         func_data.wakeup_list = &wakeup_list;
         for (;;) {
-                g_mutex_lock (http_server->idle_queue_mutex);
+                g_mutex_lock (&(http_server->idle_queue_mutex));
                 while (g_tree_nnodes (http_server->idle_queue) == 0) {
-                        g_cond_wait (http_server->idle_queue_cond, http_server->idle_queue_mutex);
+                        g_cond_wait (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex));
                 }
                 func_data.wakeup_time.tv_sec = 0;
                 g_tree_foreach (http_server->idle_queue, gtree_foreach_func, &func_data);
@@ -652,9 +654,10 @@ idle_thread (gpointer data)
                 }
                 if (func_data.wakeup_time.tv_sec != 0) {
                         /* more than one idle request in the idle queue, wait until. */
-                        g_cond_timed_wait (http_server->idle_queue_cond, http_server->idle_queue_mutex, &(func_data.wakeup_time));
+                        g_cond_timed_wait (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex), &(func_data.wakeup_time));
+                        //g_cond_wait_until (&(http_server->idle_queue_cond), &(http_server->idle_queue_mutex), func_data.wakeup_time);
                 }
-                g_mutex_unlock (http_server->idle_queue_mutex);
+                g_mutex_unlock (&(http_server->idle_queue_mutex));
         }
 }
 
@@ -685,12 +688,12 @@ block_thread (gpointer data)
         GTimeVal timeout_time;
 
         for (;;) {
-                g_mutex_lock (http_server->block_queue_mutex);
+                g_mutex_lock (&(http_server->block_queue_mutex));
                 g_get_current_time (&timeout_time);
                 g_time_val_add (&timeout_time, 10000);
-                g_cond_timed_wait (http_server->block_queue_cond, http_server->block_queue_mutex, &timeout_time);
+                g_cond_timed_wait (&(http_server->block_queue_cond), &(http_server->block_queue_mutex), &timeout_time);
                 g_queue_foreach (http_server->block_queue, block_queue_foreach_func, http_server);
-                g_mutex_unlock (http_server->block_queue_mutex);
+                g_mutex_unlock (&(http_server->block_queue_mutex));
         }
 }
 
@@ -704,7 +707,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         GstClockTime cb_ret;
         
         GST_DEBUG ("EVENT %d, status %d, sock %d", request_data->events, request_data->status, request_data->sock);
-        g_mutex_lock (request_data->events_mutex);
+        g_mutex_lock (&(request_data->events_mutex));
         if (request_data->events & (EPOLLHUP | EPOLLERR)) {
                 request_data->status = HTTP_FINISH;
                 request_data->events = 0;
@@ -733,7 +736,7 @@ thread_pool_func (gpointer data, gpointer user_data)
         } else {
                 GST_ERROR ("warning!!! unprocessed event, sock %d status %d events %d", request_data->sock, request_data->status, request_data->events);
         }
-        g_mutex_unlock (request_data->events_mutex);
+        g_mutex_unlock (&(request_data->events_mutex));
         
         if (request_data->status == HTTP_REQUEST) {
                 ret = read_request (request_data);
@@ -741,10 +744,10 @@ thread_pool_func (gpointer data, gpointer user_data)
                         GST_ERROR ("no data, sock is %d", request_data->sock);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
-                        g_mutex_lock (http_server->request_data_queue_mutex);
+                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                         request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                         return;
                 } 
 
@@ -757,56 +760,58 @@ thread_pool_func (gpointer data, gpointer user_data)
                                 GST_DEBUG ("insert idle queue end, sock %d wakeuptime %llu", request_data->sock, cb_ret);
                                 http_server->encoder_click += 1;
                                 request_data->wakeup_time = cb_ret;
-                                g_mutex_lock (http_server->idle_queue_mutex);
+                                g_mutex_lock (&(http_server->idle_queue_mutex));
                                 while (g_tree_lookup (http_server->idle_queue, &(request_data->wakeup_time)) != NULL) {
                                         /* avoid time conflict */
                                         request_data->wakeup_time++;
                                 }
                                 request_data->status = HTTP_IDLE;
                                 g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
-                                g_cond_signal (http_server->idle_queue_cond);
-                                g_mutex_unlock (http_server->idle_queue_mutex);
+                                g_cond_signal (&(http_server->idle_queue_cond));
+                                g_mutex_unlock (&(http_server->idle_queue_mutex));
                         } else { //FIXME
                                 GST_DEBUG ("callback return 0, request finish, sock %d", request_data->sock);
                                 request_data->status = HTTP_NONE;
                                 close_socket_gracefully (request_data->sock);
-                                g_mutex_lock (http_server->request_data_queue_mutex);
+                                g_mutex_lock (&(http_server->request_data_queue_mutex));
                                 request_data->events = 0;
                                 g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                                g_mutex_unlock (http_server->request_data_queue_mutex);
+                                g_mutex_unlock (&(http_server->request_data_queue_mutex));
                         }
                 } else if (ret == 1) {
                         /* need read more data */
-                        g_mutex_lock (http_server->block_queue_mutex);
+                        g_mutex_lock (&(http_server->block_queue_mutex));
                         g_queue_push_head (http_server->block_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->block_queue_mutex);
+                        g_mutex_unlock (&(http_server->block_queue_mutex));
                         return;
                 } else {
                         /* Bad Request */
                         GST_ERROR ("Bad request, return is %d, sock is %d", ret, request_data->sock);
                         gchar *buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
+                        if (write (request_data->sock, buf, strlen (buf)) != strlen(buf)) {
+                                GST_ERROR ("write sock %d error.", request_data->sock);
+                        }
                         g_free (buf);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
-                        g_mutex_lock (http_server->request_data_queue_mutex);
+                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                         request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                 }
         } else if (request_data->status == HTTP_CONTINUE) {
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 if (cb_ret == GST_CLOCK_TIME_NONE) {
-                        g_mutex_lock (http_server->block_queue_mutex);
+                        g_mutex_lock (&(http_server->block_queue_mutex));
                         request_data->status = HTTP_BLOCK;
                         // block time out is 300ms
                         request_data->wakeup_time = gst_clock_get_time (http_server->system_clock) + 300 * GST_MSECOND;
                         g_queue_push_head (http_server->block_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->block_queue_mutex);
+                        g_mutex_unlock (&(http_server->block_queue_mutex));
                 } else if (cb_ret > 0) {
                         int iiii=0;
                         request_data->wakeup_time = cb_ret;
-                        g_mutex_lock (http_server->idle_queue_mutex);
+                        g_mutex_lock (&(http_server->idle_queue_mutex));
                         if (request_data->status != HTTP_CONTINUE) {
                                 GST_ERROR ("insert a un continue request to idle queue sock %d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", request_data->sock);
                         }
@@ -825,33 +830,33 @@ thread_pool_func (gpointer data, gpointer user_data)
                         request_data->status = HTTP_IDLE;
                         GST_DEBUG ("insert idle queue end, sock %d wakeuptime %llu", request_data->sock, cb_ret);
                         g_tree_insert (http_server->idle_queue, &(request_data->wakeup_time), request_data_pointer);
-                        g_cond_signal (http_server->idle_queue_cond);
-                        g_mutex_unlock (http_server->idle_queue_mutex);
+                        g_cond_signal (&(http_server->idle_queue_cond));
+                        g_mutex_unlock (&(http_server->idle_queue_mutex));
                 } else {//FIXME
                         GST_ERROR ("return value is 0, sock is %d", request_data->sock);
-                        g_mutex_lock (http_server->idle_queue_mutex);
+                        g_mutex_lock (&(http_server->idle_queue_mutex));
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
-                        g_mutex_unlock (http_server->idle_queue_mutex);
+                        g_mutex_unlock (&(http_server->idle_queue_mutex));
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
-                        g_mutex_lock (http_server->request_data_queue_mutex);
+                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                         request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
                 GST_WARNING ("request finish %d callback return %d, send %d", request_data->sock, cb_ret, request_data->bytes_send);
                 if (cb_ret == 0) {
-                        g_mutex_lock (http_server->idle_queue_mutex);
+                        g_mutex_lock (&(http_server->idle_queue_mutex));
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
-                        g_mutex_unlock (http_server->idle_queue_mutex);
+                        g_mutex_unlock (&(http_server->idle_queue_mutex));
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
-                        g_mutex_lock (http_server->request_data_queue_mutex);
+                        g_mutex_lock (&(http_server->request_data_queue_mutex));
                         request_data->events = 0;
                         g_queue_push_head (http_server->request_data_queue, request_data_pointer);
-                        g_mutex_unlock (http_server->request_data_queue_mutex);
+                        g_mutex_unlock (&(http_server->request_data_queue_mutex));
                 }
         }
 }
@@ -872,21 +877,21 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
         http_server->user_callback = user_callback;
         http_server->user_data = user_data;
 
-        http_server->listen_thread = g_thread_create (listen_thread, http_server, TRUE, &e);
+        http_server->listen_thread = g_thread_new ("listen_thread", listen_thread, http_server);
         if (e != NULL) {
                 GST_ERROR ("Create httpserver thread error %s", e->message);
                 g_error_free (e);
                 return -1;
         }
 
-        http_server->idle_thread = g_thread_create (idle_thread, http_server, TRUE, &e);
+        http_server->idle_thread = g_thread_new ("idle_thread", idle_thread, http_server);
         if (e != NULL) {
                 GST_ERROR ("Create idle thread error %s", e->message);
                 g_error_free (e);
                 return -1;
         }
 
-        http_server->block_thread = g_thread_create (block_thread, http_server, TRUE, &e);
+        http_server->block_thread = g_thread_new ("block_thread", block_thread, http_server);
         if (e != NULL) {
                 GST_ERROR ("Create block thread error %s", e->message);
                 g_error_free (e);
@@ -913,9 +918,9 @@ httpserver_report_request_data (HTTPServer *http_server)
                 }
         }
 
-        g_mutex_lock (http_server->request_data_queue_mutex);
+        g_mutex_lock (&(http_server->request_data_queue_mutex));
         request_data_queue_len = g_queue_get_length (http_server->request_data_queue);
-        g_mutex_unlock (http_server->request_data_queue_mutex);
+        g_mutex_unlock (&(http_server->request_data_queue_mutex));
         GST_INFO ("status None %d, request queue length %d, blockq %d, total click %llu, encoder click %llu",
                   count,
                   request_data_queue_len,

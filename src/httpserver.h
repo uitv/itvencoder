@@ -92,7 +92,7 @@ typedef struct _RequestData {
         struct sockaddr client_addr;
         GstClockTime birth_time;
         guint64 bytes_send;
-        GMutex *events_mutex;
+        GMutex events_mutex;
         guint32 events; /* epoll events */
         enum session_status status; /* live over http need keeping tcp link */
         GstClockTime wakeup_time; /* used in idle queue */
@@ -121,13 +121,13 @@ struct _HTTPServer {
         gint epollfd;
         GThread *listen_thread;
 
-        GMutex *idle_queue_mutex;
-        GCond *idle_queue_cond;
+        GMutex idle_queue_mutex;
+        GCond idle_queue_cond;
         GTree *idle_queue;
         GThread *idle_thread;
 
-        GMutex *block_queue_mutex;
-        GCond *block_queue_cond;
+        GMutex block_queue_mutex;
+        GCond block_queue_cond;
         GQueue *block_queue;
         GThread *block_thread;
 
@@ -136,7 +136,7 @@ struct _HTTPServer {
         http_callback_t user_callback;
         gpointer user_data;
         gpointer request_data_pointers[kMaxRequests]; //FIXME: use pointer array?
-        GMutex *request_data_queue_mutex;
+        GMutex request_data_queue_mutex;
         GQueue *request_data_queue;
 };
 
