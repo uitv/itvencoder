@@ -201,9 +201,7 @@ main (int argc, char *argv[])
 
         signal (SIGPIPE, sigignor);
         signal (SIGHUP, sigignor);
-        signal (SIGINT, sigignor);
         signal (SIGTERM, sigignor);
-        signal (SIGQUIT, sigignor);
         signal (SIGALRM, sigignor);
         signal (SIGUSR1, sigreopen);
         GST_WARNING ("iTVEncoder started ...");
