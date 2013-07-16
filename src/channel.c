@@ -1038,8 +1038,7 @@ create_source_pipeline (Source *source)
         GstAppSinkCallbacks appsink_callbacks = {
                 NULL,
                 NULL,
-                source_appsink_callback,
-                NULL
+                source_appsink_callback
         };
         GstElementFactory *element_factory;
         GType type;
@@ -1265,6 +1264,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
 
+GST_ERROR ("appsink1 <<<<<<<<<<<");
         buffer = gst_sample_get_buffer (gst_app_sink_pull_sample (GST_APP_SINK (elt)));
         sem_wait (encoder->mutex);
         (*(encoder->total_count)) += gst_buffer_get_size (buffer);
@@ -1291,6 +1291,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         copy_buffer (encoder, buffer);
         sem_post (encoder->mutex);
         gst_buffer_unref (buffer);
+GST_ERROR ("appsink1 >>>>>>>>>>");
 }
 
 static void
@@ -1358,8 +1359,7 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
         GstAppSinkCallbacks encoder_appsink_callbacks = {
                 NULL,
                 NULL,
-                encoder_appsink_callback,
-                NULL
+                encoder_appsink_callback
         };
         gchar *p;
         GstCaps *caps;
