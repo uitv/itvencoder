@@ -23,9 +23,9 @@ test = {
     # source pipeline defination
     source = {
 
-        #videotestsrc = {
-        #    caps = video/x-raw-yuv,width=720,height=576,framerate=25/1
-        #}
+        videotestsrc = {
+            caps = video/x-raw,width=720,height=576,framerate=25/1
+        }
 
         audiotestsrc = {
             property = {
@@ -100,7 +100,7 @@ test = {
                     option = <var name="audio encoder" type="option">no</var>
                 }
                 muxer = {
-                    definition = mpegtsmux name=muxer ! queue ! appsink
+                    definition = mpegtsmux name=muxer ! appsink
                 }
             }
 
