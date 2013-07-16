@@ -20,7 +20,12 @@ GST_DEBUG_CATEGORY(ITVENCODER);
 
 Log *_log;
 
-static void sighandler (gint number)
+static void sigignor (gint number)
+{
+        GST_ERROR ("signal %d received.", number);
+}
+
+static void sigreopen (gint number)
 {
         log_reopen (_log);
 }
@@ -161,8 +166,13 @@ main (int argc, char *argv[])
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
 
-                signal (SIGPIPE, SIG_IGN);
-                signal (SIGUSR1, sighandler);
+                signal (SIGPIPE, sigignor);
+                signal (SIGHUP, sigignor);
+                signal (SIGINT, sigignor);
+                signal (SIGTERM, sigignor);
+                signal (SIGQUIT, sigignor);
+                signal (SIGALRM, sigignor);
+                signal (SIGUSR1, sigreopen);
                 signal (SIGUSR2, stopchannel);
                 GST_WARNING ("Channel %s starting ...", channel->name);
 
@@ -189,8 +199,13 @@ main (int argc, char *argv[])
                 }
         }
 
-        signal (SIGPIPE, SIG_IGN);
-        signal (SIGUSR1, sighandler);
+        signal (SIGPIPE, sigignor);
+        signal (SIGHUP, sigignor);
+        signal (SIGINT, sigignor);
+        signal (SIGTERM, sigignor);
+        signal (SIGQUIT, sigignor);
+        signal (SIGALRM, sigignor);
+        signal (SIGUSR1, sigreopen);
         GST_WARNING ("iTVEncoder started ...");
 
         loop = g_main_loop_new (NULL, FALSE);

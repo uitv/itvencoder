@@ -1778,7 +1778,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
                 return;
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Exit on an unhandled signal. restart.");
+                GST_ERROR ("Exit on signal %d, restart.", WTERMSIG(status));
                 channel->age += 1;
                 channel_start (channel, TRUE);
                 return;
@@ -1833,8 +1833,8 @@ channel_setup (Channel *channel, gboolean daemon)
 gint
 channel_start (Channel *channel, gboolean daemon)
 {
-        GError *e = NULL;
-        gchar *argv[4], path[512], *p;
+        GError *error = NULL;
+        gchar *argv[7], path[512], *p;
         GPid pid;
         Encoder *encoder;
         gint i;
@@ -1853,18 +1853,18 @@ channel_start (Channel *channel, gboolean daemon)
         if (daemon) {
                 memset (path, '\0', sizeof (path));
                 size = readlink ("/proc/self/exe", path, sizeof (path));
-                argv[0] = path;
-                argv[1] = "-n";
-                argv[2] = g_strdup_printf ("%d", channel->id);
+                i = 0;
+                argv[i++] = path;
+                argv[i++] = "-n";
+                argv[i++] = g_strdup_printf ("%d", channel->id);
                 p = (gchar *)gst_structure_get_string (channel->configure, "debug");
                 if (p != NULL) {
-                        argv[3] = g_strdup_printf ("--gst-debug=%s", p);
-                        argv[4] = NULL;
-                } else {
-                        argv[3] = NULL;
+                        argv[i++] = g_strdup_printf ("--gst-debug=%s", p);
                 }
-                if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
-                        GST_ERROR ("Start channel %s error!!!", channel->name);
+                argv[i++] = NULL;
+                if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, &error)) {
+                        GST_ERROR ("Start channel %s error: %s.", channel->name, error->message);
+                        g_error_free (error);
                         return FALSE;
                 }
                 channel->worker_pid = pid;
