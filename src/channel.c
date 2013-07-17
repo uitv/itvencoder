@@ -1844,7 +1844,7 @@ channel_start (Channel *channel, gboolean daemon)
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
-                return 1;
+                return 0;
         }
 
         if (channel->worker_pid != 0) {
