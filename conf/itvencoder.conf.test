@@ -37,7 +37,7 @@ test = {
         bins = {
             audio = {
                 definition = audiotestsrc ! queue ! appsink
-                option = <var name="audio source" type="option">no</var>
+                option = <var name="audio source" type="option">yes</var>
             }
             video = {
                 definition = videotestsrc ! appsink
@@ -69,14 +69,6 @@ test = {
                 }
             }
 
-            # faac audio encoder
-            faac = {
-                property = {
-                    name = faac
-                    outputformat = 1
-                }
-            }
-
             # mpeg2 ts mux
             mpegtsmux = {
                 property = {
@@ -96,8 +88,8 @@ test = {
                     option = <var name="video encoder" type="option">yes</var>
                 }
                 audio = {
-                    definition = appsrc name=audio ! avenc_aac ! muxer.
-                    option = <var name="audio encoder" type="option">no</var>
+                    definition = appsrc name=audio ! voaacenc ! muxer.
+                    option = <var name="audio encoder" type="option">yes</var>
                 }
                 muxer = {
                     definition = mpegtsmux name=muxer ! appsink
