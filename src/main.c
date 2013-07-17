@@ -72,7 +72,7 @@ init_log (gchar *log_path)
 
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
-static gchar *config_path = NULL;
+gchar *config_path = NULL;
 static gint channel_id = -1;
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},

@@ -14,6 +14,8 @@
 #include <gst/app/gstappsrc.h>
 #include "channel.h"
 
+extern gchar *config_path;
+
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
 #define GST_CAT_DEFAULT ITVENCODER
 
@@ -1834,7 +1836,7 @@ gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *error = NULL;
-        gchar *argv[7], path[512], *p;
+        gchar *argv[9], path[512], *p;
         GPid pid;
         Encoder *encoder;
         gint i;
@@ -1855,6 +1857,10 @@ channel_start (Channel *channel, gboolean daemon)
                 size = readlink ("/proc/self/exe", path, sizeof (path));
                 i = 0;
                 argv[i++] = path;
+                if (config_path != NULL) {
+                        argv[i++] = "-c";
+                        argv[i++] = config_path;
+                }
                 argv[i++] = "-n";
                 argv[i++] = g_strdup_printf ("%d", channel->id);
                 p = (gchar *)gst_structure_get_string (channel->configure, "debug");
