@@ -117,7 +117,7 @@ source_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpe
                 SOURCE(obj)->state= g_value_get_int (value);
                 break;
         default:
-                G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
+                G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
         }
 }
