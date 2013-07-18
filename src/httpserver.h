@@ -135,7 +135,7 @@ struct _HTTPServer {
 
         http_callback_t user_callback;
         gpointer user_data;
-        gpointer request_data_pointers[kMaxRequests]; //FIXME: use pointer array?
+        gpointer request_data_pointers[kMaxRequests];
         GMutex *request_data_queue_mutex;
         GQueue *request_data_queue;
 };
