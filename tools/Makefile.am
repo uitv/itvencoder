@@ -2,6 +2,6 @@ INCLUDES = $(gstreamer_CFLAGS)
 
 bin_PROGRAMS = mediaprobe
 
-itvencoder_LDADD = $(gstreamer_LIBS)
+mediaprobe_LDADD = $(gstreamer_LIBS) -lgstpbutils-1.0
 
-itvencoder_SOURCES = mediaprobe.c
+mediaprobe_SOURCES = mediaprobe.c

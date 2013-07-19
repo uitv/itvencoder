@@ -42,6 +42,7 @@ PKG_CHECK_MODULES([gstreamerapp], [gstreamer-app-1.0])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
+tools/Makefile
 itvencoder.spec
 ])
 
