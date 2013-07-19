@@ -274,19 +274,6 @@ channel_init (Channel *channel)
 }
 
 static void
-set_enable_property (Channel *channel)
-{
-        gchar *enable;
-
-        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
-        if (g_strcmp0 (enable, "no") == 0) {
-                channel->enable = FALSE;
-        } else if (g_strcmp0 (enable, "yes") == 0) {
-                channel->enable = TRUE;
-        }
-}
-
-static void
 channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
         g_return_if_fail(IS_CHANNEL(obj));
@@ -297,7 +284,6 @@ channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSp
                 break;
         case CHANNEL_PROP_CONFIGURE:
                 CHANNEL(obj)->configure = (GstStructure *)g_value_get_pointer (value); //TODO: should release dup string config_file_path?
-                set_enable_property (CHANNEL(obj));
                 break;
         default:
                 G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, prop_id, pspec);
@@ -1773,6 +1759,14 @@ channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
         gint i;
+        gchar *enable;
+
+        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+        if (g_strcmp0 (enable, "no") == 0) {
+                channel->enable = FALSE;
+        } else if (g_strcmp0 (enable, "yes") == 0) {
+                channel->enable = TRUE;
+        }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
         stats = g_strsplit (stat, "\n", 10);

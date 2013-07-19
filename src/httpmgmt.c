@@ -161,6 +161,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         }
                         g_free (buf);
                 }
+                GST_INFO ("Reload configure.");
                 itvencoder_load_configure (httpmgmt->itvencoder); 
         }
 
