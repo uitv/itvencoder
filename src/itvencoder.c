@@ -209,8 +209,20 @@ gint
 itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 {
         Channel *channel;
+        GValue *value;
+        GstStructure *structure;
 
+        /* maybe the configure modified, reload. */
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
+        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, channel->name);
+        channel->configure = (GstStructure *)gst_value_get_structure (value);
+
+        /* reset the channel. */
+        channel_reset (channel);
+
+        /* start the channel. */
         return channel_start (channel, itvencoder->daemon);
 }
 

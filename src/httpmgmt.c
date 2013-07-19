@@ -150,6 +150,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 }
+                GST_INFO ("Reload configure.");
                 itvencoder_load_configure (httpmgmt->itvencoder); 
         }
 
