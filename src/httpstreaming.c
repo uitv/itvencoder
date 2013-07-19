@@ -132,8 +132,16 @@ get_encoder_output (HTTPStreaming *httpstreaming, RequestData *request_data)
         Channel *channel;
 
         channel_index = itvencoder_url_channel_index (request_data->uri);
+        if (channel_index >= httpstreaming->itvencoder->channel_array->len) {
+                GST_ERROR ("channel not fount: %s.", request_data->uri);
+                return NULL;
+        }
         channel = g_array_index (httpstreaming->itvencoder->channel_array, gpointer, channel_index);
         encoder_index = itvencoder_url_encoder_index (request_data->uri);
+        if (encoder_index >= channel->encoder_array->len) {
+                GST_ERROR ("encoder not fount: %s.", request_data->uri);
+                return NULL;
+        }
 
         return &channel->output->encoders[encoder_index];
 }
