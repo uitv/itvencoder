@@ -662,8 +662,6 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
         if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
-        } else {
-                GST_WARNING ("new added pad name: %s, delayed src pad name %s. failure!", src_pad_name, bin->previous->src_pad_name);
         }
 
         g_free (src_pad_name);
