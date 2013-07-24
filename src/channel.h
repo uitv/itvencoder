@@ -96,6 +96,7 @@ typedef struct _EncoderStream {
         GstClock *system_clock;
         GstClockTime *current_timestamp;
         GstClockTime *last_heartbeat;
+        gchar *source_name;
         SourceStream *source;
 } EncoderStream;
 
