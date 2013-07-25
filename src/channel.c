@@ -1686,13 +1686,13 @@ channel_output_init (Channel *channel, gboolean daemon)
                         /* daemon, use share memory. */
                         name = g_strdup_printf ("%s.%d", (gchar *)gst_structure_get_name (configure), i);
                         fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-                        ftruncate (fd, 64 * 1024 * 1024);
-                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                        ftruncate (fd, SHM_SIZE);
+                        output->encoders[i].cache_addr = mmap (NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
                         g_free (name);
                 } else {
-                        output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (SHM_SIZE);
                 }
-                output->encoders[i].cache_size = 64 * 1024 * 1024;
+                output->encoders[i].cache_size = SHM_SIZE;
                 output->encoders[i].head_addr = (guint64 *)p;
                 *(output->encoders[i].head_addr) = 0;
                 p += sizeof (guint64);
@@ -1871,7 +1871,7 @@ channel_stop (Channel *channel, gint sig)
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
-                channel->worker_pid = 0;
+                channel_reset (channel);
                 return 0;
         } else {
                 return 1; // stop a stoped channel.

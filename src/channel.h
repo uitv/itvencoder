@@ -12,6 +12,7 @@
 
 #define SOURCE_RING_SIZE 250
 #define STREAM_NAME_LEN 32
+#define SHM_SIZE 4*1024*1024
 
 typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
