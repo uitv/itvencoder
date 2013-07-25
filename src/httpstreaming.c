@@ -341,7 +341,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
 
                         if (*(encoder_output->head_addr) == *(encoder_output->tail_addr)) {
                                 GST_WARNING ("%s unready.", request_data->uri);
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Unready");
+                                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                 write (request_data->sock, buf, strlen (buf));
                                 g_free (buf);
                                 return 0;
