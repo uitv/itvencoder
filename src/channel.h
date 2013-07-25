@@ -12,6 +12,7 @@
 
 #define SOURCE_RING_SIZE 250
 #define STREAM_NAME_LEN 32
+#define SHM_SIZE 64*1024*1024
 
 typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
@@ -97,6 +98,7 @@ typedef struct _EncoderStream {
         GstClock *system_clock;
         GstClockTime *current_timestamp;
         GstClockTime *last_heartbeat;
+        gchar *source_name;
         SourceStream *source;
 } EncoderStream;
 

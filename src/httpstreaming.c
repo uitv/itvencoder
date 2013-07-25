@@ -190,12 +190,16 @@ get_current_gop_end (EncoderOutput *encoder_output, RequestDataUserData *request
         gint64 current_gop_end_addr;
 
         /* read gop size. */
-        if (request_user_data->current_rap_addr + 12 < encoder_output->cache_size) {
+        n = encoder_output->cache_size - request_user_data->current_rap_addr;
+        if (n >= 12) {
                 memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, 4);
+        } else if (n > 8) {
+                memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, n - 8);
+                memcpy (&current_gop_size + n - 8, encoder_output->cache_addr, 12 - n);
+                GST_ERROR ("n: %d, GOP Size: %d.", n, current_gop_size);
         } else {
-                n = encoder_output->cache_size - request_user_data->current_rap_addr - 8;
-                memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, n);
-                memcpy (&current_gop_size + n, encoder_output->cache_addr, 4 - n);
+                memcpy (&current_gop_size, encoder_output->cache_addr + 8 - n, 4);
+                GST_ERROR ("n: %d, GOP sIZE: %d.", n, current_gop_size);
         }
         if (current_gop_size == 0) {
                 /* current output gop. */
@@ -342,7 +346,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                                 return 0;
                         }
 
-                        if (encoder_output->head_addr == encoder_output->tail_addr) {
+                        if (*(encoder_output->head_addr) == *(encoder_output->tail_addr)) {
                                 GST_WARNING ("%s unready.", request_data->uri);
                                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Unready");
                                 ret = write (request_data->sock, buf, strlen (buf));

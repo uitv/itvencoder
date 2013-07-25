@@ -641,7 +641,7 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 
         src_pad_name = gst_pad_get_name (pad);
         if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
-                GST_INFO ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
+                GST_DEBUG ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
 
@@ -667,8 +667,6 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
         if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
-        } else {
-                GST_WARNING ("new added pad name: %s, delayed src pad name %s. failure!", src_pad_name, bin->previous->src_pad_name);
         }
 
         g_free (src_pad_name);
@@ -842,7 +840,7 @@ get_bins (GstStructure *structure)
         for (i = 0; i < n; i++) {
                 name = (gchar *)gst_structure_nth_field_name (bins, i);
                 if (!is_bin_selected (structure, name)) {
-                        g_print ("skip bin %s\n", name);
+                        GST_WARNING ("%s has been deselected.", name);
                         continue;
                 }
                 bin = g_slice_new (Bin);
@@ -1081,7 +1079,7 @@ create_source_pipeline (Source *source)
  * request element link.
  * 
  */
-static gboolean
+static void
 complete_request_element (GSList *bins)
 {
         GSList *l1, *l2, *l3, *l4;
@@ -1276,7 +1274,7 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
                 /* insure next buffer isn't current buffer */
                 if (current_position == stream->source->current_position ||
                         stream->source->current_position == -1) { /*FIXME: condition variable*/
-                        GST_DEBUG ("waiting %s source ready", stream->name);
+                        GST_DEBUG ("waiting %s source ready", stream->source_name);
                         g_usleep (50000); /* wiating 50ms */
                         continue;
                 }
@@ -1309,8 +1307,8 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
  * @param: like this: /server/httpstreaming
  *
  */
-static void
-create_encoder_pipeline (Encoder *encoder) //FIXME return failure
+static gint
+create_encoder_pipeline (Encoder *encoder)
 {
         GValue *value;
         GstElement *pipeline, *element;
@@ -1345,6 +1343,7 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
                         element = elements->data;
                         if (!gst_bin_add (GST_BIN (pipeline), element)) {
                                 GST_ERROR ("add element %s to bin %s error.", gst_element_get_name (element), bin->name);
+                                return 1;
                         }
                         elements = g_slist_next (elements);
                 }
@@ -1392,6 +1391,7 @@ create_encoder_pipeline (Encoder *encoder) //FIXME return failure
         g_object_unref (bus);
 
         encoder->pipeline = pipeline;
+        return 0;
 }
 
 static gint
@@ -1461,7 +1461,8 @@ channel_encoder_extract_streams (Encoder *encoder)
                 g_regex_unref (regex);
                 if (g_match_info_matches (match_info)) {
                         stream = (EncoderStream *)g_malloc (sizeof (EncoderStream));
-                        stream->name = g_match_info_fetch_named (match_info, "stream");
+                        stream->name = name;
+                        stream->source_name = g_match_info_fetch_named (match_info, "stream");
                         GST_INFO ("stream found %s", stream->name);
                         g_array_append_val (encoder->streams, stream);
                 } else if (g_str_has_prefix (definition, "appsrc")) {
@@ -1553,7 +1554,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         g_strlcpy (channel->output->encoders[i].streams[j].name, stream->name, STREAM_NAME_LEN);
                         for (k = 0; k < channel->source->streams->len; k++) {
                                 source = g_array_index (channel->source->streams, gpointer, k);
-                                if (g_strcmp0 (source->name, stream->name) == 0) {
+                                if (g_strcmp0 (source->name, stream->source_name) == 0) {
                                         GST_INFO ("source: %s encoder: %s", source->name, stream->name);
                                         stream->source = source;
                                         stream->current_position = -1;
@@ -1564,7 +1565,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         }
                         if (stream->source == NULL) {
                                 GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
-                                return -1;
+                                return 1;
                         }
                 }
 
@@ -1573,7 +1574,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         return 1;
                 }
                 complete_request_element (encoder->bins);
-                create_encoder_pipeline (encoder);
+                if (create_encoder_pipeline (encoder) != 0) {
+                        return 1;
+                }
 
                 g_array_append_val (channel->encoder_array, encoder);
         }
@@ -1705,17 +1708,17 @@ channel_output_init (Channel *channel, gboolean daemon)
                         /* daemon, use share memory. */
                         name = g_strdup_printf ("%s.%d", (gchar *)gst_structure_get_name (configure), i);
                         fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-                        ret = ftruncate (fd, 64 * 1024 * 1024);
+                        ret = ftruncate (fd, SHM_SIZE);
                         if (ret == -1) {
                                 GST_ERROR ("ftruncate error: %s", g_strerror (errno));
                                 return -1;
                         }
-                        output->encoders[i].cache_addr = mmap (NULL, 64 * 1024 * 1024, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                        output->encoders[i].cache_addr = mmap (NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
                         g_free (name);
                 } else {
-                        output->encoders[i].cache_addr = g_malloc (64 * 1024 * 1024);
+                        output->encoders[i].cache_addr = g_malloc (SHM_SIZE);
                 }
-                output->encoders[i].cache_size = 64 * 1024 * 1024;
+                output->encoders[i].cache_size = SHM_SIZE;
                 output->encoders[i].head_addr = (guint64 *)p;
                 *(output->encoders[i].head_addr) = 0;
                 p += sizeof (guint64);
@@ -1820,6 +1823,7 @@ channel_start (Channel *channel, gboolean daemon)
         size_t size;
         GValue *value;
         GstStructure *structure;
+        GstStateChangeReturn ret;
 
         if (!channel->enable) {
                 GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
@@ -1877,7 +1881,10 @@ channel_start (Channel *channel, gboolean daemon)
                 channel->source->state = GST_STATE_PLAYING;
                 for (i = 0; i < channel->encoder_array->len; i++) {
                         encoder = g_array_index (channel->encoder_array, gpointer, i);
-                        gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+                        ret = gst_element_set_state (encoder->pipeline, GST_STATE_PLAYING);
+                        if (ret == GST_STATE_CHANGE_FAILURE) {
+                                GST_ERROR ("Set %s to play error.", encoder->name);
+                        }
                         encoder->state = GST_STATE_PLAYING;
                 }
                 *(channel->output->state) = GST_STATE_PLAYING;
@@ -1892,7 +1899,7 @@ channel_stop (Channel *channel, gint sig)
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
-                channel->worker_pid = 0;
+                channel_reset (channel);
                 return 0;
         } else {
                 return 1; // stop a stoped channel.
