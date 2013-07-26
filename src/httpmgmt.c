@@ -200,15 +200,14 @@ restart_channel (HTTPMgmt *httpmgmt, gint index)
         gint ret;
         gchar *buf;
 
-        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGKILL);
-        if (ret == 0) {
-                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
-        } else if (ret == 1) {
+        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
+        if (ret == 1) {
                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 24, "Restart a stoped channel");
-        } else {
-                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+                return buf;
         }
 
+        g_usleep (1000000); // wait 1s for channel stoped.
+        buf = start_channel (httpmgmt, index);
         return buf;
 }
 
