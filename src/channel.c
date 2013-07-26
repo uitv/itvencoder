@@ -1753,7 +1753,6 @@ channel_reset (Channel *channel)
                 channel->start_ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
         }
         channel->worker_pid = 0;
-        channel->age = 0;
         channel->last_ctime = 0;
         channel->last_utime = 0;
         channel->last_stime = 0;
