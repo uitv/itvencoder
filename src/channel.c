@@ -1723,9 +1723,9 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         }
         if (WIFSIGNALED(status)) {
                 GST_ERROR ("Exit on an unhandled signal. restart.");
-                channel->age += 1;
         }
 
+        channel->age += 1;
         channel->worker_pid = 0;
         return;
 }
