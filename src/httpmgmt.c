@@ -225,7 +225,7 @@ restart_channel (HTTPMgmt *httpmgmt, gint index)
 static void
 channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
-        gint i, index;
+        gint i, index, ret;
         gchar *buf;
 
         index = itvencoder_url_encoder_index (request_data->uri);
@@ -270,6 +270,7 @@ static void
 tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
         gchar *buf, *uri, *mediainfo;
+        gint ret;
 
         if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
                 uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
@@ -278,7 +279,10 @@ tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
-        write (request_data->sock, buf, strlen (buf));
+        ret = write (request_data->sock, buf, strlen (buf));
+        if (ret == -1) {
+                GST_ERROR ("Write sock error: %s", g_strerror (errno));
+        }
         g_free (buf);
 }
 
