@@ -209,6 +209,35 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         }
 }
 
+static gchar *
+get_mediainfo (gchar *uri)
+{
+        gchar *mediainfo = NULL;
+        GstElement *pipeline, *source, *demux;
+
+        if (g_str_has_prefix (uri, "udp://")) {
+                /* udp src. */
+        }
+
+        return mediainfo;
+}
+
+static void
+tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
+{
+        gchar *buf, *uri, *mediainfo;
+
+        if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
+                uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
+                mediainfo = get_mediainfo (uri);
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (uri), uri);
+        } else {
+                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+        }
+        write (request_data->sock, buf, strlen (buf));
+        g_free (buf);
+}
+
 /**
  * httpmgmt_dispatcher:
  * @data: RequestData type pointer
@@ -253,6 +282,9 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         g_free (ver);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
+                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
+                        /* tools. */
+                        tools_request (httpmgmt, request_data);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         write (request_data->sock, buf, strlen (buf));
