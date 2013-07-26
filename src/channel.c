@@ -1744,17 +1744,16 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
 {
         /* Close pid */
         g_spawn_close_pid (pid);
-        channel->worker_pid = 0;
         if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
                 GST_ERROR ("Normaly exit, status is %d", WEXITSTATUS(status));
-                return;
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Exit on signal %d, restart.", WTERMSIG(status));
-                channel->age += 1;
-                channel_start (channel, TRUE);
-                return;
+                GST_ERROR ("Exit on an unhandled signal.");
         }
+
+        channel->age += 1;
+        channel->worker_pid = 0;
+        return;
 }
 
 gint
@@ -1778,8 +1777,6 @@ channel_reset (Channel *channel)
         for (i = 1; i < 8; i++) {
                 channel->start_ctime += g_ascii_strtoull (cpustats[i], NULL, 10);
         }
-        channel->worker_pid = 0;
-        channel->age = 0;
         channel->last_ctime = 0;
         channel->last_utime = 0;
         channel->last_stime = 0;

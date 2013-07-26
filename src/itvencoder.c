@@ -361,7 +361,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         channel->name,
                                         output->source.streams[j].name,
                                         time_diff);
+                                /* restart channel. */
                                 channel_stop (channel, SIGKILL);
+                                g_usleep (1000000); // wait 1s
+                                itvencoder_channel_start (itvencoder, i);
                         } else {
                                 GST_INFO ("%s.source.%s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
@@ -389,7 +392,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].name,
                                                 output->encoders[j].streams[k].name,
                                                 time_diff);
+                                        /* restart channel. */
                                         channel_stop (channel, SIGKILL);
+                                        g_usleep (1000000); // wait 1s
+                                        itvencoder_channel_start (itvencoder, i);
                                 } else {
                                         GST_INFO ("%s.encoders.%s.%s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -432,7 +438,10 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         output->source.sync_error_times += 1;
                         if (output->source.sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart %s", output->source.sync_error_times, channel->name);
+                                /* restart channel. */
                                 channel_stop (channel, SIGKILL);
+                                g_usleep (1000000); // wait 1s.
+                                itvencoder_channel_start (itvencoder, i);
                         }
                 } else {
                         output->source.sync_error_times = 0;

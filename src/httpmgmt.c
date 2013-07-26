@@ -167,12 +167,66 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 
 }
 
+static gchar *
+stop_channel (HTTPMgmt *httpmgmt, gint index)
+{
+        gint ret;
+        gchar *buf;
+
+        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
+        if (ret == 0) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
+        } else if (ret == 1) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)21, "Stop a stoped channel");
+        } else {
+                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+        }
+
+        return buf;
+}
+
+static gchar *
+start_channel (HTTPMgmt *httpmgmt, gint index)
+{
+        gint ret;
+        gchar *buf;
+
+        ret = itvencoder_channel_start (httpmgmt->itvencoder, index);
+        if (ret == 0) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
+        } else if (ret == 1) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Start a disabled channel");
+        } else if (ret == 2) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)31, "Start a already started channel");
+        } else {
+                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
+        }
+
+        return buf;
+}
+
+static gchar *
+restart_channel (HTTPMgmt *httpmgmt, gint index)
+{
+        gint ret;
+        gchar *buf;
+
+        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
+        if (ret == 1) {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Restart a stoped channel");
+                return buf;
+        }
+
+        g_usleep (1000000); // wait 1s for channel stoped.
+        buf = start_channel (httpmgmt, index);
+        return buf;
+}
+
 static void
 channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
         gint i, index;
         gchar *buf;
-        gboolean ret;
 
         index = itvencoder_url_encoder_index (request_data->uri);
         if (index == -1) {
@@ -181,37 +235,13 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                 } else if (g_str_has_suffix (request_data->uri, "/stop")) {
                         GST_WARNING ("Stop channel %d", index);
-                        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
-                        if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
-                        } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)21, "Stop a stoped channel");
-                        } else {
-                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                        }
+                        buf = stop_channel (httpmgmt, index);
                 } else if (g_str_has_suffix (request_data->uri, "/start")) {
                         GST_WARNING ("Start channel %d", index);
-                        ret = itvencoder_channel_start (httpmgmt->itvencoder, index);
-                        if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
-                        } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Start a disabled channel");
-                        } else if (ret == 2) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)31, "Start a already started channel");
-                        } else {
-                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                        }
+                        buf = start_channel (httpmgmt, index);
                 } else if (g_str_has_suffix (request_data->uri, "/restart")) {
                         GST_WARNING ("Restart channel %d", index);
-                        index = itvencoder_url_channel_index (request_data->uri);
-                        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGKILL);
-                        if (ret == 0) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
-                        } else if (ret == 1) {
-                                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Restart a stoped channel");
-                        } else {
-                                buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                        }
+                        buf = restart_channel (httpmgmt, index);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                 }
@@ -221,6 +251,35 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 }
                 g_free (buf);
         }
+}
+
+static gchar *
+get_mediainfo (gchar *uri)
+{
+        gchar *mediainfo = NULL;
+        GstElement *pipeline, *source, *demux;
+
+        if (g_str_has_prefix (uri, "udp://")) {
+                /* udp src. */
+        }
+
+        return mediainfo;
+}
+
+static void
+tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
+{
+        gchar *buf, *uri, *mediainfo;
+
+        if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
+                uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
+                mediainfo = get_mediainfo (uri);
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (uri), uri);
+        } else {
+                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+        }
+        write (request_data->sock, buf, strlen (buf));
+        g_free (buf);
 }
 
 /**
@@ -277,6 +336,9 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
+                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
+                        /* tools. */
+                        tools_request (httpmgmt, request_data);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                         ret = write (request_data->sock, buf, strlen (buf));
