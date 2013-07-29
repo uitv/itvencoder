@@ -585,7 +585,22 @@ int mediainfo (char *uri)
     int i;
     struct sockaddr_in si_other;
     int s, slen = sizeof (si_other);
+    char *server;
+    int port;
 
+    if (strncmp (uri, "udp://", 6) != 0) {
+        exit (1);
+    }
+    server = uri + 6;
+    for (i = 6; i < strlen (uri); i++) {
+        if (*(uri + i) == ':') {
+            *(uri + i) = '\0';
+        }
+        port = atoi (uri + i + 1);
+    }
+    if (i == strlen (uri)) {
+        exit (1);
+    }
     setvbuf(stdout, NULL, _IOLBF, 0);
     memset(p_pids, 0, sizeof(p_pids));
 
@@ -594,8 +609,8 @@ int mediainfo (char *uri)
     }
     memset ((char *)&si_other, 0, sizeof (si_other));
     si_other.sin_family = AF_INET;
-    si_other.sin_port = htons (6002);
-    if (inet_aton ("127.0.0.1", &si_other.sin_addr) == 0) {
+    si_other.sin_port = htons (port);
+    if (inet_aton (server, &si_other.sin_addr) == 0) {
         exit (1);
     }
     if (bind (s, (struct sockaddr *)&si_other, sizeof (si_other)) == -1) {

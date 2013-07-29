@@ -109,7 +109,7 @@ main (int argc, char *argv[])
 
         /* mediainfo */
         if (media_uri) {
-                return mediainfo ();
+                return mediainfo (media_uri);
         }
 
         if (version) {
