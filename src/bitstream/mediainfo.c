@@ -574,7 +574,8 @@ static void handle_psi_packet(uint8_t *p_ts)
     }
 }
 
-int main(int i_argc, char **ppsz_argv)
+//int main(int i_argc, char **ppsz_argv)
+int mediainfo ()
 {
     int i;
 

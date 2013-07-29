@@ -68,9 +68,11 @@ init_log (gchar *log_path)
 static gboolean foreground = FALSE;
 static gboolean version = FALSE;
 gchar *config_path = NULL;
+gchar *media_uri = NULL;
 static gint channel_id = -1;
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
+        {"mediainfo", 'm', 0, G_OPTION_ARG_FILENAME, &media_uri, ("-m media uri, extract media info of the uri."), NULL},
         {"channel", 'n', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &channel_id, NULL, NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
@@ -104,6 +106,11 @@ main (int argc, char *argv[])
         }
         g_option_context_free (ctx);
         GST_DEBUG_CATEGORY_INIT (ITVENCODER, "itvencoder", 0, "itvencoder log");
+
+        /* mediainfo */
+        if (media_uri) {
+                return mediainfo ();
+        }
 
         if (version) {
                 print_version_info ();
