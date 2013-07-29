@@ -35,6 +35,8 @@
 #include <stdarg.h>
 #include <getopt.h>
 #include <iconv.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
 #include "ts.h"
 #include "psi.h"
@@ -47,6 +49,8 @@
  *****************************************************************************/
 #define MAX_PIDS    8192
 #define READ_ONCE   7
+
+static int got_pmt = 0;
 
 typedef struct ts_pid_t {
     int i_psi_refcount;
@@ -402,6 +406,8 @@ static void handle_pmt(uint16_t i_pid, uint8_t *p_pmt)
     if (pb_print_table[TABLE_PMT])
         pmt_print(p_pmt, print_wrapper, NULL, iconv_wrapper, NULL,
                   i_print_type);
+
+    got_pmt = 1;
 }
 
 /*****************************************************************************
@@ -574,14 +580,27 @@ static void handle_psi_packet(uint8_t *p_ts)
     }
 }
 
-//int main(int i_argc, char **ppsz_argv)
-int mediainfo ()
+int mediainfo (char *uri)
 {
     int i;
+    struct sockaddr_in si_other;
+    int s, slen = sizeof (si_other);
 
     setvbuf(stdout, NULL, _IOLBF, 0);
-
     memset(p_pids, 0, sizeof(p_pids));
+
+    if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+        exit (1);
+    }
+    memset ((char *)&si_other, 0, sizeof (si_other));
+    si_other.sin_family = AF_INET;
+    si_other.sin_port = htons (6002);
+    if (inet_aton ("127.0.0.1", &si_other.sin_addr) == 0) {
+        exit (1);
+    }
+    if (bind (s, (struct sockaddr *)&si_other, sizeof (si_other)) == -1) {
+        exit (1);
+    }
 
     for (i = 0; i < 8192; i++) {
         p_pids[i].i_last_cc = -1;
@@ -602,16 +621,20 @@ int mediainfo ()
     psi_table_init(pp_next_nit_sections);
     psi_table_init(pp_current_sdt_sections);
     psi_table_init(pp_next_sdt_sections);
-        for (i = 0; i < TABLE_END; i++)
-            pb_print_table[i] = true;
+    for (i = 0; i < TABLE_END; i++)
+        pb_print_table[i] = true;
 
-        printf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-        printf("<TS>\n");
+    printf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+    printf("<TS>\n");
 
-    while (!feof(stdin) && !ferror(stdin)) {
+    //while (!feof(stdin) && !ferror(stdin)) {
+    while (got_pmt == 0) {
         uint8_t p_ts[TS_SIZE];
-        size_t i_ret = fread(p_ts, sizeof(p_ts), 1, stdin);
-        if (i_ret != 1) continue;
+        //size_t i_ret = fread(p_ts, sizeof(p_ts), 1, stdin);
+        size_t i_ret = recvfrom (s, p_ts, sizeof(p_ts), MSG_CMSG_CLOEXEC, (struct sockaddr *)&si_other, &slen);
+        if (i_ret == -1) {
+            break;
+        }
         if (!ts_validate(p_ts)) {
                 printf("<ERROR type=\"invalid_ts\"/>\n");
         } else {
@@ -623,10 +646,10 @@ int mediainfo ()
         }
     }
 
-        printf("</TS>\n");
+    printf("</TS>\n");
 
     if (iconv_handle != (iconv_t)-1)
-        iconv_close(iconv_handle);
+    iconv_close(iconv_handle);
 
     psi_table_free(pp_current_pat_sections);
     psi_table_free(pp_next_pat_sections);
@@ -655,5 +678,6 @@ int mediainfo ()
         psi_assemble_reset(&p_pids[i].p_psi_buffer,
                            &p_pids[i].i_psi_buffer_used);
 
+    close (s);
     return EXIT_SUCCESS;
 }
