@@ -67,14 +67,14 @@ static inline void pmt_print(uint8_t *p_pmt,
         j++;
         switch (i_print_type) {
         case PRINT_XML:
-            pf_print(print_opaque, "<ES pid=\"%hu\" streamtype=\"0x%02x\" streamtype_txt=\"%s\">",
+            pf_print(print_opaque, "<ES pid=\"0x%04x\" streamtype=\"0x%02x\" streamtype_txt=\"%s\">",
                      pmtn_get_pid(p_es),
                      pmtn_get_streamtype(p_es),
                      pmt_get_streamtype_txt(pmtn_get_streamtype(p_es))
                     );
             break;
         default:
-            pf_print(print_opaque, "  * ES pid=%hu streamtype=0x%02x streamtype_txt=\"%s\"",
+            pf_print(print_opaque, "  * ES pid=0x%04x streamtype=0x%02x streamtype_txt=\"%s\"",
                      pmtn_get_pid(p_es),
                      pmtn_get_streamtype(p_es),
                      pmt_get_streamtype_txt(pmtn_get_streamtype(p_es))
