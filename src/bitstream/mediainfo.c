@@ -627,22 +627,26 @@ int mediainfo (char *uri)
     printf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
     printf("<TS>\n");
 
-    //while (!feof(stdin) && !ferror(stdin)) {
     while (got_pmt == 0) {
-        uint8_t p_ts[TS_SIZE];
-        //size_t i_ret = fread(p_ts, sizeof(p_ts), 1, stdin);
-        size_t i_ret = recvfrom (s, p_ts, sizeof(p_ts), MSG_CMSG_CLOEXEC, (struct sockaddr *)&si_other, &slen);
+        uint8_t p_ts[TS_SIZE*10];
+        uint8_t *p;
+        size_t i_ret = recvfrom (s, p_ts, sizeof (p_ts), MSG_CMSG_CLOEXEC, (struct sockaddr *)&si_other, &slen);
         if (i_ret == -1) {
             break;
         }
-        if (!ts_validate(p_ts)) {
+
+        p = p_ts;
+        while (p < p_ts + i_ret) {
+            if (!ts_validate(p)) {
                 printf("<ERROR type=\"invalid_ts\"/>\n");
-        } else {
-            uint16_t i_pid = ts_get_pid(p_ts);
-            ts_pid_t *p_pid = &p_pids[i_pid];
-            if (p_pid->i_psi_refcount)
-                handle_psi_packet(p_ts);
-            p_pid->i_last_cc = ts_get_cc(p_ts);
+            } else {
+                uint16_t i_pid = ts_get_pid(p);
+                ts_pid_t *p_pid = &p_pids[i_pid];
+                if (p_pid->i_psi_refcount)
+                    handle_psi_packet(p);
+                p_pid->i_last_cc = ts_get_cc(p);
+            }
+            p = p + TS_SIZE;
         }
     }
 
