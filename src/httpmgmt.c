@@ -242,14 +242,36 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 static gchar *
 get_mediainfo (gchar *uri)
 {
-        gchar *mediainfo = NULL;
         GstElement *pipeline, *source, *demux;
+        gchar *argv[4];
+        gchar path[512];
+        gchar *output, *p;
+        gchar *error;
+        gint status;
+        gboolean ret;
 
-        if (g_str_has_prefix (uri, "udp://")) {
+        if (!g_str_has_prefix (uri, "udp://")) {
                 /* udp src. */
+                return NULL;
         }
 
-        return mediainfo;
+        memset (path, '\0', sizeof (path));
+        readlink ("/proc/self/exe", path, sizeof (path));
+        argv[0] = path;
+        argv[1] = "-m";
+        argv[2] = uri;
+        argv[3] = NULL;
+        ret = g_spawn_sync (NULL, // working directory
+                            argv,
+                            NULL, // envp
+                            0, // flags
+                            NULL, // GSpawnChildSetupFunc
+                            NULL, // user data
+                            &output, // standard output
+                            &error, // standard error
+                            &status,
+                            NULL); // error
+        return output;
 }
 
 static void
@@ -260,7 +282,7 @@ tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
                 uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
                 mediainfo = get_mediainfo (uri);
-                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (uri), uri);
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (mediainfo), mediainfo);
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
