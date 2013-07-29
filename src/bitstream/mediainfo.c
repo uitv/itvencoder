@@ -37,6 +37,7 @@
 #include <iconv.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <time.h>
 
 #include "ts.h"
 #include "psi.h"
@@ -587,6 +588,7 @@ int mediainfo (char *uri)
     int s, slen = sizeof (si_other);
     char *server;
     int port;
+    time_t start_time;
 
     if (strncmp (uri, "udp://", 6) != 0) {
         exit (1);
@@ -642,12 +644,13 @@ int mediainfo (char *uri)
     printf("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
     printf("<TS>\n");
 
+    start_time = time (NULL);
     while (got_pmt == 0) {
         uint8_t p_ts[TS_SIZE*10];
         uint8_t *p;
-        size_t i_ret = recvfrom (s, p_ts, sizeof (p_ts), MSG_CMSG_CLOEXEC, (struct sockaddr *)&si_other, &slen);
+        size_t i_ret = recvfrom (s, p_ts, sizeof (p_ts), MSG_CMSG_CLOEXEC | MSG_DONTWAIT, (struct sockaddr *)&si_other, &slen);
         if (i_ret == -1) {
-            break;
+            usleep (10000);
         }
 
         p = p_ts;
@@ -662,6 +665,10 @@ int mediainfo (char *uri)
                 p_pid->i_last_cc = ts_get_cc(p);
             }
             p = p + TS_SIZE;
+        }
+        if (difftime (time (NULL), start_time) > 60) {
+            printf ("Timeout\n");
+            break;
         }
     }
 
