@@ -42,8 +42,12 @@
 #include "ts.h"
 #include "psi.h"
 #include "si.h"
-#include "si_print.h"
-#include "psi_print.h"
+#include "descs_print.h"
+#include "nit_print.h"
+#include "sdt_print.h"
+#include "pat_print.h"
+#include "tsdt_print.h"
+#include "pmt_print.h"
 
 /*****************************************************************************
  * Local declarations
