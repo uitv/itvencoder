@@ -1,5 +1,9 @@
 releases are sorted from youngest to oldest.
 
+v-0.3.1 2013-7-31 zhangping
+- channel run as seperate process.
+- tools via http request, e.g. mediainfo.
+
 v-0.3.0 2013-5-30 zhangping
 - rewrite configure file parse.
 - support multi audio track and multi subtitle tracks.
