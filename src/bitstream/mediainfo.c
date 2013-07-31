@@ -77,15 +77,6 @@ typedef struct sid_t {
 static sid_t **pp_sids = NULL;
 static int i_nb_sids = 0;
 
-typedef struct bouquet_t {
-    uint16_t i_bouquet;
-    PSI_TABLE_DECLARE(pp_current_bat_sections);
-    PSI_TABLE_DECLARE(pp_next_bat_sections);
-} bouquet_t;
-
-static bouquet_t **pp_bouquets = NULL;
-static int i_nb_bouquets = 0;
-
 static PSI_TABLE_DECLARE(pp_current_pat_sections);
 static PSI_TABLE_DECLARE(pp_next_pat_sections);
 static PSI_TABLE_DECLARE(pp_current_tsdt_sections);
@@ -689,13 +680,6 @@ int mediainfo (char *uri)
     psi_table_free(pp_next_nit_sections);
     psi_table_free(pp_current_sdt_sections);
     psi_table_free(pp_next_sdt_sections);
-
-    for (i = 0; i < i_nb_bouquets; i++) {
-        psi_table_free(pp_bouquets[i]->pp_current_bat_sections);
-        psi_table_free(pp_bouquets[i]->pp_next_bat_sections);
-        free(pp_bouquets[i]);
-    }
-    free(pp_bouquets);
 
     for (i = 0; i < i_nb_sids; i++) {
         psi_table_free(pp_sids[i]->pp_eit_sections);
