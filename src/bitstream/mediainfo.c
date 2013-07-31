@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdarg.h>
-#include <getopt.h>
 #include <iconv.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
