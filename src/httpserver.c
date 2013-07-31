@@ -841,7 +841,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                 }
         } else if (request_data->status == HTTP_FINISH) { // FIXME: how about if have continue request in idle queue??
                 cb_ret = http_server->user_callback (request_data, http_server->user_data);
-                GST_WARNING ("request finish %d callback return %d, send %d", request_data->sock, cb_ret, request_data->bytes_send);
+                GST_DEBUG ("request finish %d callback return %d, send %d", request_data->sock, cb_ret, request_data->bytes_send);
                 if (cb_ret == 0) {
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
