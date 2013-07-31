@@ -36,7 +36,6 @@
 #include "common.h"
 #include "psi.h"
 #include "descriptors.h"
-#include "cat.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -60,11 +59,31 @@ static inline void tsdt_init(uint8_t *p_tsdt)
     psi_set_lastsection(p_tsdt, 0);
 }
 
-#define tsdt_set_length         cat_set_length
-#define tsdt_get_desclength     cat_get_desclength
-#define tsdt_set_desclength     cat_set_desclength
-#define tsdt_get_descl          cat_get_descl
-#define tsdt_get_descl_const    cat_get_descl_const
+static inline void tsdt_set_length(uint8_t *p_tsdt, uint16_t i_tsdt_length)
+{
+    psi_set_length(p_tsdt, TSDT_HEADER_SIZE + PSI_CRC_SIZE - PSI_HEADER_SIZE
+                    + i_tsdt_length);
+}
+
+static inline uint16_t tsdt_get_desclength(const uint8_t *p_tsdt)
+{
+    return psi_get_length(p_tsdt) - (TSDT_HEADER_SIZE + PSI_CRC_SIZE - PSI_HEADER_SIZE);
+}
+
+static inline void tsdt_set_desclength(uint8_t *p_tsdt, uint16_t i_desc_len)
+{
+    tsdt_set_length(p_tsdt, i_desc_len);
+}
+
+static inline uint8_t *tsdt_get_descl(uint8_t *p_tsdt)
+{
+    return p_tsdt + TSDT_HEADER_SIZE;
+}
+
+static inline const uint8_t *tsdt_get_descl_const(const uint8_t *p_tsdt)
+{
+    return p_tsdt + TSDT_HEADER_SIZE;
+}
 
 static inline bool tsdt_validate(const uint8_t *p_tsdt)
 {
@@ -86,7 +105,20 @@ static inline bool tsdt_validate(const uint8_t *p_tsdt)
     return true;
 }
 
-#define tsdt_table_validate cat_table_validate
+static inline bool tsdt_table_validate(uint8_t **pp_sections)
+{
+    uint8_t i_last_section = psi_table_get_lastsection(pp_sections);
+    uint8_t i;
+
+    for (i = 0; i <= i_last_section; i++) {
+        uint8_t *p_section = psi_table_get_section(pp_sections, i);
+
+        if (!psi_check_crc(p_section))
+            return false;
+    }
+
+    return true;
+}
 
 #ifdef __cplusplus
 }

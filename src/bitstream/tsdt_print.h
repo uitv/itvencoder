@@ -33,14 +33,52 @@
 #include "descriptors.h"
 #include "descs_print.h"
 #include "tsdt.h"
-#include "cat_print.h"
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#define tsdt_table_print cat_table_print
+static inline void tsdt_table_print(uint8_t **pp_sections, f_print pf_print,
+                                   void *opaque, print_type_t i_print_type)
+{
+    uint8_t i_last_section = psi_table_get_lastsection(pp_sections);
+    uint8_t i;
+    char *psz_table_name = "TSDT";
+
+    if (psi_get_tableid(psi_table_get_section(pp_sections, 0)) == TSDT_TABLE_ID)
+        psz_table_name = "TSDT";
+
+    switch (i_print_type) {
+    case PRINT_XML:
+        pf_print(opaque, "<%s version=\"%hhu\" current_next=\"%d\">",
+                 psz_table_name,
+                 psi_table_get_version(pp_sections),
+                 !psi_table_get_current(pp_sections) ? 0 : 1);
+        break;
+    default:
+        pf_print(opaque, "new %s version=%hhu%s",
+                 psz_table_name,
+                 psi_table_get_version(pp_sections),
+                 !psi_table_get_current(pp_sections) ? " (next)" : "");
+    }
+
+    for (i = 0; i <= i_last_section; i++) {
+        uint8_t *p_section = psi_table_get_section(pp_sections, i);
+
+        descl_print(tsdt_get_descl(p_section), tsdt_get_desclength(p_section),
+                    pf_print, opaque, NULL, NULL, i_print_type);
+    }
+
+    switch (i_print_type) {
+    case PRINT_XML:
+        pf_print(opaque, "</%s>", psz_table_name);
+        break;
+    default:
+        pf_print(opaque, "end %s", psz_table_name);
+    }
+}
+
 
 #ifdef __cplusplus
 }
