@@ -352,7 +352,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                         now = gst_clock_get_time (itvencoder->system_clock);
                         time_diff = GST_CLOCK_DIFF (output->source.streams[j].last_heartbeat, now);
-                        if (time_diff > HEARTBEAT_THRESHHOLD) {
+                        if ((time_diff > HEARTBEAT_THRESHHOLD) && itvencoder->daemon) {
                                 GST_ERROR ("%s.source.%s heart beat error %lld, restart channel.",
                                         channel->name,
                                         output->source.streams[j].name,
@@ -382,7 +382,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         for (k = 0; k < output->encoders[j].stream_count; k++) {
                                 now = gst_clock_get_time (itvencoder->system_clock);
                                 time_diff = GST_CLOCK_DIFF (output->encoders[j].streams[k].last_heartbeat, now);
-                                if (time_diff > HEARTBEAT_THRESHHOLD) {
+                                if ((time_diff > HEARTBEAT_THRESHHOLD) && itvencoder->daemon) {
                                         GST_ERROR ("%s.encoders.%s.%s heart beat error %lld, restart",
                                                 channel->name,
                                                 output->encoders[j].name,
@@ -429,7 +429,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         }
                 }
                 time_diff = GST_CLOCK_DIFF (min, max);
-                if (time_diff > SYNC_THRESHHOLD) {
+                if ((time_diff > SYNC_THRESHHOLD) && itvencoder->daemon){
                         GST_ERROR ("%s sync error %lld", channel->name, time_diff);
                         output->source.sync_error_times += 1;
                         if (output->source.sync_error_times == 3) {
