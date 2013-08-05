@@ -285,6 +285,9 @@ get_mediainfo (gchar *uri)
                             &error, // standard error
                             &status,
                             NULL); // error
+        if (error != NULL) {
+                g_free (error);
+        }
         return output;
 }
 
@@ -297,7 +300,12 @@ tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
                 uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
                 mediainfo = get_mediainfo (uri);
-                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (mediainfo), mediainfo);
+                if (mediainfo != NULL) {
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (mediainfo), mediainfo);
+                        g_free (mediainfo);
+                } else {
+                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                }
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
