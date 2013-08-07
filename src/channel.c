@@ -432,20 +432,17 @@ get_property_names (gchar *param)
         /* strip space at begin */
         regex = g_regex_new ("[^ ]* *(.*)", 0, 0, NULL);
         p1 = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        GST_INFO ("param: %s, property: %s", param, p1);
         g_regex_unref (regex);
         /* strip space beside = */
         regex = g_regex_new ("( *= *)", 0, 0, NULL);
         p2 = g_regex_replace (regex, p1, -1, 0, "=", 0, NULL);
         g_free (p1);
         g_regex_unref (regex);
-        GST_INFO ("param: %s, property: %s", param, p2);
         /* strip redundant space */
         regex = g_regex_new ("( +)", 0, 0, NULL);
         p1 = g_regex_replace (regex, p2, -1, 0, " ", 0, NULL);
         g_free (p2);
         g_regex_unref (regex);
-        GST_INFO ("param: %s, property: %s\n", param, p1);
         pp = g_strsplit_set (p1, " ", 0);
         g_free (p1);
 
@@ -546,7 +543,6 @@ create_element (GstStructure *pipeline, gchar *param)
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, p);
         g_free (p);
-        g_free (factory);
 
         if (value != NULL) {
                 /* set propertys in element property configure. */
@@ -583,13 +579,13 @@ create_element (GstStructure *pipeline, gchar *param)
         while (*pp1 != NULL) {
                 p = get_property_value (param, *pp1);
                 if (p == NULL) {
-                        GST_ERROR ("Configure error: %s=%s", *pp1, p);
+                        GST_ERROR ("Create element %s failure, Configure error: %s=%s", factory, *pp1, p);
                         gst_object_unref (element);
                         g_strfreev (pp);
                         return NULL;
                 }
                 if (!set_element_property (element, *pp1, p)) {
-                        GST_ERROR ("Set property error: %s=%s", *pp1, p);
+                        GST_ERROR ("Create element %s failure, Set property error: %s=%s", factory, *pp1, p);
                         return NULL;
                 }
                 g_free (p);
@@ -597,6 +593,8 @@ create_element (GstStructure *pipeline, gchar *param)
         }
         g_strfreev (pp);
 
+        GST_INFO ("Create element %s success.", factory);
+        g_free (factory);
         return element;
 }
 
@@ -900,10 +898,8 @@ get_bins (GstStructure *structure)
                                         bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
                                         src_name = p1;
-                                        GST_INFO ("element_name: %s", src_name);
                                         src_pad_name = NULL;
                                 } else {
-                                        GST_ERROR ("error create element %s", *pp);
                                         g_free (p);
                                         g_strfreev (pp1);
                                         return NULL; //FIXME release pipeline
