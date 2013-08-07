@@ -607,21 +607,24 @@ get_caps (GstStructure *configure, gchar *name)
 {
         GstStructure *structure;
         GValue *value;
-        gchar *p;
+        gchar *p, **pp;
 
         p = NULL;
         value = (GValue *)gst_structure_get_value (configure, "elements");
 	structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, name);
+        pp = g_strsplit (name, " ", 0);
+        value = (GValue *)gst_structure_get_value (structure, pp[0]);
         if (value == NULL) {
+                g_strfreev (pp);
                 return NULL;
         }
         structure = (GstStructure *)gst_value_get_structure (value);
         if (gst_structure_has_field (structure, "caps")) {
                 p = (gchar *)gst_structure_get_string (structure, "caps");
-                GST_INFO ("%s caps found: %s", name, p);
+                GST_INFO ("%s caps found: %s", pp[0], p);
         }
 
+        g_strfreev (pp);
         return p;
 }
 
@@ -1642,7 +1645,6 @@ channel_configure_parse (Channel *channel)
                         g_regex_match (regex, definition, 0, &match_info);
                         g_regex_unref (regex);
                         if (g_match_info_matches (match_info)) {
-                                GST_ERROR ("encoder stream");
                                 channel->shm_size += sizeof (struct _EncoderStreamState);
                                 escount += 1;
                         }
