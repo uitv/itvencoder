@@ -573,6 +573,7 @@ create_element (GstStructure *pipeline, gchar *param)
         if (pp == NULL) {
                 gst_object_unref (element);
                 g_strfreev (pp);
+                g_free (factory);
                 return NULL;
         }
         pp1 = pp;
@@ -582,12 +583,15 @@ create_element (GstStructure *pipeline, gchar *param)
                         GST_ERROR ("Create element %s failure, Configure error: %s=%s", factory, *pp1, p);
                         gst_object_unref (element);
                         g_strfreev (pp);
+                        g_free (factory);
                         return NULL;
                 }
                 if (!set_element_property (element, *pp1, p)) {
                         GST_ERROR ("Create element %s failure, Set property error: %s=%s", factory, *pp1, p);
+                        g_free (factory);
                         return NULL;
                 }
+                GST_INFO ("Set property: %s=%s", *pp1, p);
                 g_free (p);
                 pp1++;
         }
