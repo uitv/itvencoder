@@ -214,6 +214,5 @@ gint channel_setup (Channel *channel, gboolean daemon);
 gint channel_reset (Channel *channel);
 gint channel_start (Channel *channel, gboolean daemon);
 gint channel_stop (Channel *channel, gint sig);
-Encoder * channel_get_encoder (gchar *uri, GArray *channel);
 
 #endif /* __CHANNEL_H__ */
