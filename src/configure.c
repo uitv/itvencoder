@@ -295,7 +295,7 @@ configure_element_parse (gchar *name, gchar *data)
         GRegex *regex;
 
         if (!is_valid_name (name)) {
-                g_print ("Invalid element configure: %s\n", name);
+                GST_ERROR ("Invalid element configure: %s\n", name);
                 return NULL;
         }
         gkeyfile = ini_data_parse (name, data);
@@ -328,7 +328,7 @@ configure_element_parse (gchar *name, gchar *data)
                         g_value_unset (&value);
                         g_free (var);
                 } else {
-                        g_print ("invalid element configuration\n");
+                        GST_ERROR ("invalid element configuration\n");
                 }
                 g_free (v);
         }
@@ -351,7 +351,7 @@ configure_bin_parse (gchar *name, gchar *data)
         GValue value = { 0, { { 0 } } };
 
         if (!is_valid_name (name)) {
-                g_print ("Invalid bin configure: %s\n", name);
+                GST_ERROR ("Invalid bin configure: %s\n", name);
                 return NULL;
         }
         gkeyfile = ini_data_parse (name, data);
@@ -360,7 +360,7 @@ configure_bin_parse (gchar *name, gchar *data)
         structure = gst_structure_empty_new (name);
         for (i = 0; i < number; i++) {
                 if (!is_valid_name (p[i])) {
-                        g_print ("Invalid bin configure: %s\n", p[i]);
+                        GST_ERROR ("Invalid bin configure: %s\n", p[i]);
                         return NULL;
                 }
                 v1 = g_key_file_get_value (gkeyfile, name, p[i], &e);
@@ -536,7 +536,7 @@ configure_channel_parse (gchar *name, gchar *data)
                         regex = g_regex_new ("<[^>]*>([^<]*)</[^>]*>", 0, 0, NULL);
                         v1 = g_regex_replace (regex, v, -1, 0, "\\1", 0, NULL);
                         if ((g_strcmp0 (v1, "no") != 0) && (g_strcmp0 (v1, "yes") != 0)) {
-                                g_print ("Configure error: %s.\n", v);
+                                GST_ERROR ("Configure error: %s.\n", v);
                                 return NULL;
                         }
                         g_value_init (&value, G_TYPE_STRING);
@@ -664,7 +664,7 @@ configure_file_parse (Configure *configure)
                 g_value_set_static_string (&value, v);
                 gst_structure_set_value (structure, p[i], &value);
                 if (!is_valid_name (p[i])) {
-                        g_print ("Invalid server configure: %s\n", p[i]);
+                        GST_ERROR ("Invalid server configure: %s\n", p[i]);
                         return 1;
                 }
                 g_value_unset (&value);
@@ -680,7 +680,7 @@ configure_file_parse (Configure *configure)
         for (i = 0; i < number; i++) {
                 v = g_key_file_get_value (gkeyfile, "channels", p[i], &e);
                 if (!is_valid_name (p[i])) {
-                        g_print ("Invalid channel configure: %s\n", p[i]);
+                        GST_ERROR ("Invalid channel configure: %s\n", p[i]);
                         return 1;
                 }
                 if (gst_structure_has_field (structure, p[i])) {
@@ -743,7 +743,7 @@ configure_extract_lines (Configure *configure)
                                         index++;
                                         p3 = p2;
                                 } else {
-                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
                                         return 1;
                                 }
                                 break;
@@ -810,7 +810,7 @@ configure_extract_lines (Configure *configure)
                                         g_regex_match (regex, p3, 0, &match_info);
                                         g_regex_unref (regex);
                                         if (!g_match_info_matches (match_info)) {
-                                                g_print ("parse var type error, line: %d\n", line_number);
+                                                GST_ERROR ("parse var type error, line: %d\n", line_number);
                                                 return 1;
                                         }
                                         variable->type = g_match_info_fetch_named (match_info, "type");
@@ -819,7 +819,7 @@ configure_extract_lines (Configure *configure)
                                         g_regex_match (regex, p3, 0, &match_info);
                                         g_regex_unref (regex);
                                         if (!g_match_info_matches (match_info)) {
-                                                g_print ("parse var name error, line: %d\n", line_number);
+                                                GST_ERROR ("parse var name error, line: %d\n", line_number);
                                                 return 1;
                                         }
                                         variable->name = g_match_info_fetch_named (match_info, "name");
@@ -836,7 +836,7 @@ configure_extract_lines (Configure *configure)
                                         index++;
                                         p4 = p3;
                                 } else {
-                                        g_print ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d, position %d: %s, parse error\n", line_number, p3 - p1, p1);
                                         return 1;
                                 }
                                 break;
@@ -852,7 +852,7 @@ configure_extract_lines (Configure *configure)
                                         /* close variable define */
                                         var_status = 'v';
                                 } else {
-                                        g_print ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
+                                        GST_ERROR ("line %d position %d: %s, parse error\n", line_number, p3 - p1, p1);
                                         return 1;
                                 }
                                 break;
@@ -948,7 +948,7 @@ configure_load_from_file (Configure *configure)
 
         /* load file */
         if (!g_file_get_contents (configure->configure_file, &configure->raw, &configure->size, &e)) {
-                g_print ("Error: %s\n", e->message);
+                GST_ERROR ("Error: %s\n", e->message);
                 g_error_free (e);
                 return 1;
         }
@@ -1347,7 +1347,7 @@ configure_set_var (Configure *configure, gchar *var)
         if (!g_markup_parse_context_parse (context, var, -1, &e)) {
                 g_array_free (var_array, TRUE);
                 g_markup_parse_context_free (context);
-                g_print ("parse error\n");
+                GST_ERROR ("parse error\n");
                 return 1;
         }
 
