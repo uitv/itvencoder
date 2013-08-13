@@ -1729,10 +1729,10 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         /* Close pid */
         g_spawn_close_pid (pid);
         if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
-                GST_ERROR ("Normaly exit, status is %d", WEXITSTATUS(status));
+                GST_ERROR ("Channel with pid %d normaly exit, status is %d", pid, WEXITSTATUS(status));
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Exit on an unhandled signal.");
+                GST_ERROR ("Channel with pid %d exit on an unhandled signal.", pid);
         }
 
         channel->age += 1;
