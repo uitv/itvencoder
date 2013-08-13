@@ -1745,14 +1745,6 @@ channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
         gint i;
-        gchar *enable;
-
-        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
-        if (g_strcmp0 (enable, "no") == 0) {
-                channel->enable = FALSE;
-        } else if (g_strcmp0 (enable, "yes") == 0) {
-                channel->enable = TRUE;
-        }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
         stats = g_strsplit (stat, "\n", 10);

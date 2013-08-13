@@ -137,7 +137,7 @@ itvencoder_get_type (void)
         return type;
 }
 
-gint
+static gint
 itvencoder_load_configure (ITVEncoder *itvencoder)
 {
         gint ret;
@@ -150,6 +150,37 @@ itvencoder_load_configure (ITVEncoder *itvencoder)
         ret = configure_load_from_file (itvencoder->configure);
 
         return ret;
+}
+
+gint
+itvencoder_reload_configure (ITVEncoder *itvencoder)
+{
+        Channel *channel;
+        GValue *value;
+        GstStructure *structure;
+        gint i;
+        gchar *enable;
+
+        if (itvencoder_load_configure (itvencoder) != 0) {
+                GST_ERROR ("load configure error.");
+                return 1;
+        }
+
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                value = (GValue *)gst_structure_get_value (structure, channel->name);
+                channel->configure = (GstStructure *)gst_value_get_structure (value);
+                enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+                if (g_strcmp0 (enable, "no") == 0) {
+                        channel->enable = FALSE;
+                } else if (g_strcmp0 (enable, "yes") == 0) {
+                        channel->enable = TRUE;
+                }
+        }
+
+        return 0;
 }
 
 static void
@@ -188,6 +219,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gint i, n;
         gchar *name, *log_dir;
         Channel *channel;
+        gchar *enable;
 
         if (itvencoder_load_configure (itvencoder) != 0) {
                 GST_ERROR ("load configure error.");
@@ -204,6 +236,12 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 channel = channel_new ("name", name, "configure", configure, NULL);
                 remove_semaphore (channel);
                 channel->id = i;
+                enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+                if (g_strcmp0 (enable, "no") == 0) {
+                        channel->enable = FALSE;
+                } else if (g_strcmp0 (enable, "yes") == 0) {
+                        channel->enable = TRUE;
+                }
                 channel_setup (channel, itvencoder->daemon);
 
                 g_array_append_val (itvencoder->channel_array, channel);
@@ -217,16 +255,8 @@ gint
 itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 {
         Channel *channel;
-        GValue *value;
-        GstStructure *structure;
 
-        /* maybe the configure modified, reload. */
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, channel->name);
-        channel->configure = (GstStructure *)gst_value_get_structure (value);
-
         /* reset the channel. */
         channel_reset (channel);
 
