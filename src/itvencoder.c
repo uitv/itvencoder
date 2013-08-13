@@ -139,15 +139,50 @@ itvencoder_get_type (void)
         return type;
 }
 
-void
+static gint
 itvencoder_load_configure (ITVEncoder *itvencoder)
 {
+        gint ret;
+
         if (itvencoder->configure != NULL) {
                 gst_object_unref (G_OBJECT (itvencoder->configure));
         }
 
         itvencoder->configure = configure_new ("configure_path", itvencoder->configure_file, NULL);
-        configure_load_from_file (itvencoder->configure);
+        ret = configure_load_from_file (itvencoder->configure);
+
+        return ret;
+}
+
+gint
+itvencoder_reload_configure (ITVEncoder *itvencoder)
+{
+        Channel *channel;
+        GValue *value;
+        GstStructure *structure;
+        gint i;
+        gchar *enable;
+
+        if (itvencoder_load_configure (itvencoder) != 0) {
+                GST_ERROR ("load configure error.");
+                return 1;
+        }
+
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                value = (GValue *)gst_structure_get_value (structure, channel->name);
+                channel->configure = (GstStructure *)gst_value_get_structure (value);
+                enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+                if (g_strcmp0 (enable, "no") == 0) {
+                        channel->enable = FALSE;
+                } else if (g_strcmp0 (enable, "yes") == 0) {
+                        channel->enable = TRUE;
+                }
+        }
+
+        return 0;
 }
 
 static void
@@ -178,7 +213,7 @@ remove_semaphore (Channel *channel)
  * Returns: TRUE on success, FALSE on failure.
  *
  */
-gboolean
+gint
 itvencoder_channel_initialize (ITVEncoder *itvencoder)
 {
         GValue *value;
@@ -186,8 +221,13 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gint i, n;
         gchar *name, *log_dir;
         Channel *channel;
+        gchar *enable;
 
-        itvencoder_load_configure (itvencoder);
+        if (itvencoder_load_configure (itvencoder) != 0) {
+                GST_ERROR ("load configure error.");
+                return 1;
+        }
+
         value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
         structure = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure);
@@ -198,31 +238,27 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 channel = channel_new ("name", name, "configure", configure, NULL);
                 remove_semaphore (channel);
                 channel->id = i;
-                if (channel_setup (channel, itvencoder->daemon) != 0) {
-                        return FALSE;
+                enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+                if (g_strcmp0 (enable, "no") == 0) {
+                        channel->enable = FALSE;
+                } else if (g_strcmp0 (enable, "yes") == 0) {
+                        channel->enable = TRUE;
                 }
+                channel_setup (channel, itvencoder->daemon);
 
                 g_array_append_val (itvencoder->channel_array, channel);
                 GST_INFO ("Channel %s added.", name);
         }
 
-        return TRUE;
+        return 0;
 }
 
 gint
 itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 {
         Channel *channel;
-        GValue *value;
-        GstStructure *structure;
 
-        /* maybe the configure modified, reload. */
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, channel->name);
-        channel->configure = (GstStructure *)gst_value_get_structure (value);
-
         /* reset the channel. */
         channel_reset (channel);
 
@@ -362,9 +398,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         output->source.streams[j].name,
                                         time_diff);
                                 /* restart channel. */
-                                channel_stop (channel, SIGKILL);
-                                g_usleep (1000000); // wait 1s
-                                itvencoder_channel_start (itvencoder, i);
+                                goto restart;
                         } else {
                                 GST_INFO ("%s.source.%s heart beat %" GST_TIME_FORMAT,
                                         channel->name,
@@ -393,9 +427,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].streams[k].name,
                                                 time_diff);
                                         /* restart channel. */
-                                        channel_stop (channel, SIGKILL);
-                                        g_usleep (1000000); // wait 1s
-                                        itvencoder_channel_start (itvencoder, i);
+                                        goto restart;
                                 } else {
                                         GST_INFO ("%s.encoders.%s.%s heart beat %" GST_TIME_FORMAT,
                                                 channel->name,
@@ -439,9 +471,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                         if (output->source.sync_error_times == 3) {
                                 GST_ERROR ("sync error times %d, restart %s", output->source.sync_error_times, channel->name);
                                 /* restart channel. */
-                                channel_stop (channel, SIGKILL);
-                                g_usleep (1000000); // wait 1s.
-                                itvencoder_channel_start (itvencoder, i);
+                                goto restart;
                         }
                 } else {
                         output->source.sync_error_times = 0;
@@ -456,6 +486,11 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 if (itvencoder->daemon) {
                         log_rotate (itvencoder);
                 }
+                continue;
+restart:
+                channel_stop (channel, SIGKILL);
+                g_usleep (1000000); // wait 1s.
+                itvencoder_channel_start (itvencoder, i);
         }
 
 

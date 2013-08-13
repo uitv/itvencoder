@@ -154,7 +154,7 @@ main (int argc, char *argv[])
         if (channel_id != -1) {
                 GValue *value;
                 GstStructure *structure;
-                gchar *name;
+                gchar *name, *enable;
                 Channel *channel;
 
                 /* launch a channel. */
@@ -172,6 +172,12 @@ main (int argc, char *argv[])
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
                 channel->id = channel_id;
+                enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
+                if (g_strcmp0 (enable, "no") == 0) {
+                        channel->enable = FALSE;
+                } else if (g_strcmp0 (enable, "yes") == 0) {
+                        channel->enable = TRUE;
+                }
 
                 signal (SIGPIPE, sigignor);
                 signal (SIGHUP, sigignor);
@@ -222,7 +228,7 @@ main (int argc, char *argv[])
                 itvencoder = itvencoder_new ("daemon", !foreground, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         itvencoder->log_dir = log_dir;
-        if (!itvencoder_channel_initialize (itvencoder)) {
+        if (itvencoder_channel_initialize (itvencoder) != 0) {
                 GST_ERROR ("exit ...");
                 return 1;
         }

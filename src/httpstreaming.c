@@ -125,6 +125,43 @@ get_channel (HTTPStreaming *httpstreaming, RequestData *request_data)
         return channel;
 }
 
+static Encoder *
+get_encoder (gchar *uri, GArray *channels)
+{
+        GRegex *regex = NULL;
+        GMatchInfo *match_info = NULL;
+        gchar *c, *e;
+        Channel *channel;
+        Encoder *encoder = NULL;
+
+        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
+        g_regex_match (regex, uri, 0, &match_info);
+        if (g_match_info_matches (match_info)) {
+                c = g_match_info_fetch_named (match_info, "channel");
+                if (atoi (c) < channels->len) {
+                        channel = g_array_index (channels, gpointer, atoi (c));
+                        e = g_match_info_fetch_named (match_info, "encoder");
+                        if (atoi (e) < channel->encoder_array->len) {
+                                GST_DEBUG ("http get request, channel is %s, encoder is %s", c, e);
+                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
+                        } else {
+                                GST_ERROR ("Out range encoder %s, len is %d.", e, channel->encoder_array->len);
+                        }
+                        g_free (e);
+                } else {
+                        GST_ERROR ("Out range channel %s.", c);
+                }
+                g_free (c);
+        }
+
+        if (match_info != NULL)
+                g_match_info_free (match_info);
+        if (regex != NULL)
+                g_regex_unref (regex);
+
+        return encoder;
+}
+
 static EncoderOutput *
 get_encoder_output (HTTPStreaming *httpstreaming, RequestData *request_data)
 {
@@ -174,7 +211,7 @@ send_data (EncoderOutput *encoder_output, RequestData *request_data)
         }
         ret = writev (request_data->sock, iov, 3);
         if (ret == -1) {
-                GST_INFO ("write error %s sock %d", g_strerror (errno), request_data->sock);
+                GST_DEBUG ("write error %s sock %d", g_strerror (errno), request_data->sock);
         }
 
         return ret;
@@ -196,10 +233,8 @@ get_current_gop_end (EncoderOutput *encoder_output, RequestDataUserData *request
         } else if (n > 8) {
                 memcpy (&current_gop_size, encoder_output->cache_addr + request_user_data->current_rap_addr + 8, n - 8);
                 memcpy (&current_gop_size + n - 8, encoder_output->cache_addr, 12 - n);
-                GST_ERROR ("n: %d, GOP Size: %d.", n, current_gop_size);
         } else {
                 memcpy (&current_gop_size, encoder_output->cache_addr + 8 - n, 4);
-                GST_ERROR ("n: %d, GOP sIZE: %d.", n, current_gop_size);
         }
         if (current_gop_size == 0) {
                 /* current output gop. */
@@ -321,7 +356,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         channel = get_channel (httpstreaming, request_data);
         switch (request_data->status) {
         case HTTP_REQUEST:
-                GST_INFO ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
+                GST_DEBUG ("new request arrived, socket is %d, uri is %s", request_data->sock, request_data->uri);
                 encoder_output = get_encoder_output (httpstreaming, request_data);
                 if (encoder_output == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
@@ -333,7 +368,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 } else if ((request_data->parameters[0] == '\0') || (request_data->parameters[0] == 'b')) {
                         /* default operator is play, ?bitrate= */
-                        GST_INFO ("Play command");
+                        GST_DEBUG ("Play command");
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                         if (request_user_data == NULL) {
                                 GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
@@ -347,7 +382,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         }
 
                         if (*(encoder_output->head_addr) == *(encoder_output->tail_addr)) {
-                                GST_WARNING ("%s unready.", request_data->uri);
+                                GST_DEBUG ("%s unready.", request_data->uri);
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                                 ret = write (request_data->sock, buf, strlen (buf));
                                 if (ret == -1) {
@@ -358,7 +393,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         }
 
                         /* let send_chunk send new chunk. */
-                        encoder = channel_get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
+                        encoder = get_encoder (request_data->uri, httpstreaming->itvencoder->channel_array);
                         request_user_data->encoder = encoder;
                         request_user_data->chunk_size = 0;
                         request_user_data->send_count = 2;

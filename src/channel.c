@@ -433,20 +433,17 @@ get_property_names (gchar *param)
         /* strip space at begin */
         regex = g_regex_new ("[^ ]* *(.*)", 0, 0, NULL);
         p1 = g_regex_replace (regex, param, -1, 0, "\\1", 0, NULL);
-        GST_INFO ("param: %s, property: %s", param, p1);
         g_regex_unref (regex);
         /* strip space beside = */
         regex = g_regex_new ("( *= *)", 0, 0, NULL);
         p2 = g_regex_replace (regex, p1, -1, 0, "=", 0, NULL);
         g_free (p1);
         g_regex_unref (regex);
-        GST_INFO ("param: %s, property: %s", param, p2);
         /* strip redundant space */
         regex = g_regex_new ("( +)", 0, 0, NULL);
         p1 = g_regex_replace (regex, p2, -1, 0, " ", 0, NULL);
         g_free (p2);
         g_regex_unref (regex);
-        GST_INFO ("param: %s, property: %s\n", param, p1);
         pp = g_strsplit_set (p1, " ", 0);
         g_free (p1);
 
@@ -551,7 +548,6 @@ create_element (GstStructure *pipeline, gchar *param)
         structure = (GstStructure *)gst_value_get_structure (value);
         value = (GValue *)gst_structure_get_value (structure, p);
         g_free (p);
-        g_free (factory);
 
         if (value != NULL) {
                 /* set propertys in element property configure. */
@@ -582,26 +578,32 @@ create_element (GstStructure *pipeline, gchar *param)
         if (pp == NULL) {
                 gst_object_unref (element);
                 g_strfreev (pp);
+                g_free (factory);
                 return NULL;
         }
         pp1 = pp;
         while (*pp1 != NULL) {
                 p = get_property_value (param, *pp1);
                 if (p == NULL) {
-                        GST_ERROR ("Configure error: %s=%s", *pp1, p);
+                        GST_ERROR ("Create element %s failure, Configure error: %s=%s", factory, *pp1, p);
                         gst_object_unref (element);
                         g_strfreev (pp);
+                        g_free (factory);
                         return NULL;
                 }
                 if (!set_element_property (element, *pp1, p)) {
-                        GST_ERROR ("Set property error: %s=%s", *pp1, p);
+                        GST_ERROR ("Create element %s failure, Set property error: %s=%s", factory, *pp1, p);
+                        g_free (factory);
                         return NULL;
                 }
+                GST_INFO ("Set property: %s=%s", *pp1, p);
                 g_free (p);
                 pp1++;
         }
         g_strfreev (pp);
 
+        GST_INFO ("Create element %s success.", factory);
+        g_free (factory);
         return element;
 }
 
@@ -610,21 +612,24 @@ get_caps (GstStructure *configure, gchar *name)
 {
         GstStructure *structure;
         GValue *value;
-        gchar *p;
+        gchar *p, **pp;
 
         p = NULL;
         value = (GValue *)gst_structure_get_value (configure, "elements");
 	structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, name);
+        pp = g_strsplit (name, " ", 0);
+        value = (GValue *)gst_structure_get_value (structure, pp[0]);
         if (value == NULL) {
+                g_strfreev (pp);
                 return NULL;
         }
         structure = (GstStructure *)gst_value_get_structure (value);
         if (gst_structure_has_field (structure, "caps")) {
                 p = (gchar *)gst_structure_get_string (structure, "caps");
-                GST_INFO ("%s caps found: %s", name, p);
+                GST_INFO ("%s caps found: %s", pp[0], p);
         }
 
+        g_strfreev (pp);
         return p;
 }
 
@@ -646,6 +651,14 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
         }
 
         pipeline = (GstElement *)gst_element_get_parent (src);
+
+        elements = bin->elements;
+        while (elements != NULL) {
+                element = elements->data;
+                gst_element_set_state (element, GST_STATE_PLAYING);
+                gst_bin_add (GST_BIN (pipeline), element);
+                elements = elements->next;
+        }
 
         links = bin->links;
         while (links != NULL) {
@@ -897,10 +910,8 @@ get_bins (GstStructure *structure)
                                         bin->elements = g_slist_append (bin->elements, element);
                                         src = element;
                                         src_name = p1;
-                                        GST_INFO ("element_name: %s", src_name);
                                         src_pad_name = NULL;
                                 } else {
-                                        GST_ERROR ("error create element %s", *pp);
                                         g_free (p);
                                         g_strfreev (pp1);
                                         return NULL; //FIXME release pipeline
@@ -1022,15 +1033,15 @@ create_source_pipeline (Source *source)
         while (bins != NULL) {
                 bin = bins->data;
 
-                /* add element to pipeline */
-                elements = bin->elements;
-                while (elements != NULL) {
-                        element = elements->data;
-                        gst_bin_add (GST_BIN (pipeline), element);
-                        elements = g_slist_next (elements);
-                }
-
                 if (bin->previous == NULL) {
+                        /* add element to pipeline */
+                        elements = bin->elements;
+                        while (elements != NULL) {
+                                element = elements->data;
+                                gst_bin_add (GST_BIN (pipeline), element);
+                                elements = g_slist_next (elements);
+                        }
+
                         /* links element */
                         links = bin->links;
                         while (links != NULL) {
@@ -1652,7 +1663,6 @@ channel_configure_parse (Channel *channel)
                         g_regex_match (regex, definition, 0, &match_info);
                         g_regex_unref (regex);
                         if (g_match_info_matches (match_info)) {
-                                GST_ERROR ("encoder stream");
                                 channel->shm_size += sizeof (struct _EncoderStreamState);
                                 escount += 1;
                         }
@@ -1745,10 +1755,10 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         /* Close pid */
         g_spawn_close_pid (pid);
         if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
-                GST_ERROR ("Normaly exit, status is %d", WEXITSTATUS(status));
+                GST_ERROR ("Channel with pid %d normaly exit, status is %d", pid, WEXITSTATUS(status));
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Exit on an unhandled signal.");
+                GST_ERROR ("Channel with pid %d exit on an unhandled signal.", pid);
         }
 
         channel->age += 1;
@@ -1761,14 +1771,6 @@ channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
         gint i;
-        gchar *enable;
-
-        enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
-        if (g_strcmp0 (enable, "no") == 0) {
-                channel->enable = FALSE;
-        } else if (g_strcmp0 (enable, "yes") == 0) {
-                channel->enable = TRUE;
-        }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
         stats = g_strsplit (stat, "\n", 10);
@@ -1901,42 +1903,5 @@ channel_stop (Channel *channel, gint sig)
         } else {
                 return 1; // stop a stoped channel.
         }
-}
-
-Encoder *
-channel_get_encoder (gchar *uri, GArray *channels)
-{
-        GRegex *regex = NULL;
-        GMatchInfo *match_info = NULL;
-        gchar *c, *e;
-        Channel *channel;
-        Encoder *encoder = NULL;
-
-        regex = g_regex_new ("^/channel/(?<channel>[0-9]+)/encoder/(?<encoder>[0-9]+).*", G_REGEX_OPTIMIZE, 0, NULL);
-        g_regex_match (regex, uri, 0, &match_info);
-        if (g_match_info_matches (match_info)) {
-                c = g_match_info_fetch_named (match_info, "channel");
-                if (atoi (c) < channels->len) {
-                        channel = g_array_index (channels, gpointer, atoi (c));
-                        e = g_match_info_fetch_named (match_info, "encoder");
-                        if (atoi (e) < channel->encoder_array->len) {
-                                GST_INFO ("http get request, channel is %s, encoder is %s", c, e);
-                                encoder = g_array_index (channel->encoder_array, gpointer, atoi (e));
-                        } else {
-                                GST_ERROR ("Out range encoder %s, len is %d.", e, channel->encoder_array->len);
-                        }
-                        g_free (e);
-                } else {
-                        GST_ERROR ("Out range channel %s.", c);
-                }
-                g_free (c);
-        }
-
-        if (match_info != NULL)
-                g_match_info_free (match_info);
-        if (regex != NULL)
-                g_regex_unref (regex);
-
-        return encoder;
 }
 
