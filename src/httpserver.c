@@ -828,7 +828,6 @@ thread_pool_func (gpointer data, gpointer user_data)
                         g_cond_signal (http_server->idle_queue_cond);
                         g_mutex_unlock (http_server->idle_queue_mutex);
                 } else {//FIXME
-                        GST_ERROR ("return value is 0, sock is %d", request_data->sock);
                         g_mutex_lock (http_server->idle_queue_mutex);
                         g_tree_remove (http_server->idle_queue, &(request_data->wakeup_time));
                         g_mutex_unlock (http_server->idle_queue_mutex);
