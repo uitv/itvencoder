@@ -137,15 +137,19 @@ itvencoder_get_type (void)
         return type;
 }
 
-void
+gint
 itvencoder_load_configure (ITVEncoder *itvencoder)
 {
+        gint ret;
+
         if (itvencoder->configure != NULL) {
                 gst_object_unref (G_OBJECT (itvencoder->configure));
         }
 
         itvencoder->configure = configure_new ("configure_path", itvencoder->configure_file, NULL);
-        configure_load_from_file (itvencoder->configure);
+        ret = configure_load_from_file (itvencoder->configure);
+
+        return ret;
 }
 
 static void
@@ -176,7 +180,7 @@ remove_semaphore (Channel *channel)
  * Returns: TRUE on success, FALSE on failure.
  *
  */
-gboolean
+gint
 itvencoder_channel_initialize (ITVEncoder *itvencoder)
 {
         GValue *value;
@@ -185,7 +189,11 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
         gchar *name, *log_dir;
         Channel *channel;
 
-        itvencoder_load_configure (itvencoder);
+        if (itvencoder_load_configure (itvencoder) != 0) {
+                GST_ERROR ("load configure error.");
+                return 1;
+        }
+
         value = (GValue *)gst_structure_get_value (itvencoder->configure->data, "channels");
         structure = (GstStructure *)gst_value_get_structure (value);
         n = gst_structure_n_fields (structure);
@@ -202,7 +210,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 GST_INFO ("Channel %s added.", name);
         }
 
-        return TRUE;
+        return 0;
 }
 
 gint

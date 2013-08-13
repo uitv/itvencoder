@@ -209,7 +209,7 @@ main (int argc, char *argv[])
                 itvencoder = itvencoder_new ("daemon", !foreground, "configure", "/etc/itvencoder/itvencoder.conf", NULL);
         }
         itvencoder->log_dir = log_dir;
-        if (!itvencoder_channel_initialize (itvencoder)) {
+        if (itvencoder_channel_initialize (itvencoder) != 0) {
                 GST_ERROR ("exit ...");
                 return 1;
         }
