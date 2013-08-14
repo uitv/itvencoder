@@ -257,8 +257,6 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         Channel *channel;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        /* reset the channel. */
-        channel_reset (channel);
 
         /* start the channel. */
         return channel_start (channel, itvencoder->daemon);
@@ -490,7 +488,6 @@ restart:
                 g_usleep (1000000); // wait 1s.
                 itvencoder_channel_start (itvencoder, i);
         }
-
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released

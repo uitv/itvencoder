@@ -1735,7 +1735,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         return;
 }
 
-gint
+static gint
 channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
@@ -1767,7 +1767,6 @@ channel_setup (Channel *channel, gboolean daemon)
                 return 2;
         }
 
-        channel_reset (channel);
         return 0;
 }
 
@@ -1842,6 +1841,7 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                channel_reset (channel);
                 channel->source->pipeline = create_source_pipeline (channel->source);
                 for (i = 0; i < channel->encoder_array->len; i++) {
                         encoder = g_array_index (channel->encoder_array, gpointer, i);
@@ -1873,7 +1873,6 @@ channel_stop (Channel *channel, gint sig)
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
-                channel_reset (channel);
                 return 0;
         } else {
                 return 1; // stop a stoped channel.
