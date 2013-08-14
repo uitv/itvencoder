@@ -1498,7 +1498,6 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
         if (source->bins == NULL) {
                 return 1;
         }
-        source->pipeline = create_source_pipeline (source);
 
         return 0;
 }
@@ -1567,10 +1566,6 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         return 1;
                 }
                 complete_request_element (encoder->bins);
-                if (create_encoder_pipeline (encoder) != 0) {
-                        return 1;
-                }
-
                 g_array_append_val (channel->encoder_array, encoder);
         }
 
@@ -1841,12 +1836,20 @@ channel_start (Channel *channel, gboolean daemon)
                 argv[i++] = NULL;
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                         GST_ERROR ("Start channel %s error!!!", channel->name);
-                        return FALSE;
+                        return 5;
                 }
                 channel->worker_pid = pid;
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                channel->source->pipeline = create_source_pipeline (channel->source);
+                for (i = 0; i < channel->encoder_array->len; i++) {
+                        encoder = g_array_index (channel->encoder_array, gpointer, i);
+                        if (create_encoder_pipeline (encoder) != 0) {
+                                return 1;
+                        }
+                }
+
                 /* set pipelines as PLAYING state */
                 gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
                 channel->source->state = GST_STATE_PLAYING;
