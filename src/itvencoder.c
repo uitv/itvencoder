@@ -498,8 +498,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 continue;
 restart:
                 channel_stop (channel, SIGKILL);
-                g_usleep (1000000); // wait 1s.
-                itvencoder_channel_start (itvencoder, i);
         }
 
         now = gst_clock_get_time (itvencoder->system_clock);
