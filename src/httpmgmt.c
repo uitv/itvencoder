@@ -217,6 +217,14 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         gint i, index;
         gchar *buf;
 
+        if (!httpmgmt->itvencoder->daemon) {
+                /* run in foreground, channel operation is forbidden. */
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 9, "Forbidden");
+                write (request_data->sock, buf, strlen (buf));
+                g_free (buf);
+                return;
+        }
+
         index = itvencoder_url_encoder_index (request_data->uri);
         if (index == -1) {
                 index = itvencoder_url_channel_index (request_data->uri);
