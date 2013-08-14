@@ -1735,11 +1735,32 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         return;
 }
 
-static gint
+/*
+ * reset channel's status and configuration.
+ */
+gint
 channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
         gint i;
+        GValue *value;
+        GstStructure *structure;
+
+        /* initialize source */
+        value = (GValue *)gst_structure_get_value (channel->configure, "source");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (channel_source_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel source error.");
+                return 3;
+        }
+
+        /* initialize encoders */
+        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (channel_encoder_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel encoder error.");
+                return 4;
+        }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
         stats = g_strsplit (stat, "\n", 10);
@@ -1787,35 +1808,7 @@ channel_start (Channel *channel, gboolean daemon)
         GPid pid;
         Encoder *encoder;
         gint i;
-        GValue *value;
-        GstStructure *structure;
         GstStateChangeReturn ret;
-
-        if (!channel->enable) {
-                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
-                return 0;
-        }
-
-        if (channel->worker_pid != 0) {
-                GST_WARNING ("Start channel %s, but it's already started.", channel->name);
-                return 2;
-        }
-
-        /* initialize source */
-        value = (GValue *)gst_structure_get_value (channel->configure, "source");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (channel_source_initialize (channel, structure) != 0) {
-                GST_ERROR ("Initialize channel source error.");
-                return 3;
-        }
-
-        /* initialize encoders */
-        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (channel_encoder_initialize (channel, structure) != 0) {
-                GST_ERROR ("Initialize channel encoder error.");
-                return 4;
-        }
 
         if (daemon) {
                 memset (path, '\0', sizeof (path));
@@ -1841,7 +1834,6 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
-                channel_reset (channel);
                 channel->source->pipeline = create_source_pipeline (channel->source);
                 for (i = 0; i < channel->encoder_array->len; i++) {
                         encoder = g_array_index (channel->encoder_array, gpointer, i);

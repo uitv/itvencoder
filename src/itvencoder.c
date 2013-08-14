@@ -258,6 +258,19 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
 
+        if (!channel->enable) {
+                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
+                return 0;
+        }
+
+        if (channel->worker_pid != 0) {
+                GST_WARNING ("Start channel %s, but it's already started.", channel->name);
+                return 2;
+        }
+
+        /* reset channel. */
+        channel_reset (channel);
+
         /* start the channel. */
         return channel_start (channel, itvencoder->daemon);
 }

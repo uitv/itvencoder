@@ -181,6 +181,7 @@ main (int argc, char *argv[])
 
                 loop = g_main_loop_new (NULL, FALSE);
                 channel_setup (channel, TRUE);
+                channel_reset (channel);
                 channel_start (channel, FALSE);
                 g_main_loop_run (loop);
                 return 0;

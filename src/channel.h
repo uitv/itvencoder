@@ -211,6 +211,7 @@ struct _ChannelClass {
 
 GType channel_get_type (void);
 gint channel_setup (Channel *channel, gboolean daemon);
+gint channel_reset (Channel *channel);
 gint channel_start (Channel *channel, gboolean daemon);
 gint channel_stop (Channel *channel, gint sig);
 
