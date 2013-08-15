@@ -1565,6 +1565,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 
 /*
  * parse configure.
+ * shm_size: share memory size, channel child report running status through share memory.
+ * sscount: source stream count.
+ * escountlist: a list of every encoder's stream count.
  */
 gint
 channel_configure_parse (Channel *channel)
@@ -1832,6 +1835,7 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                /* source pipeline. */
                 value = (GValue *)gst_structure_get_value (channel->configure, "source");
                 configure = (GstStructure *)gst_value_get_structure (value);
                 channel->source->bins = get_bins (configure);
@@ -1840,6 +1844,7 @@ channel_start (Channel *channel, gboolean daemon)
                 }
                 channel->source->pipeline = create_source_pipeline (channel->source);
 
+                /* encoders pipeline. */
                 value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
                 structure = (GstStructure *)gst_value_get_structure (value);
                 for (i = 0; i < channel->encoder_array->len; i++) {
