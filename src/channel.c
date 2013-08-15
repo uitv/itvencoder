@@ -1225,6 +1225,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
 
+        *(encoder->output_heartbeat) = gst_clock_get_time (encoder->channel->system_clock);
         buffer = gst_app_sink_pull_buffer (GST_APP_SINK (elt));
         sem_wait (encoder->mutex);
         (*(encoder->total_count)) += GST_BUFFER_SIZE (buffer);
@@ -1524,6 +1525,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->id = i;
                 encoder->name = name;
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
+                encoder->output_heartbeat = channel->output->encoders[i].heartbeat;
                 encoder->cache_addr = channel->output->encoders[i].cache_addr;
                 encoder->cache_size = channel->output->encoders[i].cache_size;
                 encoder->total_count = channel->output->encoders[i].total_count;
@@ -1685,6 +1687,9 @@ channel_output_init (Channel *channel, gboolean daemon)
         output->encoders = (struct _EncoderOutput *)g_malloc (channel->escountlist->len * sizeof (struct _EncoderOutput));
         for (i = 0; i < channel->escountlist->len; i++) {
                 output->encoders[i].stream_count = g_array_index (channel->escountlist, gint, i);
+                output->encoders[i].heartbeat = (GstClockTime *)p;
+                *(output->encoders[i].heartbeat) = gst_clock_get_time (channel->system_clock);
+                p += sizeof (GstClockTime);
                 output->encoders[i].streams = (struct _EncoderStreamState *)p;
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
@@ -1712,7 +1717,7 @@ channel_output_init (Channel *channel, gboolean daemon)
                 p += sizeof (guint64);
         }
 
-        GST_LOG ("output : %llu, p: %llu", output, p);
+        GST_DEBUG ("output : %llu, p: %llu", output, p);
         channel->output = output;
 
         return 0;

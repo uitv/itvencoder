@@ -444,7 +444,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].streams[k].name,
                                                 GST_TIME_ARGS (output->encoders[j].streams[k].last_heartbeat));
                                 }
-
                         }
                 }
 
@@ -456,6 +455,25 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         output->encoders[j].name,
                                         output->encoders[j].streams[k].name,
                                         GST_TIME_ARGS (output->encoders[j].streams[k].current_timestamp));
+                        }
+                }
+
+                /* encoder output heartbeat check. */
+                for (j = 0; j < output->encoder_count; j++) {
+                        now = gst_clock_get_time (itvencoder->system_clock);
+                        time_diff = GST_CLOCK_DIFF (*(output->encoders[j].heartbeat), now);
+                        if ((time_diff > ENCODER_OUTPUT_HEARTBEAT_THRESHHOLD) && itvencoder->daemon) {
+                                GST_ERROR ("%s.encoders.%s output heart beat error %lld, restart",
+                                        channel->name,
+                                        output->encoders[j].name,
+                                        time_diff);
+                                /* restart channel. */
+                                goto restart;
+                        } else {
+                                GST_INFO ("%s.encoders.%s output heart beat %" GST_TIME_FORMAT,
+                                        channel->name,
+                                        output->encoders[j].name,
+                                        GST_TIME_ARGS (*(output->encoders[j].heartbeat)));
                         }
                 }
 
