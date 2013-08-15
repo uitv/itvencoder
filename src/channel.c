@@ -1881,7 +1881,7 @@ gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *error = NULL;
-        gchar *argv[4], path[512], *p, *name;
+        gchar *argv[16], path[512], *p, *name;
         GPid pid;
         Encoder *encoder;
         gint i;
