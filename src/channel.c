@@ -41,6 +41,8 @@ static void source_set_property (GObject *obj, guint prop_id, const GValue *valu
 static void source_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 static void encoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
+static void encoder_dispose (GObject *obj);
+static void encoder_finalize (GObject *obj);
 static void channel_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSpec *pspec);
 static void channel_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *pspec);
 
@@ -149,6 +151,8 @@ encoder_class_init (EncoderClass *encoderclass)
 
         g_object_class->set_property = encoder_set_property;
         g_object_class->get_property = encoder_get_property;
+        g_object_class->dispose = encoder_dispose;
+        g_object_class->finalize = encoder_finalize;
 
         param = g_param_spec_string (
                 "name",
@@ -207,7 +211,7 @@ encoder_set_property (GObject *obj, guint prop_id, const GValue *value, GParamSp
 
         switch(prop_id) {
         case ENCODER_PROP_NAME:
-                ENCODER(obj)->name = (gchar *)g_value_dup_string (value); //TODO: should release dup string config_file_path?
+                ENCODER(obj)->name = (gchar *)g_value_dup_string (value);
                 break;
         case ENCODER_PROP_STATE:
                 ENCODER(obj)->state= g_value_get_int (value);
@@ -234,6 +238,38 @@ encoder_get_property (GObject *obj, guint prop_id, GValue *value, GParamSpec *ps
                 G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
                 break;
         }
+}
+
+static void
+encoder_dispose (GObject *obj)
+{
+        Encoder *encoder = ENCODER (obj);
+        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+
+        if (encoder->name != NULL) {
+                g_free (encoder->name);
+                encoder->name = NULL;
+        }
+
+        G_OBJECT_CLASS (parent_class)->dispose (obj);
+}
+
+static void
+encoder_finalize (GObject *obj)
+{
+        Encoder *encoder = ENCODER (obj);
+        GObjectClass *parent_class = g_type_class_peek(G_TYPE_OBJECT);
+        gint i;
+        EncoderStream *estream;
+
+        for (i = encoder->streams->len - 1; i >= 0; i--) {
+                estream = g_array_index (encoder->streams, gpointer, i);
+                g_free (estream);
+                g_array_remove_index (encoder->streams, i);
+        }
+        g_array_free (encoder->streams, FALSE);
+
+        G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
 
 /* channel class */
@@ -1533,10 +1569,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 GST_INFO ("encoder found: %s", name);
                 value = (GValue *)gst_structure_get_value (configure, name);
                 structure = (GstStructure *)gst_value_get_structure (value);
-                encoder = encoder_new (0, NULL); //TODO free!
+                encoder = encoder_new ("name", name, NULL);
                 encoder->channel = channel;
                 encoder->id = i;
-                encoder->name = name;
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
                 encoder->output_heartbeat = channel->output->encoders[i].heartbeat;
                 encoder->cache_addr = channel->output->encoders[i].cache_addr;
@@ -1547,7 +1582,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->last_rap_addr = channel->output->encoders[i].last_rap_addr;
                 encoder->configure = structure;
                 name = g_strdup_printf ("/%s%s", channel->name, encoder->name);
-                encoder->mutex = sem_open (name, O_CREAT, 0600, 1);
+                encoder->mutex = sem_open (name, O_CREAT, 0600, 1); //FIXME CLOSE OR NOT?
                 g_free (name);
 
                 if (channel_encoder_extract_streams (encoder) != 0) {
@@ -1583,6 +1618,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
 
 /*
  * parse configure.
+ * shm_size: share memory size, channel child report running status through share memory.
+ * sscount: source stream count.
+ * escountlist: a list of every encoder's stream count.
  */
 gint
 channel_configure_parse (Channel *channel)
@@ -1767,8 +1805,19 @@ channel_reset (Channel *channel)
         gint i;
         GValue *value;
         GstStructure *structure;
+        SourceStream *sstream;
+        Encoder *encoder;
 
         /* initialize source */
+        if (channel->source->streams->len != 0) {
+                /* release streams first if have. */
+                for (i = channel->source->streams->len - 1; i >= 0; i--) {
+                        sstream = g_array_index (channel->source->streams, gpointer, i);
+                        g_array_free (sstream->encoders, FALSE);
+                        g_free (sstream);
+                        g_array_remove_index (channel->source->streams, i);
+                }
+        }
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
@@ -1777,6 +1826,12 @@ channel_reset (Channel *channel)
         }
 
         /* initialize encoders */
+        for (i = channel->encoder_array->len - 1; i >= 0; i--) {
+                /* release encoder array first. */
+                encoder = g_array_index (channel->encoder_array, gpointer, i);
+                g_object_unref (G_OBJECT (encoder));
+                g_array_remove_index (channel->encoder_array, i);
+        }
         value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
@@ -1860,6 +1915,7 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                /* source pipeline. */
                 value = (GValue *)gst_structure_get_value (channel->configure, "source");
                 configure = (GstStructure *)gst_value_get_structure (value);
                 channel->source->bins = get_bins (configure);
@@ -1868,6 +1924,7 @@ channel_start (Channel *channel, gboolean daemon)
                 }
                 channel->source->pipeline = create_source_pipeline (channel->source);
 
+                /* encoders pipeline. */
                 value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
                 structure = (GstStructure *)gst_value_get_structure (value);
                 for (i = 0; i < channel->encoder_array->len; i++) {
