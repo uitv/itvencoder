@@ -1495,11 +1495,6 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
         }
 
-        source->bins = get_bins (configure);
-        if (source->bins == NULL) {
-                return 1;
-        }
-
         return 0;
 }
 
@@ -1562,12 +1557,6 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 return 1;
                         }
                 }
-
-                encoder->bins = get_bins (structure);
-                if (encoder->bins == NULL) {
-                        return 1;
-                }
-                complete_request_element (encoder->bins);
                 g_array_append_val (channel->encoder_array, encoder);
         }
 
@@ -1811,11 +1800,13 @@ gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *e = NULL;
-        gchar *argv[4], path[512], *p;
+        gchar *argv[4], path[512], *p, *name;
         GPid pid;
         Encoder *encoder;
         gint i;
         GstStateChangeReturn ret;
+        GValue *value;
+        GstStructure *structure, *configure;
 
         if (daemon) {
                 memset (path, '\0', sizeof (path));
@@ -1841,9 +1832,26 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                value = (GValue *)gst_structure_get_value (channel->configure, "source");
+                configure = (GstStructure *)gst_value_get_structure (value);
+                channel->source->bins = get_bins (configure);
+                if (channel->source->bins == NULL) {
+                        return 1;
+                }
                 channel->source->pipeline = create_source_pipeline (channel->source);
+
+                value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
+                structure = (GstStructure *)gst_value_get_structure (value);
                 for (i = 0; i < channel->encoder_array->len; i++) {
                         encoder = g_array_index (channel->encoder_array, gpointer, i);
+                        name = (gchar *)gst_structure_nth_field_name (structure, i);
+                        value = (GValue *)gst_structure_get_value (structure, name);
+                        configure = (GstStructure *)gst_value_get_structure (value);
+                        encoder->bins = get_bins (configure);
+                        if (encoder->bins == NULL) {
+                                return 1;
+                        }
+                        complete_request_element (encoder->bins);
                         if (create_encoder_pipeline (encoder) != 0) {
                                 return 1;
                         }
