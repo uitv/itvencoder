@@ -259,7 +259,18 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
         Channel *channel;
 
         channel = g_array_index (itvencoder->channel_array, gpointer, index);
-        /* reset the channel. */
+
+        if (!channel->enable) {
+                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
+                return 0;
+        }
+
+        if (channel->worker_pid != 0) {
+                GST_WARNING ("Start channel %s, but it's already started.", channel->name);
+                return 2;
+        }
+
+        /* reset channel. */
         channel_reset (channel);
 
         /* start the channel. */
@@ -435,7 +446,6 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                                 output->encoders[j].streams[k].name,
                                                 GST_TIME_ARGS (output->encoders[j].streams[k].last_heartbeat));
                                 }
-
                         }
                 }
 
@@ -447,6 +457,25 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                                         output->encoders[j].name,
                                         output->encoders[j].streams[k].name,
                                         GST_TIME_ARGS (output->encoders[j].streams[k].current_timestamp));
+                        }
+                }
+
+                /* encoder output heartbeat check. */
+                for (j = 0; j < output->encoder_count; j++) {
+                        now = gst_clock_get_time (itvencoder->system_clock);
+                        time_diff = GST_CLOCK_DIFF (*(output->encoders[j].heartbeat), now);
+                        if ((time_diff > ENCODER_OUTPUT_HEARTBEAT_THRESHHOLD) && itvencoder->daemon) {
+                                GST_ERROR ("%s.encoders.%s output heart beat error %lld, restart",
+                                        channel->name,
+                                        output->encoders[j].name,
+                                        time_diff);
+                                /* restart channel. */
+                                goto restart;
+                        } else {
+                                GST_INFO ("%s.encoders.%s output heart beat %" GST_TIME_FORMAT,
+                                        channel->name,
+                                        output->encoders[j].name,
+                                        GST_TIME_ARGS (*(output->encoders[j].heartbeat)));
                         }
                 }
 
@@ -489,10 +518,7 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 continue;
 restart:
                 channel_stop (channel, SIGKILL);
-                g_usleep (1000000); // wait 1s.
-                itvencoder_channel_start (itvencoder, i);
         }
-
 
         now = gst_clock_get_time (itvencoder->system_clock);
         nextid = gst_clock_new_single_shot_id (itvencoder->system_clock, now + 2000 * GST_MSECOND); // FIXME: id should be released

@@ -1244,6 +1244,7 @@ encoder_appsink_callback (GstAppSink * elt, gpointer user_data)
         GstBuffer *buffer;
         Encoder *encoder = (Encoder *)user_data;
 
+        *(encoder->output_heartbeat) = gst_clock_get_time (encoder->channel->system_clock);
         buffer = gst_sample_get_buffer (gst_app_sink_pull_sample (GST_APP_SINK (elt)));
         sem_wait (encoder->mutex);
         (*(encoder->total_count)) += gst_buffer_get_size (buffer);
@@ -1512,12 +1513,6 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
         }
 
-        source->bins = get_bins (configure);
-        if (source->bins == NULL) {
-                return 1;
-        }
-        source->pipeline = create_source_pipeline (source);
-
         return 0;
 }
 
@@ -1543,6 +1538,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                 encoder->id = i;
                 encoder->name = name;
                 g_strlcpy (channel->output->encoders[i].name, name, STREAM_NAME_LEN);
+                encoder->output_heartbeat = channel->output->encoders[i].heartbeat;
                 encoder->cache_addr = channel->output->encoders[i].cache_addr;
                 encoder->cache_size = channel->output->encoders[i].cache_size;
                 encoder->total_count = channel->output->encoders[i].total_count;
@@ -1579,16 +1575,6 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 return 1;
                         }
                 }
-
-                encoder->bins = get_bins (structure);
-                if (encoder->bins == NULL) {
-                        return 1;
-                }
-                complete_request_element (encoder->bins);
-                if (create_encoder_pipeline (encoder) != 0) {
-                        return 1;
-                }
-
                 g_array_append_val (channel->encoder_array, encoder);
         }
 
@@ -1712,6 +1698,9 @@ channel_output_init (Channel *channel, gboolean daemon)
         output->encoders = (struct _EncoderOutput *)g_malloc (channel->escountlist->len * sizeof (struct _EncoderOutput));
         for (i = 0; i < channel->escountlist->len; i++) {
                 output->encoders[i].stream_count = g_array_index (channel->escountlist, gint, i);
+                output->encoders[i].heartbeat = (GstClockTime *)p;
+                *(output->encoders[i].heartbeat) = gst_clock_get_time (channel->system_clock);
+                p += sizeof (GstClockTime);
                 output->encoders[i].streams = (struct _EncoderStreamState *)p;
                 p += output->encoders[i].stream_count * sizeof (struct _EncoderStreamState);
                 if (daemon) {
@@ -1743,7 +1732,7 @@ channel_output_init (Channel *channel, gboolean daemon)
                 p += sizeof (guint64);
         }
 
-        GST_LOG ("output : %llu, p: %llu", output, p);
+        GST_DEBUG ("output : %llu, p: %llu", output, p);
         channel->output = output;
 
         return 0;
@@ -1754,23 +1743,46 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
 {
         /* Close pid */
         g_spawn_close_pid (pid);
+        channel->age += 1;
+        channel->worker_pid = 0;
+
         if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
                 GST_ERROR ("Channel with pid %d normaly exit, status is %d", pid, WEXITSTATUS(status));
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Channel with pid %d exit on an unhandled signal.", pid);
+                GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.", pid);
+                channel_start (channel, TRUE);
         }
 
-        channel->age += 1;
-        channel->worker_pid = 0;
         return;
 }
 
+/*
+ * reset channel's status and configuration.
+ */
 gint
 channel_reset (Channel *channel)
 {
         gchar *stat, **stats, **cpustats;
         gint i;
+        GValue *value;
+        GstStructure *structure;
+
+        /* initialize source */
+        value = (GValue *)gst_structure_get_value (channel->configure, "source");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (channel_source_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel source error.");
+                return 3;
+        }
+
+        /* initialize encoders */
+        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        if (channel_encoder_initialize (channel, structure) != 0) {
+                GST_ERROR ("Initialize channel encoder error.");
+                return 4;
+        }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
         stats = g_strsplit (stat, "\n", 10);
@@ -1798,7 +1810,6 @@ channel_setup (Channel *channel, gboolean daemon)
                 return 2;
         }
 
-        channel_reset (channel);
         return 0;
 }
 
@@ -1815,40 +1826,14 @@ gint
 channel_start (Channel *channel, gboolean daemon)
 {
         GError *error = NULL;
-        gchar *argv[9], path[512], *p;
+        gchar *argv[4], path[512], *p, *name;
         GPid pid;
         Encoder *encoder;
         gint i;
         size_t size;
-        GValue *value;
-        GstStructure *structure;
         GstStateChangeReturn ret;
-
-        if (!channel->enable) {
-                GST_WARNING ("Can't start a channel %s with enable set to no.", channel->name);
-                return 0;
-        }
-
-        if (channel->worker_pid != 0) {
-                GST_WARNING ("Start channel %s, but it's already started.", channel->name);
-                return 2;
-        }
-
-        /* initialize source */
-        value = (GValue *)gst_structure_get_value (channel->configure, "source");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (channel_source_initialize (channel, structure) != 0) {
-                GST_ERROR ("Initialize channel source error.");
-                return 3;
-        }
-
-        /* initialize encoders */
-        value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        if (channel_encoder_initialize (channel, structure) != 0) {
-                GST_ERROR ("Initialize channel encoder error.");
-                return 4;
-        }
+        GValue *value;
+        GstStructure *structure, *configure;
 
         if (daemon) {
                 memset (path, '\0', sizeof (path));
@@ -1875,6 +1860,31 @@ channel_start (Channel *channel, gboolean daemon)
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
                 return 0;
         } else {
+                value = (GValue *)gst_structure_get_value (channel->configure, "source");
+                configure = (GstStructure *)gst_value_get_structure (value);
+                channel->source->bins = get_bins (configure);
+                if (channel->source->bins == NULL) {
+                        return 1;
+                }
+                channel->source->pipeline = create_source_pipeline (channel->source);
+
+                value = (GValue *)gst_structure_get_value (channel->configure, "encoders");
+                structure = (GstStructure *)gst_value_get_structure (value);
+                for (i = 0; i < channel->encoder_array->len; i++) {
+                        encoder = g_array_index (channel->encoder_array, gpointer, i);
+                        name = (gchar *)gst_structure_nth_field_name (structure, i);
+                        value = (GValue *)gst_structure_get_value (structure, name);
+                        configure = (GstStructure *)gst_value_get_structure (value);
+                        encoder->bins = get_bins (configure);
+                        if (encoder->bins == NULL) {
+                                return 1;
+                        }
+                        complete_request_element (encoder->bins);
+                        if (create_encoder_pipeline (encoder) != 0) {
+                                return 1;
+                        }
+                }
+
                 /* set pipelines as PLAYING state */
                 gst_element_set_state (channel->source->pipeline, GST_STATE_PLAYING);
                 channel->source->state = GST_STATE_PLAYING;
@@ -1898,7 +1908,6 @@ channel_stop (Channel *channel, gint sig)
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
-                channel_reset (channel);
                 return 0;
         } else {
                 return 1; // stop a stoped channel.

@@ -107,6 +107,7 @@ struct _Encoder {
 
         gchar *name;
         GstState state; /* state of the pipeline */
+        GstClockTime *output_heartbeat;
         Channel *channel;
         GstStructure *configure;
         GSList *bins;
@@ -141,6 +142,7 @@ GType encoder_get_type (void);
 struct _EncoderOutput {
         gchar name[STREAM_NAME_LEN];
         gint64 stream_count;
+        GstClockTime *heartbeat;
         struct _EncoderStreamState {
                 gchar name[STREAM_NAME_LEN];
                 GstClockTime current_timestamp;
