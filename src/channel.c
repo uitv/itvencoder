@@ -1824,6 +1824,8 @@ channel_reset (Channel *channel)
         channel->last_utime = 0;
         channel->last_stime = 0;
         g_free (stat);
+        g_strfreev (stats);
+        g_strfreev (cpustats);
 }
 
 gint
@@ -1858,7 +1860,7 @@ channel_start (Channel *channel, gboolean daemon)
         gchar *argv[16], path[512], *p, *name;
         GPid pid;
         Encoder *encoder;
-        gint i;
+        gint i, k;
         GstStateChangeReturn ret;
         GValue *value;
         GstStructure *structure, *configure;
@@ -1867,12 +1869,12 @@ channel_start (Channel *channel, gboolean daemon)
                 memset (path, '\0', sizeof (path));
                 readlink ("/proc/self/exe", path, sizeof (path));
                 i = 0;
-                argv[i++] = path;
+                argv[i++] = g_strdup (path);
                 if (config_path != NULL) {
-                        argv[i++] = "-c";
-                        argv[i++] = config_path;
+                        argv[i++] = g_strdup ("-c");
+                        argv[i++] = g_strdup (config_path);
                 }
-                argv[i++] = "-n";
+                argv[i++] = g_strdup ("-n");
                 argv[i++] = g_strdup_printf ("%d", channel->id);
                 p = (gchar *)gst_structure_get_string (channel->configure, "debug");
                 if (p != NULL) {
@@ -1881,7 +1883,13 @@ channel_start (Channel *channel, gboolean daemon)
                 argv[i++] = NULL;
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                         GST_ERROR ("Start channel %s error!!!", channel->name);
+                        for (k = 0; k < i; k++) {
+                                g_free (argv[k]);
+                        }
                         return 5;
+                }
+                for (k = 0; k < i; k++) {
+                        g_free (argv[k]);
                 }
                 channel->worker_pid = pid;
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
