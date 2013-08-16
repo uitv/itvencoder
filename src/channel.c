@@ -261,6 +261,7 @@ encoder_finalize (GObject *obj)
         gint i;
         EncoderStream *estream;
 
+        sem_close (encoder->mutex);
         for (i = encoder->streams->len - 1; i >= 0; i--) {
                 estream = g_array_index (encoder->streams, gpointer, i);
                 g_free (estream);
@@ -1884,12 +1885,16 @@ channel_start (Channel *channel, gboolean daemon)
                 if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
                         GST_ERROR ("Start channel %s error!!!", channel->name);
                         for (k = 0; k < i; k++) {
-                                g_free (argv[k]);
+                                if (argv[k] != NULL) {
+                                        g_free (argv[k]);
+                                }
                         }
                         return 5;
                 }
                 for (k = 0; k < i; k++) {
-                        g_free (argv[k]);
+                        if (argv[k] != NULL) {
+                                g_free (argv[k]);
+                        }
                 }
                 channel->worker_pid = pid;
                 g_child_watch_add (pid, (GChildWatchFunc)child_watch_cb, channel);
