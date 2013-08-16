@@ -211,14 +211,13 @@ restart_channel (HTTPMgmt *httpmgmt, gint index)
         gint ret;
         gchar *buf;
 
-        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGUSR2);
+        ret = itvencoder_channel_stop (httpmgmt->itvencoder, index, SIGKILL);
         if (ret == 1) {
                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)24, "Restart a stoped channel");
-                return buf;
+        } else {
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
         }
 
-        g_usleep (1000000); // wait 1s for channel stoped.
-        buf = start_channel (httpmgmt, index);
         return buf;
 }
 
@@ -230,8 +229,11 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 
         if (!httpmgmt->itvencoder->daemon) {
                 /* run in foreground, channel operation is forbidden. */
-                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 9, "Forbidden");
-                write (request_data->sock, buf, strlen (buf));
+                buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)9, "Forbidden");
+                ret = write (request_data->sock, buf, strlen (buf));
+                if (ret == -1) {
+                        GST_ERROR ("Write sock error: %s", g_strerror (errno));
+                }
                 g_free (buf);
                 return;
         }
@@ -271,6 +273,7 @@ get_mediainfo (gchar *uri)
         gchar *error;
         gint status;
         gboolean ret;
+        size_t size;
 
         if (!g_str_has_prefix (uri, "udp://")) {
                 /* udp src. */
@@ -278,7 +281,7 @@ get_mediainfo (gchar *uri)
         }
 
         memset (path, '\0', sizeof (path));
-        readlink ("/proc/self/exe", path, sizeof (path));
+        size = readlink ("/proc/self/exe", path, sizeof (path));
         argv[0] = path;
         argv[1] = "-m";
         argv[2] = uri;
