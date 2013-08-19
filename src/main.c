@@ -220,10 +220,6 @@ main (int argc, char *argv[])
                 GST_ERROR ("exit ...");
                 return 1;
         }
-        if (itvencoder_start (itvencoder) != 0) {
-                GST_ERROR ("exit ...");
-                exit (1);
-        }
 
         /* management */
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
@@ -232,6 +228,11 @@ main (int argc, char *argv[])
         /* httpstreaming */
         httpstreaming = httpstreaming_new ("itvencoder", itvencoder, NULL);
         httpstreaming_start (httpstreaming, 10);
+
+        if (itvencoder_start (itvencoder) != 0) {
+                GST_ERROR ("exit ...");
+                exit (1);
+        }
 
         g_main_loop_run (loop);
 
