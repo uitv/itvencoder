@@ -55,6 +55,7 @@ gint itvencoder_reload_configure (ITVEncoder *itvencoder);
 gint itvencoder_channel_initialize (ITVEncoder *itvencoder);
 gint itvencoder_channel_start (ITVEncoder *itvencoder, gint index);
 gint itvencoder_channel_stop (ITVEncoder *itvencoder, gint index, gint sig);
+gint itvencoder_stop (ITVEncoder *itvencoder);
 gint itvencoder_url_channel_index (gchar *url);
 gint itvencoder_url_encoder_index (gchar *url);
 

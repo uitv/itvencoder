@@ -276,6 +276,20 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 }
 
 gint
+itvencoder_stop (ITVEncoder *itvencoder)
+{
+        Channel *channel;
+        gint i;
+
+        for (i = 0; i < itvencoder->channel_array->len; i++) {
+                channel = g_array_index (itvencoder->channel_array, gpointer, i);
+                channel_stop (channel, SIGUSR2);
+        }
+
+        return 0;
+}
+
+gint
 itvencoder_channel_stop (ITVEncoder *itvencoder, gint index, gint sig)
 {
         Channel *channel;
