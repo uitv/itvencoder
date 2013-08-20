@@ -2,6 +2,6 @@
 SUBDIRS = src
 
 sysconfdir = /etc/itvencoder
-sysconf_DATA = conf/itvencoder.conf.ip conf/itvencoder.conf.test
+sysconf_DATA = conf/itvencoder.conf.ip conf/itvencoder.conf.test conf/itvencoder.conf
 
 EXTRA_DIST = conf src/*.h
