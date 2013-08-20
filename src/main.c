@@ -225,9 +225,15 @@ main (int argc, char *argv[])
                 GST_WARNING ("Channel %s starting ...", channel->name);
 
                 loop = g_main_loop_new (NULL, FALSE);
-                channel_setup (channel, TRUE);
-                channel_reset (channel);
-                channel_start (channel, FALSE);
+                if (channel_setup (channel, TRUE) != 0) {
+                        exit (0);
+                }
+                if (channel_reset (channel) != 0) {
+                        exit (0);
+                }
+                if (channel_start (channel, FALSE) != 0) {
+                        exit (0);
+                }
                 g_main_loop_run (loop);
                 return 0;
         }

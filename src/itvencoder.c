@@ -265,14 +265,20 @@ itvencoder_channel_start (ITVEncoder *itvencoder, gint index)
 
         if (channel->worker_pid != 0) {
                 GST_WARNING ("Start channel %s, but it's already started.", channel->name);
-                return 2;
+                return 1;
         }
 
         /* reset channel. */
-        channel_reset (channel);
+        if (channel_reset (channel) != 0) {
+                return 2;
+        }
 
         /* start the channel. */
-        return channel_start (channel, itvencoder->daemon);
+        if (channel_start (channel, itvencoder->daemon) != 0) {
+                return 3;
+        }
+
+        return 0;
 }
 
 gint
