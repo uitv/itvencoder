@@ -1505,7 +1505,7 @@ channel_encoder_extract_streams (Encoder *encoder)
                         continue;
                 }
                 definition = (gchar *)gst_structure_get_string (bin, "definition");
-                regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                regex = g_regex_new ("appsrc *name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
                 g_regex_match (regex, definition, 0, &match_info);
                 g_regex_unref (regex);
                 if (g_match_info_matches (match_info)) {
@@ -1595,6 +1595,7 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         stream->last_heartbeat = &(channel->output->encoders[i].streams[j].last_heartbeat);
                         stream->current_timestamp = &(channel->output->encoders[i].streams[j].current_timestamp);
                         g_strlcpy (channel->output->encoders[i].streams[j].name, stream->name, STREAM_NAME_LEN);
+                        stream->source = NULL;
                         for (k = 0; k < channel->source->streams->len; k++) {
                                 source = g_array_index (channel->source->streams, gpointer, k);
                                 if (g_strcmp0 (source->name, stream->source_name) == 0) {
@@ -1684,7 +1685,7 @@ channel_configure_parse (Channel *channel)
                                 continue;
                         }
                         definition = (gchar *)gst_structure_get_string (bin, "definition");
-                        regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                        regex = g_regex_new ("appsrc *name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
                         g_regex_match (regex, definition, 0, &match_info);
                         g_regex_unref (regex);
                         if (g_match_info_matches (match_info)) {
@@ -1823,7 +1824,7 @@ channel_reset (Channel *channel)
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel source error.");
-                return 3;
+                return 1;
         }
 
         /* initialize encoders */
@@ -1837,7 +1838,7 @@ channel_reset (Channel *channel)
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");
-                return 4;
+                return 2;
         }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
@@ -1853,6 +1854,8 @@ channel_reset (Channel *channel)
         g_free (stat);
         g_strfreev (stats);
         g_strfreev (cpustats);
+
+        return 0;
 }
 
 gint
