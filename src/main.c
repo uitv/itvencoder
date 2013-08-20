@@ -20,12 +20,7 @@ GST_DEBUG_CATEGORY(ITVENCODER);
 
 Log *_log;
 
-static void sigignor (gint number)
-{
-        GST_ERROR ("signal %d received.", number);
-}
-
-static void sigreopen (gint number)
+static void sighandler (gint number)
 {
         log_reopen (_log);
 }
@@ -224,13 +219,8 @@ main (int argc, char *argv[])
                         channel->enable = TRUE;
                 }
 
-                signal (SIGPIPE, sigignor);
-                signal (SIGHUP, sigignor);
-                signal (SIGINT, sigignor);
-                signal (SIGTERM, sigignor);
-                signal (SIGQUIT, sigignor);
-                signal (SIGALRM, sigignor);
-                signal (SIGUSR1, sigreopen);
+                signal (SIGPIPE, SIG_IGN);
+                signal (SIGUSR1, sighandler);
                 signal (SIGUSR2, stopchannel);
                 GST_WARNING ("Channel %s starting ...", channel->name);
 
