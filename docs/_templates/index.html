@@ -4,13 +4,15 @@
   <h1>{{ _('Welcome') }}</h1>
 
   <p>{%trans%}
-    iTVEncoder是一个基于gstreamer的实时编码器，利用iTVEncoder能够很方便的在gstreamer环境中
-    实现自己的编码器。通过编写gstreamer的插件可以对iTVEncoder进行定制，比如支持新的编码，
-    支持新的硬件采集设备等。这样的实现方式使得iTVEncoder的扩展和定制变得非常灵活
+    发布一个itvencoder，版本号0.3.3，有如下改进和需要注意的地方：
   {%endtrans%}</p>
-  <p>{%trans%}
-    iTVEncoder本身不做编码等工作，具体的音视频编解码以及mux等工作由gstreamer的element实现，
-  {%endtrans%}</p>
+  <ul>
+    <li>{%trans%}<b>清理了log信息，去掉一些没有用的</b>目的是为了更容易通过log信息定位问题。{%endtrans%}</li>
+    <li>{%trans%}<b>重启通道后，清理缓冲</b>不清理缓冲会造成下游切片反复获取重复的数据{%endtrans%}</li>
+    <li>{%trans%}<b>优化重启策略，避免连续重启</b>之前的重启策略存在出现问题会连续重启通道的问题{%endtrans%}</li>
+    <li>{%trans%}<b>-s命令行参数</b>用-s参数停止itvencoder的运行。{%endtrans%}</li>
+    <li>{%trans%}<b>增加了编码输出心跳</b>存在itvencoder重启后不能正常运行，编码输出心跳可以在这样的情况发生后重启编码{%endtrans%}</li>
+  </ul>
   <p>{%trans%}
     itvencoder的当前版本是0.3.1，有如下改进和需要注意的地方：
   {%endtrans%}</p>
@@ -62,6 +64,14 @@
     {%endtrans%}
   </p>
 
+  <p>{%trans%}
+    iTVEncoder是一个基于gstreamer的实时编码器，利用iTVEncoder能够很方便的在gstreamer环境中
+    实现自己的编码器。通过编写gstreamer的插件可以对iTVEncoder进行定制，比如支持新的编码，
+    支持新的硬件采集设备等。这样的实现方式使得iTVEncoder的扩展和定制变得非常灵活
+  {%endtrans%}</p>
+  <p>{%trans%}
+    iTVEncoder本身不做编码等工作，具体的音视频编解码以及mux等工作由gstreamer的element实现，
+  {%endtrans%}</p>
   <p>{%trans%}
     点击<a class="biglink" href="documents.html">这里</a>浏览iTVEncoder相关文档。
     {%endtrans%}
