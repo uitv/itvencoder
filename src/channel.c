@@ -1487,7 +1487,7 @@ channel_encoder_extract_streams (Encoder *encoder)
                         continue;
                 }
                 definition = (gchar *)gst_structure_get_string (bin, "definition");
-                regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                regex = g_regex_new ("appsrc *name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
                 g_regex_match (regex, definition, 0, &match_info);
                 g_regex_unref (regex);
                 if (g_match_info_matches (match_info)) {
@@ -1667,7 +1667,7 @@ channel_configure_parse (Channel *channel)
                                 continue;
                         }
                         definition = (gchar *)gst_structure_get_string (bin, "definition");
-                        regex = g_regex_new ("appsrc name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
+                        regex = g_regex_new ("appsrc *name=(?<stream>[^ ]*)", G_REGEX_OPTIMIZE, 0, NULL);
                         g_regex_match (regex, definition, 0, &match_info);
                         g_regex_unref (regex);
                         if (g_match_info_matches (match_info)) {
