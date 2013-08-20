@@ -136,6 +136,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                 } else {
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (var), var);
+                        g_free (var);
                 }
                 ret = write (request_data->sock, buf, strlen (buf));
                 if (ret == -1) {

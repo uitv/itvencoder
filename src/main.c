@@ -71,18 +71,51 @@ init_log (gchar *log_path)
 }
 
 static gboolean foreground = FALSE;
+static gboolean stop = FALSE;
 static gboolean version = FALSE;
 gchar *config_path = NULL;
 gchar *media_uri = NULL;
+ITVEncoder *itvencoder;
 static gint channel_id = -1;
 static GOptionEntry options[] = {
         {"config", 'c', 0, G_OPTION_ARG_FILENAME, &config_path, ("-c /full/path/to/itvencoder.conf: Specify a config file, full path is must."), NULL},
         {"mediainfo", 'm', 0, G_OPTION_ARG_FILENAME, &media_uri, ("-m media uri, extract media info of the uri."), NULL},
         {"channel", 'n', G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_INT, &channel_id, NULL, NULL},
         {"foreground", 'd', 0, G_OPTION_ARG_NONE, &foreground, ("Run in the foreground"), NULL},
+        {"stop", 's', 0, G_OPTION_ARG_NONE, &stop, ("Stop itvencoder."), NULL},
         {"version", 'v', 0, G_OPTION_ARG_NONE, &version, ("display version information and exit."), NULL},
         {NULL}
 };
+
+static gint create_pid_file (gchar *pid_file)
+{
+        pid_t pid;
+        FILE *fd;
+
+        pid = getpid ();
+        fd = fopen (pid_file, "w");
+        if (fd == NULL) {
+                perror ("open /var/run/itvencoder.pid file error\n");
+                return 1;
+        }
+        fprintf (fd, "%d\n", pid);
+        fclose (fd);
+
+        return 0;
+}
+
+static gint
+remove_pid_file ()
+{
+        unlink ("/var/run/itvencoder.pid");
+}
+
+static void stopitvencoder (gint number)
+{
+        itvencoder_stop (itvencoder);
+        remove_pid_file ();
+        exit (0);
+}
 
 int
 main (int argc, char *argv[])
@@ -90,7 +123,6 @@ main (int argc, char *argv[])
         Configure *configure;
         GValue *value;
         GstStructure *channels;
-        ITVEncoder *itvencoder;
         HTTPMgmt *httpmgmt;
         HTTPStreaming *httpstreaming;
         GMainLoop *loop;
@@ -115,6 +147,19 @@ main (int argc, char *argv[])
         /* mediainfo */
         if (media_uri) {
                 return mediainfo (media_uri);
+        }
+
+        /* stop itvencoder. */
+        if (stop) {
+                gchar *pid_str;
+                gint pid;
+
+                g_file_get_contents ("/var/run/itvencoder.pid", &pid_str, NULL, NULL);
+                pid = atoi (pid_str);
+                g_free (pid_str);
+                g_print ("stoping itvencoder with pid %d ...\n", pid);
+                kill (pid, SIGUSR2);
+                exit (0);
         }
 
         if (version) {
@@ -211,13 +256,14 @@ main (int argc, char *argv[])
                         g_print ("Init log error, ret %d.\n", ret);
                         exit (1);
                 }
+                signal (SIGUSR1, sighandler);
+                signal (SIGUSR2, stopitvencoder);
+                if (create_pid_file ("/var/run/itvencoder.pid") != 0) {
+                        exit (1);
+                }
         }
 
-        signal (SIGPIPE, sigignor);
-        signal (SIGHUP, sigignor);
-        signal (SIGTERM, sigignor);
-        signal (SIGALRM, sigignor);
-        signal (SIGUSR1, sigreopen);
+        signal (SIGPIPE, SIG_IGN);
         GST_WARNING ("iTVEncoder started ...");
 
         loop = g_main_loop_new (NULL, FALSE);
@@ -233,10 +279,6 @@ main (int argc, char *argv[])
                 GST_ERROR ("exit ...");
                 return 1;
         }
-        if (itvencoder_start (itvencoder) != 0) {
-                GST_ERROR ("exit ...");
-                exit (1);
-        }
 
         /* management */
         httpmgmt = httpmgmt_new ("itvencoder", itvencoder, NULL);
@@ -245,6 +287,11 @@ main (int argc, char *argv[])
         /* httpstreaming */
         httpstreaming = httpstreaming_new ("itvencoder", itvencoder, NULL);
         httpstreaming_start (httpstreaming, 10);
+
+        if (itvencoder_start (itvencoder) != 0) {
+                GST_ERROR ("exit ...");
+                exit (1);
+        }
 
         g_main_loop_run (loop);
 

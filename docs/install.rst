@@ -27,7 +27,9 @@ iTVEncoder运行
 itvencoder运行时主要参数如下::
 
     -c, --config                      -c /full/path/to/itvencoder.conf: Specify a config file, full path is must.
+    -m, --mediainfo                   -m media uri, extract media info of the uri.
     -d, --foreground                  Run in the foreground
+    -s, --stop                        Stop itvencoder.
     -v, --version                     display version information and exit.
 
 itvencoder采用了gstreamer的命令行选项::

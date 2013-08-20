@@ -1,5 +1,12 @@
 releases are sorted from youngest to oldest.
 
+v-0.3.3 2013-8-20 zhangping
+- enocer output heartbeat
+- stop command line option
+- remove noise log message
+- avoid start more than one itvencoder
+- reset channel on restart
+
 v-0.3.2 2013-8-9 zhangping
 - configure mistake cause start failure bugfix.
 - one channel and enable is no, cause start failure bugfix.

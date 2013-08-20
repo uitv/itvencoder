@@ -36,6 +36,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %doc
+/etc/itvencoder/itvencoder.conf
 /etc/itvencoder/itvencoder.conf.ip
 /etc/itvencoder/itvencoder.conf.test
 /usr/bin/itvencoder
