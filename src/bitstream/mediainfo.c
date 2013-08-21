@@ -627,13 +627,10 @@ int mediainfo (char *uri)
 
     if (is_multicast (uri) == 1) {
         int reuse = 1;
-        printf ("multicast\n");
         if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0){
             perror("Setting SO_REUSEADDR error");
             close(s);
             exit(1);
-        } else {
-            printf("Setting SO_REUSEADDR...OK.\n");
         }
     }
 
@@ -658,8 +655,6 @@ int mediainfo (char *uri)
             perror("Adding multicast group error");
             close(s);
             exit(1);
-        } else {
-            printf("Adding multicast group...OK.\n");
         }
     }
 
