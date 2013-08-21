@@ -661,7 +661,6 @@ int mediainfo (char *uri)
         } else {
             printf("Adding multicast group...OK.\n");
         }
-        exit (0);
     }
 
     for (i = 0; i < 8192; i++) {
