@@ -1136,6 +1136,7 @@ complete_request_element (GSList *bins)
                                                 l4 = g_slist_next (l4);
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
                                                         link->sink = element;
+                                                        link->sink_pad_name = g_strdup (bin->name);
                                                 }
                                         }
                                         l3 = g_slist_next (l3);
@@ -1405,6 +1406,15 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
+                        if (g_str_has_prefix (link->sink_pad_name, "audio_english")) {
+                                p = g_strdup ("audio/mpeg,language=eng");
+                        } else if (g_str_has_prefix (link->sink_pad_name, "audio_thai")) {
+                                p = g_strdup ("audio/mpeg,language=tha");
+                        } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_english")) {
+                                p = g_strdup ("private/dvbsub,language=eng");
+                        } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_thai")) {
+                                p = g_strdup ("private/dvbsub,language=tha");
+                        }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
                                 gst_element_link_filtered (link->src, link->sink, caps);
