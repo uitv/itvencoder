@@ -1406,14 +1406,16 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if (g_str_has_prefix (link->sink_pad_name, "audio_english")) {
-                                p = g_strdup ("audio/mpeg,language=eng");
-                        } else if (g_str_has_prefix (link->sink_pad_name, "audio_thai")) {
-                                p = g_strdup ("audio/mpeg,language=tha");
-                        } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_english")) {
-                                p = g_strdup ("private/dvbsub,language=eng");
-                        } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_thai")) {
-                                p = g_strdup ("private/dvbsub,language=tha");
+                        if (link->sink_pad_name != NULL) {
+                                if (g_str_has_prefix (link->sink_pad_name, "audio_english")) {
+                                        p = g_strdup ("audio/mpeg,language=eng");
+                                } else if (g_str_has_prefix (link->sink_pad_name, "audio_thai")) {
+                                        p = g_strdup ("audio/mpeg,language=tha");
+                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_english")) {
+                                        p = g_strdup ("private/dvbsub,language=eng");
+                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_thai")) {
+                                        p = g_strdup ("private/dvbsub,language=tha");
+                                }
                         }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
