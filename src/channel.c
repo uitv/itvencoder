@@ -1959,7 +1959,7 @@ channel_start (Channel *channel, gboolean daemon)
 gint
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("Stop channel %s", channel->name);
+        GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);
