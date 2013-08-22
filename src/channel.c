@@ -1407,14 +1407,10 @@ create_encoder_pipeline (Encoder *encoder)
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
                         if (link->sink_pad_name != NULL) {
-                                if (g_str_has_prefix (link->sink_pad_name, "audio_english")) {
-                                        p = g_strdup ("audio/mpeg,language=eng");
-                                } else if (g_str_has_prefix (link->sink_pad_name, "audio_thai")) {
-                                        p = g_strdup ("audio/mpeg,language=tha");
-                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_english")) {
-                                        p = g_strdup ("private/dvbsub,language=eng");
-                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_thai")) {
-                                        p = g_strdup ("private/dvbsub,language=tha");
+                                if (g_str_has_prefix (link->sink_pad_name, "audio_")) {
+                                        p = g_strdup_printf ("audio/mpeg,language=%s", &(link->sink_pad_name[6]));
+                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_")) {
+                                        p = g_strdup_printf ("private/dvbsub,language=%s", &(link->sink_pad_name[9]));
                                 }
                         }
                         if (p != NULL) {
