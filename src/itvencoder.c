@@ -358,6 +358,7 @@ rotate_log (ITVEncoder *itvencoder, gchar *log_path, pid_t pid)
                 name = g_strdup_printf ("%s-%llu", log_path, gst_clock_get_time (itvencoder->system_clock));
                 g_rename (log_path, name);
                 g_free (name);
+                GST_INFO ("log rotate %s, process pid %d.", log_path, pid);
                 kill (pid, SIGUSR1); /* reopen log file. */
                 name = g_strdup_printf ("%s-*", log_path);
                 glob (name, 0, NULL, &pglob);
