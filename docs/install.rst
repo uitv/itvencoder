@@ -66,17 +66,38 @@ itvencoder针对每一个channel有一个log文件，针对channel的log文件�
 
 itvencoder内置了logrotate功能，默认log文件大小是2MBytes，rotate个数是100。
 
-启动多个itvencoder
-==================
+如果想把itvencoder用作获取媒体信息的工具::
 
-由于gstreamer的pipeline在运行状态下关闭并重新启动存在如下问题，第一是有时候关闭成功需要较长时间，根据以往的log信息发现最长时间需要半个小时。
-第二是有时候关闭并重新启动一个pipeline存在内存泄露。
+    itvencoder -m udp://225.1.1.3:6002
 
-itvencoder运行过程中，由于解码出来的音视频数据严重不同步，解码出错，编码出现问题等原因，需要重新启动pipeline，因此重启是不可避免的。
+返回的结果如下::
 
-鉴于上面的原因，可以让一个通道对应一个itvencoder进程，也就是只为itvencoder配置一个通道，重启的时候不是采用streamer的相关功能，而是重新启动进程。
+    <?xml version="1.0" encoding="utf-8"?>
+    <TS>
+    <PAT tsid="1" version="5" current_next="1">
+    <PROGRAM number="1331" pid="257"/>
+    </PAT>
+    NIT is carried on PID 31 which isn't DVB compliant
+    <PAT tsid="1" version="0" current_next="1">
+    <PROGRAM number="0" pid="31"/>
+    <PROGRAM number="1" pid="256"/>
+    </PAT>
+    <PMT program="1" version="0" current_next="1" pcrpid="4097">
+    <DESC id="0x05" length="4" value="48444d56">
+    <REGISTRATION_DESC identifier="HDMV"/>
+    </DESC>
+    <DESC id="0x88" length="4" value="0ffffcfc">
+    <UNKNOWN_DESC />
+    </DESC>
+    <ES pid="0x1011" streamtype="0x1b" streamtype_txt="H.264/14496-10 video (MPEG-4/AVC)">
+    <DESC id="0x28" length="4" value="4d4029bf">
+    <AVC_VIDEO_DESC profile_idc="0x4d" constraint_set0_flag="0" constraint_set1_flag="1" constraint_set2_flag="0" AVC_compatible_flags="0x00" level_idc="0x29" AVC_still_present="1" AVC_24_hour_picture_flag="0"/>
+    </DESC>
+    </ES>
+    <ES pid="0x1100" streamtype="0x0f" streamtype_txt="13818-7 Audio with ADTS transport syntax">
+    </ES>
+    </PMT>
+    </TS>
 
-itvencoder提供了-c选项，可以在运行的时候指定不同的配置文件来运行多个itvencoder，这样就运行了多个频道，需要注意的是，配置文件的server部分不能冲突。
+通过-c可以指定配置文件，通过指定配置文件可以启动多个itvencoder，需要注意的是，配置文件需要绑定不同的服务端口。
 
-
-当前最新版本已经实现了每个通道启动一个进程，因此应经可以不必通过启动多个itvencoder的方式来绕过重启通道的问题。
