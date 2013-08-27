@@ -387,7 +387,11 @@ log_rotate (ITVEncoder *itvencoder)
         /* channels log rotate. */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", itvencoder->log_dir, i);
+                if (channel->worker_pid == 0) {
+                        /* pid == 0, channel is stop. */
+                        continue;
+                }
+                log_path = g_strdup_printf ("%schannel%d/itvencoder.log", itvencoder->log_dir, i);
                 rotate_log (itvencoder, log_path, channel->worker_pid);
                 g_free (log_path);
         }
