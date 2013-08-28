@@ -1773,6 +1773,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         }
         if (WIFSIGNALED(status)) {
                 GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.", pid);
+                channel_reset (channel);
                 channel_start (channel, TRUE);
         }
 
