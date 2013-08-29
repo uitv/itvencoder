@@ -71,7 +71,6 @@ static gchar *index_html = "<html>\n"
 /* server */
 "    var server = document.getElementById (\"server\");\n"
 "    var v = serverXML.getElementsByTagName (\"var\");\n"
-#if 0
 "    var dashbox = document.createElement (\"div\");\n"
 "    dashbox.setAttribute ('class', 'dashbox');\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<h3>Server</h3>\";\n"
@@ -87,7 +86,6 @@ static gchar *index_html = "<html>\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<button type=\\\"button\\\" onclick=saveChanges()>Save Changes</button>\";\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<button type=\\\"button\\\" onclick=restartiTVEncoder()>Restart iTVEncoder</button>\";\n"
 "    server.appendChild (dashbox);\n"
-#endif
 /* channels */
 "    var channels = document.getElementById (\"channels\");\n"
 "    var c = channelsXML.firstElementChild;\n"
