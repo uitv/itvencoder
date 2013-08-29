@@ -570,6 +570,10 @@ create_element (GstStructure *pipeline, gchar *param)
         g_regex_unref (regex);
         g_free (p);
         element = gst_element_factory_make (factory, NULL);
+        if (element == NULL) {
+                GST_ERROR ("make element %s error.", factory);
+                return NULL;
+        }
 
         /* extract element configure. */
         regex = g_regex_new (" .*", 0, 0, NULL);
