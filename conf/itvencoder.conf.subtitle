@@ -70,7 +70,7 @@ channel0 = {
             x264enc = {
                 property = {
                     name = x264enc
-                    bitrate = <var name="bitrate" type="number">2000</var>
+                    bitrate = <var name="bitrate" type="number">1500</var>
                     bframes = <var name="b frames" type="number">3</var>
                     profile = <var name="profile" type="[baseline, main, high]">high</var>
                     threads = 16
