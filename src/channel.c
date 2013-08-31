@@ -1011,7 +1011,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         for (i = 0; i < stream->encoders->len; i++) {
                 encoder = g_array_index (stream->encoders, gpointer, i);
                 if (stream->current_position == encoder->current_position) {
-                        GST_WARNING ("encoder %s stream %s can not catch up output.", encoder->name, stream->name);
+                        GST_WARNING ("encoder stream %s can not catch up source output.", encoder->name);
                 }
         }
 
