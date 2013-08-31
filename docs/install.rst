@@ -1,6 +1,24 @@
 iTVEncoder安装部署
 ******************
 
+安装操作系统和gstreamer
+=======================
+
+目前只在64位的CentOS 6.2上进行过验证。安装CentOS的时候选择Basic Server，这样安装完成后即安装了gstreamer-plugins-base、gstreamer-tools、gstreamer等，还需要安装如下插件::
+
+    gstreamer-plugins-bad-free
+    gstreamer-plugins-good
+
+然后安装一个rpmforge源::
+
+    sudo rpm -ivh http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.2-2.el6.rf.x86_64.rpm
+
+并安装如下三个gstreamer插件::
+
+    gstreamer-ffmpeg
+    gstreamer-plugins-bad
+    gstreamer-plugins-ugly
+
 iTVEncoder源码安装
 ==================
 
