@@ -6,7 +6,7 @@ static gchar *index_html = "<html>\n"
 "function getConfigure() {\n"
 "    getConfigureRequest = new XMLHttpRequest();\n"
 "    getConfigureRequest.onreadystatechange = processRequest;\n"
-"    getConfigureRequest.open (\"GET\", \"/configure/\", true);\n"
+"    getConfigureRequest.open (\"GET\", \"/configure/channels/\", true);\n"
 "    getConfigureRequest.send ();\n"
 "}\n"
 /* save changes button onclick */
@@ -33,7 +33,7 @@ static gchar *index_html = "<html>\n"
 "    }\n"
 /* POST */
 "    var postRequestXML = serializer.serializeToString(data);\n"
-"    postConfigureRequest.open (\"POST\", \"/configure/\", true);\n"
+"    postConfigureRequest.open (\"POST\", \"/configure/channels/\", true);\n"
 "    postConfigureRequest.send (postRequestXML);\n"
 //"    alert (postRequestXML);\n"
 "}\n"
@@ -69,6 +69,7 @@ static gchar *index_html = "<html>\n"
 "    channelsXML = getConfigureRequest.responseXML.getElementsByTagName (\"channels\")[0];\n"
 "    var itvencoder = document.getElementById (\"itvencoder\");\n"
 /* server */
+#if 0
 "    var server = document.getElementById (\"server\");\n"
 "    var v = serverXML.getElementsByTagName (\"var\");\n"
 "    var dashbox = document.createElement (\"div\");\n"
@@ -86,6 +87,7 @@ static gchar *index_html = "<html>\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<button type=\\\"button\\\" onclick=saveChanges()>Save Changes</button>\";\n"
 "    dashbox.innerHTML = dashbox.innerHTML + \"<button type=\\\"button\\\" onclick=restartiTVEncoder()>Restart iTVEncoder</button>\";\n"
 "    server.appendChild (dashbox);\n"
+#endif
 /* channels */
 "    var channels = document.getElementById (\"channels\");\n"
 "    var c = channelsXML.firstElementChild;\n"
