@@ -286,7 +286,6 @@ HTTP Response::
     Content-Length: 1
     Connection: Close
     
-    
     0
 
 上面给出的例子查询的是通道0的重新启动次数，要查询其它通道，改变channel/0/age中的0为欲查询的通道号即可。
@@ -313,7 +312,30 @@ HTTP Response::
     Content-Length: 19
     Connection: Close
     
-    
     1378188183416644943
 
 时间类型为Unix epoch，精度为纳秒。
+
+查询编码通道的个数
+==================
+
+HTTP Request::
+
+    GET /channelnum HTTP/1.1
+    Host: 192.168.2.10:20118
+    Connection: keep-alive
+    Cache-Control: max-age=0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+    
+HTTP Response::
+    
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.3
+    Content-Type: text/plain
+    Content-Length: 2
+    Connection: Close
+    
+    10
