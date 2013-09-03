@@ -226,7 +226,8 @@ static void
 channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
         gint i, index, ret;
-        gchar *buf;
+        gchar *buf, *age;
+        Channel *channel;
 
         if (!httpmgmt->itvencoder->daemon) {
                 /* run in foreground, channel operation is forbidden. */
@@ -245,23 +246,31 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 if (index == -1) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                 } else if (g_str_has_suffix (request_data->uri, "/stop")) {
-                        GST_WARNING ("Stop channel %d", index);
+                        GST_WARNING ("Stop channel%d", index);
                         buf = stop_channel (httpmgmt, index);
                 } else if (g_str_has_suffix (request_data->uri, "/start")) {
-                        GST_WARNING ("Start channel %d", index);
+                        GST_WARNING ("Start channel%d", index);
                         buf = start_channel (httpmgmt, index);
                 } else if (g_str_has_suffix (request_data->uri, "/restart")) {
-                        GST_WARNING ("Restart channel %d", index);
+                        GST_WARNING ("Restart channel%d", index);
                         buf = restart_channel (httpmgmt, index);
+                } else if (g_str_has_suffix (request_data->uri, "/age")) {
+                        GST_WARNING ("Get channel%d age.", index);
+                        channel = g_array_index (httpmgmt->itvencoder->channel_array, gpointer, index);
+                        age = g_strdup_printf ("%lld", channel->age);
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (age), age);
+                        g_free (age);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
                 }
-                ret = write (request_data->sock, buf, strlen (buf));
-                if (ret == -1) {
-                        GST_ERROR ("Write sock error: %s", g_strerror (errno));
-                }
-                g_free (buf);
+        } else {
+                buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
+        ret = write (request_data->sock, buf, strlen (buf));
+        if (ret == -1) {
+                GST_ERROR ("Write sock error: %s", g_strerror (errno));
+        }
+        g_free (buf);
 }
 
 static gchar *
@@ -343,7 +352,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
-        gchar *buf;
+        gchar *buf, *p;
         gint ret;
 
         switch (request_data->status) {
@@ -373,16 +382,24 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* get version */
-                        gchar *ver;
-                        ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
-                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
-                        g_free (ver);
+                        p = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
+                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (p), p);
+                        g_free (p);
                         ret = write (request_data->sock, buf, strlen (buf));
                         if (ret == -1) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
-                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
+                } else if (g_str_has_prefix (request_data->uri, "/starttime")) {
+                        p = g_strdup_printf ("%llu", httpmgmt->itvencoder->start_time);
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
+                        g_free (p);
+                        ret = write (request_data->sock, buf, strlen (buf));
+                        if (ret == -1) {
+                                GST_ERROR ("Write sock error: %s", g_strerror (errno));
+                        }
+                        g_free (buf);
+                } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* tools. */
                         tools_request (httpmgmt, request_data);
                 } else {

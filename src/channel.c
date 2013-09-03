@@ -1024,7 +1024,7 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         for (i = 0; i < stream->encoders->len; i++) {
                 encoder = g_array_index (stream->encoders, gpointer, i);
                 if (stream->current_position == encoder->current_position) {
-                        GST_WARNING ("encoder %s stream %s can not catch up output.", encoder->name, stream->name);
+                        GST_WARNING ("encoder stream %s can not catch up source output.", encoder->name);
                 }
         }
 
@@ -1152,6 +1152,7 @@ complete_request_element (GSList *bins)
                                                 l4 = g_slist_next (l4);
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
                                                         link->sink = element;
+                                                        link->sink_pad_name = g_strdup (bin->name);
                                                 }
                                         }
                                         l3 = g_slist_next (l3);
@@ -1423,6 +1424,13 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
+                        if (link->sink_pad_name != NULL) {
+                                if (g_str_has_prefix (link->sink_pad_name, "audio_")) {
+                                        p = g_strdup_printf ("audio/mpeg,language=%s", &(link->sink_pad_name[6]));
+                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_")) {
+                                        p = g_strdup_printf ("private/dvbsub,language=%s", &(link->sink_pad_name[9]));
+                                }
+                        }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
                                 gst_element_link_filtered (link->src, link->sink, caps);
@@ -1791,6 +1799,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         }
         if (WIFSIGNALED(status)) {
                 GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.", pid);
+                channel_reset (channel);
                 channel_start (channel, TRUE);
         }
 
@@ -1977,7 +1986,7 @@ channel_start (Channel *channel, gboolean daemon)
 gint
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("Stop channel %s", channel->name);
+        GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
         *(channel->output->state) = GST_STATE_NULL;
         if (channel->worker_pid != 0) {
                 kill (channel->worker_pid, sig);

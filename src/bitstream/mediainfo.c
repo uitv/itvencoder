@@ -575,10 +575,31 @@ static void handle_psi_packet(uint8_t *p_ts)
     }
 }
 
+static int is_multicast (char *uri)
+{
+    char p[4];
+    int i;
+
+    /* must be udp://xx.... */
+    for (i = 6; i < 9; i++) {
+        if (uri[i] == '.') {
+            break;
+        }
+        p[i-6] = uri[i];
+    }
+    p[i-6] = '\0';
+    if ((atoi(p) >= 224) && (atoi(p) <=239)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 int mediainfo (char *uri)
 {
     int i;
     struct sockaddr_in si_other;
+    struct ip_mreq group;
     int s, slen = sizeof (si_other);
     char *server;
     int port;
@@ -603,14 +624,38 @@ int mediainfo (char *uri)
     if ((s = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         exit (1);
     }
+
+    if (is_multicast (uri) == 1) {
+        int reuse = 1;
+        if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0){
+            perror("Setting SO_REUSEADDR error");
+            close(s);
+            exit(1);
+        }
+    }
+
     memset ((char *)&si_other, 0, sizeof (si_other));
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons (port);
-    if (inet_aton (server, &si_other.sin_addr) == 0) {
-        exit (1);
+    if (is_multicast (uri) == 1) {
+        si_other.sin_addr.s_addr = INADDR_ANY;
+    } else {
+        if (inet_aton (server, &si_other.sin_addr) == 0) {
+            exit (1);
+        }    
     }
     if (bind (s, (struct sockaddr *)&si_other, sizeof (si_other)) == -1) {
         exit (1);
+    }
+
+    if (is_multicast (uri) == 1) {
+        group.imr_multiaddr.s_addr = inet_addr(server);
+        //group.imr_interface.s_addr = inet_addr("172.16.0.10");
+        if(setsockopt(s, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0){
+            perror("Adding multicast group error");
+            close(s);
+            exit(1);
+        }
     }
 
     for (i = 0; i < 8192; i++) {

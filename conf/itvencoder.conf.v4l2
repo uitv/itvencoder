@@ -1,0 +1,109 @@
+#
+# key/value type configure.
+# the configure file is created by encoder customizer, end-user isn't allowed to modify the configure file directly.
+# end-user can modify the configure item by web ui or command line tools.
+# <type definition>value</type> style value is modifiable.
+# types: select option ipaddr number string
+#
+[server]
+# http streaming server
+httpstreaming = <var name="streaming address" type="string">0.0.0.0:20119</var>
+
+# http managment server
+httpmgmt = <var name="management address" type="string">0.0.0.0:20118</var> # test regex <ipaddr>value</ipaddr>
+
+# log dirctory
+logdir = /var/log/itvencoder
+
+[channels]
+v4l2src = {
+    enable = <var name="enable" type="option">yes</var>
+    debug = mpegtsmux:2
+
+    # source pipeline defination
+    source = {
+
+#
+#        v4l2src = {
+#            caps = video/x-raw-yuv,width=720,height=480,framerate=25/1
+#        }
+
+        alsasrc = {
+            property = {
+                blocksize = 8192
+            }
+            caps = audio/x-raw-int,width=16,depth=16,rate=48000,channels=2,endianness=1234
+        }
+
+        # element can be customized by elemment(property=vlue, ...)
+        bins = {
+            audio = {
+                definition = alsasrc device=hw:2 ! queue ! appsink
+                option = <var name="audio source" type="option">yes</var>
+            }
+            video = {
+                definition = v4l2src device=/dev/video0 ! queue! deinterlace mode=0 method=5 ! queue !appsink
+                option = <var name="video source" type="option">yes</var>
+            }
+        }
+    }
+
+    # encoder pipeline defination
+    encoders = {
+        encoder1 = {
+            videoscale = {
+                caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
+            }
+
+            # x264 encoder element
+            x264enc = {
+                property = {
+                    bitrate = <var name="bitrate" type="number">1000</var>
+                    byte-stream = TRUE
+                    threads = <var name="threads" type="number">6</var>
+                    bframes = <var name="b frames" type="number">3</var>
+                    profile = <var name="profile" type="[baseline, main, high]">high</var>
+                }
+            }
+
+            # faac audio encoder
+            faac = {
+                property = {
+                    name = faac
+                    outputformat = 1
+                }
+            }
+
+            # mpeg2 ts mux
+            mpegtsmux = {
+                property = {
+                    name = muxer
+                }
+            }
+
+            appsink = {
+                property = {
+                    sync = FALSE
+                }
+            }
+
+            bins = {
+                video = {
+                    definition = appsrc name=video ! queue ! ffmpegcolorspace ! x264enc ! queue ! muxer.
+                    option = <var name="video encoder" type="option">yes</var>
+                }
+                audio = {
+                    definition = appsrc name=audio ! audioresample ! audioconvert ! faac ! muxer.
+                    option = <var name="audio encoder" type="option">yes</var>
+                }
+                muxer = {
+                    definition = mpegtsmux name=muxer ! queue ! appsink
+                }
+            }
+
+            httpstreaming = <var name="http streaming out" type="option">yes</var>
+            #udpstreaming = <var name="udp streaming out" type="string">224.1.1.1:1111</var>
+        }
+    }
+}
+

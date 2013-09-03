@@ -1,0 +1,112 @@
+#
+# multi audio track and multi subtitle
+# key/value type configure.
+# the configure file is created by encoder customizer, end-user isn't allowed to modify the configure file directly.
+# end-user can modify the configure item by web ui or command line tools.
+# <type definition>value</type> style value is modifiable.
+# types: select option ipaddr number string
+#
+[server]
+# http streaming server
+httpstreaming = <var name="streaming address" type="string">0.0.0.0:30119</var>
+
+# http managment server
+httpmgmt = <var name="management address" type="string">0.0.0.0:30118</var> # test regex <ipaddr>value</ipaddr>
+
+# log dirctory
+logdir = /var/log/itvencoder
+
+[channels]
+channel0 = {
+    enable = <var name="enable" type="option">yes</var>
+
+    # source pipeline defination
+    source = {
+        udpsrc = {
+            property = {
+                uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:6003</var>
+            }
+        }
+
+        appsink = {
+            property = {
+               sync = FALSE
+               drop = TRUE
+            }
+        }
+
+        # element can be customized by elemment(property=vlue, ...)
+        bins = {
+            mpegtsdemuxer = {
+                # dont link a sometimes pad directly.
+                definition = udpsrc ! queue ! mpegtsdemux name=demuxer
+            }
+            video = {
+                definition = demuxer.<var name="video pid" type="string">video_0201</var> ! queue ! <var name="video decoder" type="[mpeg2dec, h264dec]">h264dec</var> ! queue ! appsink
+            }
+            audio1 = {
+                definition = demuxer.<var name="english audio pid" type="string">audio_026d</var> ! queue ! mad ! queue ! appsink
+                option = <var name="select audio1" type="option">yes</var>
+            }
+            audio2 = {
+                definition = demuxer.<var name="thai audio pid" type="string">audio_0271</var> ! queue ! mad ! queue ! appsink
+                option = <var name="select audio2" type="option">yes</var>
+            }
+            subtitle1 = {
+                definition = demuxer.private_044f ! queue ! appsink
+                option = <var name="select subtitle1" type="option">yes</var>
+            }
+        }
+    }
+
+    # encoder pipeline defination
+    encoders = {
+        encoder1 = {
+            videoscale = {
+                caps = video/x-raw-yuv,width=<var name="width" type="number">1280</var>,height=<var name="height" type="number">720</var>
+            }
+
+            # x264 encoder element
+            x264enc = {
+                property = {
+                    name = x264enc
+                    bitrate = <var name="bitrate" type="number">1500</var>
+                    bframes = <var name="b frames" type="number">3</var>
+                    profile = <var name="profile" type="[baseline, main, high]">high</var>
+                    threads = 16
+                    byte-stream = TRUE
+                    rc-lookahead = 25
+                    key-int-max = 300
+                    key-int-min = 25
+                    pass = 17
+                    level = 31
+                    mb-tree = true
+                    stats-file = /tmp/x264.log
+                    option-string = :ref=3:me=hex:subme=8:merange=16:nf=1:deblock=1,-2:weightp=1:scenecut=0:lookahead-threads=4:sliced-threads=false:b-pyramid=2:direct=spatial
+                }
+            }
+
+            bins = {
+                video = {
+                    definition = appsrc name=video ! queue ! videoscale ! queue ! x264enc ! queue ! muxer.
+                }
+                audio_eng = {
+                    definition = appsrc name=audio1 is-live=TRUE ! queue ! audioconvert ! queue ! faac name=faac1 outputformat=1 ! queue ! muxer.
+                    option = <var name="select audio1" type="option">yes</var>
+                }
+                audio_tha = {
+                    definition = appsrc name=audio2 is-live=TRUE ! queue ! audioconvert ! queue ! faac name=faac2 outputformat=1 ! queue ! muxer.
+                    option = <var name="select audio2" type="option">yes</var>
+                }
+                subtitle1 = {
+                    definition = appsrc name=subtitle1 ! queue ! muxer.
+                    option = <var name="select subtitle1" type="option">yes</var>
+                }
+                muxer = {
+                    definition = mpegtsmux name=muxer ! queue ! appsink sync=FALSE
+                }
+            }
+        }
+    }
+}
+

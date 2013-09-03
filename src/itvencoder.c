@@ -360,6 +360,7 @@ rotate_log (ITVEncoder *itvencoder, gchar *log_path, pid_t pid)
                 name = g_strdup_printf ("%s-%jd", log_path, g_get_monotonic_time ());
                 g_rename (log_path, name);
                 g_free (name);
+                GST_INFO ("log rotate %s, process pid %d.", log_path, pid);
                 kill (pid, SIGUSR1); /* reopen log file. */
                 name = g_strdup_printf ("%s-*", log_path);
                 glob (name, 0, NULL, &pglob);
@@ -388,7 +389,11 @@ log_rotate (ITVEncoder *itvencoder)
         /* channels log rotate. */
         for (i = 0; i < itvencoder->channel_array->len; i++) {
                 channel = g_array_index (itvencoder->channel_array, gpointer, i);
-                log_path = g_strdup_printf ("%s/channel%d/itvencoder.log", itvencoder->log_dir, i);
+                if (channel->worker_pid == 0) {
+                        /* pid == 0, channel is stop. */
+                        continue;
+                }
+                log_path = g_strdup_printf ("%schannel%d/itvencoder.log", itvencoder->log_dir, i);
                 rotate_log (itvencoder, log_path, channel->worker_pid);
                 g_free (log_path);
         }

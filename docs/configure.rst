@@ -102,6 +102,13 @@ bins的配置如下面的样子::
 
 encoder的定义与source类似，最大的区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin。
 
+如果需要向mux传递音频或者字幕的语言信息，需要把相应的bin_name的格式按照如下定义即可::
+
+    audio_eng
+    subtitle_tha
+
+其中下划线前面的部分指明其为音轨或者字幕，而下划线后面的部分是语言，采用ISO 639标准。
+
 可修改配置项
 ============
 

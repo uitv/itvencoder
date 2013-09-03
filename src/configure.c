@@ -1095,7 +1095,7 @@ group_alter (gchar *path, gchar *group)
         }
 
         /* channel tag <channel name="thename"> */
-        regex = g_regex_new (".*channels/([^/]*)$", G_REGEX_DOTALL, 0, NULL);
+        regex = g_regex_new (".*channels/([^/]*).*", G_REGEX_DOTALL, 0, NULL);
         p1 = NULL;
         p1 = g_regex_replace (regex, group, -1, 0, "\\1", 0, NULL);
         g_regex_unref (regex);
