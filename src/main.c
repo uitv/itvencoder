@@ -162,6 +162,11 @@ main (int argc, char *argv[])
                 exit (0);
         }
 
+        if (!foreground && g_file_test ("/var/run/itvencoder.pid", G_FILE_TEST_EXISTS)) {
+                g_print ("itvencoder already running !!!\n");
+                exit (0);
+        }
+
         if (gst_debug_get_default_threshold () < GST_LEVEL_WARNING) {
                 gst_debug_set_default_threshold (GST_LEVEL_WARNING);
         }
