@@ -162,7 +162,7 @@ main (int argc, char *argv[])
                 exit (0);
         }
 
-        if (!foreground && g_file_test ("/var/run/itvencoder.pid", G_FILE_TEST_EXISTS)) {
+        if (!foreground && g_file_test ("/var/run/itvencoder.pid", G_FILE_TEST_EXISTS) && (channel_id == -1)) {
                 g_print ("itvencoder already running !!!\n");
                 exit (0);
         }
