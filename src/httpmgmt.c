@@ -330,7 +330,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
 {
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
-        gchar *buf;
+        gchar *buf, *p;
 
         switch (request_data->status) {
         case HTTP_REQUEST:
@@ -353,13 +353,18 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* get version */
-                        gchar *ver;
-                        ver = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
-                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (ver), ver);
-                        g_free (ver);
+                        p = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
+                        buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (p), p);
+                        g_free (p);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
+                } else if (g_str_has_prefix (request_data->uri, "/starttime")) {
+                        p = g_strdup_printf ("%llu", httpmgmt->itvencoder->start_time);
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
+                        g_free (p);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* tools. */
                         tools_request (httpmgmt, request_data);
                 } else {
