@@ -1739,6 +1739,8 @@ channel_output_init (Channel *channel, gboolean daemon)
                         fd = shm_open (name, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
                         ftruncate (fd, SHM_SIZE);
                         output->encoders[i].cache_addr = mmap (NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                        /* initialize gop size = 0. */
+                        *(gint32 *)(output->encoders[i].cache_addr + 8) = 0;
                         g_free (name);
                 } else {
                         output->encoders[i].cache_addr = g_malloc (SHM_SIZE);
@@ -1748,7 +1750,8 @@ channel_output_init (Channel *channel, gboolean daemon)
                 *(output->encoders[i].head_addr) = 0;
                 p += sizeof (guint64);
                 output->encoders[i].tail_addr = (guint64 *)p;
-                *(output->encoders[i].tail_addr) = 0;
+                /* timestamp + gop size = 12 */
+                *(output->encoders[i].tail_addr) = 12;
                 p += sizeof (guint64);
                 output->encoders[i].last_rap_addr = (guint64 *)p;
                 *(output->encoders[i].last_rap_addr) = 0;
