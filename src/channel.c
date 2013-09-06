@@ -1966,8 +1966,8 @@ gint
 channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
-        *(channel->output->state) = GST_STATE_NULL;
-        if (channel->worker_pid != 0) {
+        if (*(channel->output->state) == GST_STATE_PLAYING) {
+                *(channel->output->state) = GST_STATE_NULL;
                 kill (channel->worker_pid, sig);
                 return 0;
         } else {
