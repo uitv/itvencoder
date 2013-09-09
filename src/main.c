@@ -216,6 +216,7 @@ main (int argc, char *argv[])
                 value = (GValue *)gst_structure_get_value (structure, name);
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
+                channel->configure_mutex = NULL;
                 channel->id = channel_id;
                 enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
                 if (g_strcmp0 (enable, "no") == 0) {

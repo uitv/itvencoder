@@ -1810,6 +1810,10 @@ channel_reset (Channel *channel)
                         g_array_remove_index (channel->source->streams, i);
                 }
         }
+        if (channel->configure_mutex != NULL) {
+                /* mian process, else is encoder process */
+                g_mutex_lock (channel->configure_mutex);
+        }
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
@@ -1829,6 +1833,10 @@ channel_reset (Channel *channel)
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");
                 return 2;
+        }
+        if (channel->configure_mutex != NULL) {
+                /* mian process, else is encoder process */
+                g_mutex_unlock (channel->configure_mutex);
         }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);

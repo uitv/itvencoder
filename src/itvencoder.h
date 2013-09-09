@@ -32,6 +32,7 @@ struct _ITVEncoder {
         GstClockTime start_time;
 
         gchar *configure_file;
+        GMutex *configure_mutex; //GRWLock configure_rwlock;
         Configure *configure;
         gchar *log_dir;
         GArray *channel_array;
