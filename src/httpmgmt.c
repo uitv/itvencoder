@@ -370,7 +370,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         g_free (p);
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
-                } else if (g_str_has_prefix (request_data->uri, "/version")) {
+                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
                         /* tools. */
                         tools_request (httpmgmt, request_data);
                 } else {
