@@ -15,9 +15,6 @@ httpmgmt = <var name="management address" type="string">0.0.0.0:20118</var> # te
 # log dirctory
 logdir = /var/log/itvencoder
 
-# pid file path
-pidfile = /var/run/itvencoder.pid
-
 [channels]
 channel0 = {
     enable = <var name="enable" type="option">yes</var>
