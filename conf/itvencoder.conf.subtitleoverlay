@@ -32,7 +32,6 @@ channel0 = {
             caps = audio/x-raw-int,width=16,depth=16,rate=48000,channels=2,endianness=1234
         }
 
-
         appsink = {
             property = {
                sync = FALSE
