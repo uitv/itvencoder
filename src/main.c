@@ -163,7 +163,7 @@ main (int argc, char *argv[])
         }
 
         if (!foreground && g_file_test ("/var/run/itvencoder.pid", G_FILE_TEST_EXISTS) && (channel_id == -1)) {
-                g_print ("itvencoder already running !!!\n");
+                g_print ("file /var/run/itvencoder.pid found, itvencoder already running !!!\n");
                 exit (0);
         }
 
@@ -216,6 +216,7 @@ main (int argc, char *argv[])
                 value = (GValue *)gst_structure_get_value (structure, name);
                 structure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", structure, NULL);
+                channel->configure_mutex = NULL;
                 channel->id = channel_id;
                 enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
                 if (g_strcmp0 (enable, "no") == 0) {

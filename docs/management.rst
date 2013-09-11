@@ -286,7 +286,6 @@ HTTP Response::
     Content-Length: 1
     Connection: Close
     
-    
     0
 
 上面给出的例子查询的是通道0的重新启动次数，要查询其它通道，改变channel/0/age中的0为欲查询的通道号即可。
@@ -313,7 +312,92 @@ HTTP Response::
     Content-Length: 19
     Connection: Close
     
-    
     1378188183416644943
 
 时间类型为Unix epoch，精度为纳秒。
+
+查询编码通道的个数
+==================
+
+HTTP Request::
+
+    GET /channelnum HTTP/1.1
+    Host: 192.168.2.10:20118
+    Connection: keep-alive
+    Cache-Control: max-age=0
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.62 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+    
+HTTP Response::
+    
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.3
+    Content-Type: text/plain
+    Content-Length: 2
+    Connection: Close
+    
+    10
+
+获取源信息
+==========
+
+目前可以获取udp源的编码类型，pid等信息。
+
+HTTP Request::
+
+    GET /tools/mediainfo/udp://127.0.0.1:6002 HTTP/1.1
+    Host: 192.168.2.10:20118
+    Connection: keep-alive
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.66 Safari/537.36
+    Accept-Encoding: gzip,deflate,sdch
+    Accept-Language: zh-CN,zh;q=0.8
+
+HTTP Response::
+    
+    HTTP/1.1 200 Ok
+    Server: iTVEncoder-0.3.3
+    Content-Type: application/xml
+    Content-Length: 1401
+    Connection: Close
+    
+    <?xml version="1.0" encoding="utf-8"?>
+    <TS>
+    <PAT tsid="30" version="3" current_next="1">
+        <PROGRAM number="0" pid="16"/>
+        <PROGRAM number="634" pid="6345"/>
+        <PROGRAM number="620" pid="6205"/>
+    </PAT>
+    <PMT program="634" version="0" current_next="1" pcrpid="6340">
+        <ES pid="0x18c4" streamtype="0x02" streamtype_txt="13818-2 video (MPEG-2)">
+            <DESC id="0x09" length="17" value="0100f8cb012dff00000000000000022e88">
+                <CA_DESC sysid="0x100" pid="6347"/>
+            </DESC>
+            <DESC id="0x09" length="17" value="0100f8cc0130ff00000000000000022e88">
+                <CA_DESC sysid="0x100" pid="6348"/>
+            </DESC>
+            <DESC id="0x09" length="7" value="1811f8cc020130">
+                <CA_DESC sysid="0x1811" pid="6348"/>
+            </DESC>
+        </ES>
+        <ES pid="0x18c5" streamtype="0x06" streamtype_txt="13818-1 PES private data">
+            <DESC id="0x6a" length="1" value="00">
+                <AC3_DESC component_type_flag="0" component_type="0" bsid_flag="0" bsid="0" mainid_flag="0" mainid="0" asvc_flag="0" asvc="0"/>
+            </DESC>
+            <DESC id="0x0a" length="4" value="656e6700">
+                <AUDIO_LANGUAGE_DESC language="eng" audiotype="0" audiotype_txt="undefined"/>
+            </DESC>
+            <DESC id="0x09" length="17" value="0100f8cb012dff00000000000000022e88">
+                <CA_DESC sysid="0x100" pid="6347"/>
+            </DESC>
+            <DESC id="0x09" length="17" value="0100f8cc0130ff00000000000000022e88">
+                <CA_DESC sysid="0x100" pid="6348"/>
+            </DESC>
+            <DESC id="0x09" length="7" value="1811f8cc020130">
+                <CA_DESC sysid="0x1811" pid="6348"/>
+            </DESC>
+        </ES>
+    </PMT>
+    </TS>

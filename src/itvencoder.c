@@ -63,6 +63,8 @@ static void
 itvencoder_init (ITVEncoder *itvencoder)
 {
         itvencoder->configure = NULL;
+        //g_rw_lock_init (itvencoder->configure_rwlock);
+        itvencoder->configure_mutex = g_mutex_new (); //FIXME: release, deprecated api in new version of glib.
         itvencoder->channel_array = g_array_new (FALSE, FALSE, sizeof(gpointer));
         itvencoder->system_clock = gst_system_clock_obtain ();
         g_object_set (itvencoder->system_clock, "clock-type", GST_CLOCK_TYPE_REALTIME, NULL);
@@ -163,6 +165,9 @@ itvencoder_reload_configure (ITVEncoder *itvencoder)
         gint i;
         gchar *enable;
 
+        //g_rw_lock_writer_lock (&(itvencoder->configure_rwlock));
+        g_mutex_lock (itvencoder->configure_mutex);
+
         if (itvencoder_load_configure (itvencoder) != 0) {
                 GST_ERROR ("load configure error.");
                 return 1;
@@ -174,6 +179,7 @@ itvencoder_reload_configure (ITVEncoder *itvencoder)
                 structure = (GstStructure *)gst_value_get_structure (value);
                 value = (GValue *)gst_structure_get_value (structure, channel->name);
                 channel->configure = (GstStructure *)gst_value_get_structure (value);
+                channel->configure_mutex = itvencoder->configure_mutex;
                 enable = (gchar *)gst_structure_get_string (channel->configure, "enable");
                 if (g_strcmp0 (enable, "no") == 0) {
                         channel->enable = FALSE;
@@ -181,6 +187,9 @@ itvencoder_reload_configure (ITVEncoder *itvencoder)
                         channel->enable = TRUE;
                 }
         }
+
+        //g_rw_lock_writer_unlock (&(itvencoder->configure_rwlock));
+        g_mutex_unlock (itvencoder->configure_mutex);
 
         return 0;
 }
@@ -236,6 +245,7 @@ itvencoder_channel_initialize (ITVEncoder *itvencoder)
                 value = (GValue *)gst_structure_get_value (structure, name);
                 configure = (GstStructure *)gst_value_get_structure (value);
                 channel = channel_new ("name", name, "configure", configure, NULL);
+                channel->configure_mutex = itvencoder->configure_mutex;
                 remove_semaphore (channel);
                 channel->id = i;
                 enable = (gchar *)gst_structure_get_string (channel->configure, "enable");

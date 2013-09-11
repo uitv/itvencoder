@@ -18,15 +18,18 @@ logdir = /var/log/itvencoder
 [channels]
 channel0 = {
     enable = <var name="enable" type="option">yes</var>
-    debug = mpegtsmux:2
 
     # source pipeline defination
     source = {
 
         udpsrc = {
             property = {
-                uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:6001</var>
+                uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:6003</var>
             }
+        }
+
+        audioconvert = {
+            caps = audio/x-raw-int,width=16,depth=16,rate=48000,channels=2,endianness=1234
         }
 
         appsink = {
@@ -43,10 +46,16 @@ channel0 = {
                 definition = udpsrc ! mpegtsdemux name=demuxer
             }
             video = {
-                definition = demuxer.video ! queue ! ffdec_mpeg2video ! queue ! appsink
+                definition = demuxer.video ! queue ! h264dec ! queue ! appsink
+                option = yes
             }
             audio = {
                 definition = demuxer.audio ! queue ! mad ! queue ! appsink
+            }
+
+            subtitle = {
+                definition = demuxer.private ! appsink
+                option = yes
             }
         }
     }
@@ -58,6 +67,10 @@ channel0 = {
                 property = {
                     is-live = TRUE
                 }
+            }
+
+            videoscale = {
+                caps = video/x-raw-yuv,width=<var name="width" type="number">720</var>,height=<var name="height" type="number">576</var>
             }
 
             # x264 encoder element
@@ -72,10 +85,10 @@ channel0 = {
                     dct8x8 = TRUE
                     psy-tune = film
                     subme = 5
-                    #qp-min = 1
-                    #qp-step = 8
+                    qp-min = 1
+                    qp-step = 8
                     pass = 17
-                    #threads = <var name="threads" type="number">4</var>
+                    threads = <var name="threads" type="number">24</var>
                     bframes = <var name="b frames" type="number">3</var>
                     profile = <var name="profile" type="[baseline, main, high]">high</var>
                 }
@@ -89,20 +102,6 @@ channel0 = {
                 }
             }
 
-            # mpeg2 ts mux
-            mpegtsmux = {
-                property = {
-                    name = muxer
-                }
-            }
-
-            # flv mux
-            flvmux = {
-                property = {
-                    name = muxer
-                }
-            }
-
             appsink = {
                 property = {
                     sync = FALSE
@@ -110,11 +109,19 @@ channel0 = {
             }
 
             bins = {
+                subtitle = {
+                    definition = appsrc name=subtitle ! overlay.
+                    option = yes
+                }
                 video = {
-                    definition = appsrc name=video ! queue ! x264enc ! queue ! muxer.
+                    definition = appsrc name=video ! overlay.
+                    option = yes
+                }
+                overlay = {
+                    definition = dvbsuboverlay name=overlay ! queue ! videoscale ! queue ! x264enc ! queue ! muxer.
                 }
                 audio = {
-                    definition = appsrc name=audio ! queue ! audioconvert ! queue ! faac name=faac1 ! queue ! muxer.
+                    definition = appsrc name=audio ! audioconvert ! faac name=faac1 ! queue ! muxer.
                 }
                 muxer = {
                     definition = mpegtsmux name=muxer ! queue ! appsink
@@ -123,5 +130,4 @@ channel0 = {
         }
     }
 }
-
 

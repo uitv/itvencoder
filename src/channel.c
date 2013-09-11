@@ -682,7 +682,7 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
         gchar *p;
 
         src_pad_name = gst_pad_get_name (pad);
-        if (g_strcmp0 (src_pad_name, bin->previous->src_pad_name) != 0) {
+        if (!g_str_has_prefix (src_pad_name, bin->previous->src_pad_name)) {
                 GST_DEBUG ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
@@ -714,7 +714,7 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 
         caps = gst_pad_get_current_caps (pad);
         GST_INFO ("caps: %s", gst_caps_to_string (caps));
-        if (gst_element_link_pads_filtered (src, bin->previous->src_pad_name, bin->previous->sink, NULL, caps)) {
+        if (gst_element_link_pads_filtered (src, src_pad_name, bin->previous->sink, NULL, caps)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
         }
@@ -1761,6 +1761,8 @@ channel_output_init (Channel *channel, gboolean daemon)
                                 return -1;
                         }
                         output->encoders[i].cache_addr = mmap (NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                        /* initialize gop size = 0. */
+                        *(gint32 *)(output->encoders[i].cache_addr + 8) = 0;
                         g_free (name);
                 } else {
                         output->encoders[i].cache_addr = g_malloc (SHM_SIZE);
@@ -1770,7 +1772,8 @@ channel_output_init (Channel *channel, gboolean daemon)
                 *(output->encoders[i].head_addr) = 0;
                 p += sizeof (guint64);
                 output->encoders[i].tail_addr = (guint64 *)p;
-                *(output->encoders[i].tail_addr) = 0;
+                /* timestamp + gop size = 12 */
+                *(output->encoders[i].tail_addr) = 12;
                 p += sizeof (guint64);
                 output->encoders[i].last_rap_addr = (guint64 *)p;
                 *(output->encoders[i].last_rap_addr) = 0;
@@ -1829,6 +1832,10 @@ channel_reset (Channel *channel)
                         g_array_remove_index (channel->source->streams, i);
                 }
         }
+        if (channel->configure_mutex != NULL) {
+                /* mian process, else is encoder process */
+                g_mutex_lock (channel->configure_mutex);
+        }
         value = (GValue *)gst_structure_get_value (channel->configure, "source");
         structure = (GstStructure *)gst_value_get_structure (value);
         if (channel_source_initialize (channel, structure) != 0) {
@@ -1848,6 +1855,10 @@ channel_reset (Channel *channel)
         if (channel_encoder_initialize (channel, structure) != 0) {
                 GST_ERROR ("Initialize channel encoder error.");
                 return 2;
+        }
+        if (channel->configure_mutex != NULL) {
+                /* mian process, else is encoder process */
+                g_mutex_unlock (channel->configure_mutex);
         }
 
         g_file_get_contents ("/proc/stat", &stat, NULL, NULL);
@@ -1987,8 +1998,8 @@ gint
 channel_stop (Channel *channel, gint sig)
 {
         GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
-        *(channel->output->state) = GST_STATE_NULL;
-        if (channel->worker_pid != 0) {
+        if (*(channel->output->state) == GST_STATE_PLAYING) {
+                *(channel->output->state) = GST_STATE_NULL;
                 kill (channel->worker_pid, sig);
                 return 0;
         } else {

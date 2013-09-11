@@ -184,6 +184,7 @@ struct _Channel {
         gint id;
         gchar *name; // same as the name in channel config file
         gboolean enable;
+        GMutex *configure_mutex;
         GstStructure *configure;
         gint sscount, shm_size;
         GArray *escountlist;

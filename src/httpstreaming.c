@@ -327,7 +327,13 @@ send_chunk (EncoderOutput *encoder_output, RequestData *request_data)
         } else {
                 request_user_data->send_count += ret;
                 request_data->bytes_send += ret;
+        }
+        if (request_user_data->send_count == request_user_data->chunk_size + request_user_data->chunk_size_str_len + 2) {
+                /* send complete, wait 10 ms. */
                 return gst_util_get_timestamp () + 10 * GST_MSECOND + g_random_int_range (1, 1000000);
+        } else {
+                /* not send complete, blocking, wait 200 ms. */
+                return gst_util_get_timestamp () + 200 * GST_MSECOND + g_random_int_range (1, 1000000);
         }
 }
 
@@ -368,7 +374,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         return 0;
                 } else if ((request_data->parameters[0] == '\0') || (request_data->parameters[0] == 'b')) {
                         /* default operator is play, ?bitrate= */
-                        GST_DEBUG ("Play command");
+                        GST_ERROR ("Play %s.", request_data->uri);
                         request_user_data = (RequestDataUserData *)g_malloc (sizeof (RequestDataUserData));//FIXME
                         if (request_user_data == NULL) {
                                 GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");

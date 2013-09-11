@@ -361,6 +361,12 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                 if (g_str_has_prefix (request_data->uri, "/configure")) {
                         /* get or post configure data. */
                         configure_request (httpmgmt, request_data);
+                } else if (g_str_has_prefix (request_data->uri, "/channelnum")) {
+                        p = g_strdup_printf ("%d", httpmgmt->itvencoder->channel_array->len);
+                        buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
+                        g_free (p);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/channel")) {
                         /* channel operate. */
                         channel_request (httpmgmt, request_data);
@@ -399,7 +405,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
-                } else if (g_str_has_prefix (request_data->uri, "/version")) {
+                } else if (g_str_has_prefix (request_data->uri, "/tools")) {
                         /* tools. */
                         tools_request (httpmgmt, request_data);
                 } else {
