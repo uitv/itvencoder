@@ -21,19 +21,10 @@ channel0 = {
 
     # source pipeline defination
     source = {
-        textoverlay = {
-            property = {
-                text = iTVEncoder-0.2.0
-                valign = top
-                halign = right
-            }
-            # option define option element
-            option = <var name="textoverlay option" type="option">yes</var>
-        }
 
         udpsrc = {
             property = {
-                uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:6002</var>
+                uri = <var name="udpsrc uri" type="string">udp://127.0.0.1:6003</var>
             }
         }
 
@@ -56,16 +47,15 @@ channel0 = {
                 definition = udpsrc ! mpegtsdemux name=demuxer
             }
             video = {
-                definition = demuxer.<var name="video pid" type="string">video_0201</var> ! queue ! <var name="video decoder" type="[h264dec, ffdec_mpeg2video]">h264dec</var> ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
+                definition = demuxer.video ! queue ! h264dec ! queue ! appsink
                 option = yes
             }
-            audio1 = {
-                definition = demuxer.audio_026d ! queue ! mad ! queue ! appsink
-                option = <var name="select audio1" type="option">yes</var>
+            audio = {
+                definition = demuxer.audio ! queue ! mad ! queue ! appsink
             }
 
             subtitle = {
-                definition = demuxer.private_044f ! appsink
+                definition = demuxer.private ! appsink
                 option = yes
             }
         }
@@ -129,11 +119,10 @@ channel0 = {
                     option = yes
                 }
                 overlay = {
-                    definition = dvbsuboverlay name=overlay ! queue ! x264enc ! queue ! muxer.
+                    definition = dvbsuboverlay name=overlay ! queue ! videoscale ! queue ! x264enc ! queue ! muxer.
                 }
-                audio1 = {
-                    definition = appsrc name=audio1 ! audioconvert ! faac name=faac1 ! queue ! muxer.
-                    option = <var name="select audio1" type="option">yes</var>
+                audio = {
+                    definition = appsrc name=audio ! audioconvert ! faac name=faac1 ! queue ! muxer.
                 }
                 muxer = {
                     definition = mpegtsmux name=muxer ! queue ! appsink
