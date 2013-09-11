@@ -94,11 +94,23 @@ option主要是用于把该element设置为可选，让用户通过web管理界�
 bins的配置如下面的样子::
 
     bins = {
-        bin_name = bin definition
+        bin_name = bin configuration
            ...
     }
 
-其中bin的定义可以参照gst-launch命令的格式。需要注意的是source的bins中需要有末端为appsink的bin，这样的bin通过appsink输出stream，iTVEncoder读取appsink输出的流交给encoder对应的bin。encoder的bin与source的bin对应起来的方法是，encoder的bin中开头的appsrc必须有name属性，其值如果与source的某一个bin的名字匹配则两个bin就是对应的。
+bins定义了一组bin，这组bin构成了一个pipeline，pipeline可能是source类型的，也可能是encoder类型的。
+
+bin的配置如下面的样子::
+
+    bin = {
+        definition = bin definition
+        option = yes | no
+        language = lang
+    }
+
+bin的定义与gst-launch命令中的语法格式类似。需要注意的是source的bins中需要有末端为appsink的bin，这样的bin通过appsink输出stream，iTVEncoder读取appsink输出的流交给encoder中对应的bin。encoder的bin与source的bin对应起来的方法是，encoder的bin中开头的appsrc必须有name属性，其值如果与source的某一个bin的名字匹配则两个bin就是对应的。
+
+bin中的option指明该bin是可选的，language指明了该bin对应的语言类型，比如音轨的语言属性，或者字幕的语言属性。
 
 encoder的定义与source类似，最大的区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin。
 
