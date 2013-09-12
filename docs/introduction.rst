@@ -30,3 +30,5 @@ elements的输入叫做sink pads，输出叫做source pads。应用程序通过p
 
 iTVEncoder
 ==========
+
+.. image:: _static/itvencoderarch.png
