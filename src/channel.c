@@ -1436,12 +1436,8 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if (link->sink_pad_name != NULL) {
-                                if (g_str_has_prefix (link->sink_pad_name, "audio_")) {
-                                        p = g_strdup_printf ("audio/mpeg,language=%s", &(link->sink_pad_name[6]));
-                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_")) {
-                                        p = g_strdup_printf ("private/dvbsub,language=%s", &(link->sink_pad_name[9]));
-                                }
+                        if ((link->sink_pad_name != NULL) && (bin->streaminfo != NULL)){
+                                p = bin->streaminfo;
                         }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
