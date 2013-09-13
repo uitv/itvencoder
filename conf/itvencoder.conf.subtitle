@@ -92,14 +92,17 @@ channel0 = {
                 }
                 audio_eng = {
                     definition = appsrc name=audio1 is-live=TRUE ! queue ! audioconvert ! queue ! faac name=faac1 outputformat=1 ! queue ! muxer.
+                    streaminfo = language:eng
                     option = <var name="select audio1" type="option">yes</var>
                 }
                 audio_tha = {
                     definition = appsrc name=audio2 is-live=TRUE ! queue ! audioconvert ! queue ! faac name=faac2 outputformat=1 ! queue ! muxer.
+                    streaminfo = language:tha
                     option = <var name="select audio2" type="option">yes</var>
                 }
                 subtitle1 = {
                     definition = appsrc name=subtitle1 ! queue ! muxer.
+                    streaminfo = language:eng
                     option = <var name="select subtitle1" type="option">yes</var>
                 }
                 muxer = {

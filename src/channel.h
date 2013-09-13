@@ -43,6 +43,7 @@ typedef struct _Link {
 
 typedef struct _Bin {
         gchar *name;
+        gchar *streaminfo;
         GSList *elements;
         GstElement *first;
         GstElement *last;

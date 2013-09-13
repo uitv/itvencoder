@@ -816,11 +816,35 @@ is_bin_selected (GstStructure *pipeline, gchar *bin)
 }
 
 /*
+ * Returns: the streaminfo of the bin.
+ */
+static gchar *
+get_bin_streaminfo (GstStructure *pipeline, gchar *bin)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p;
+
+        value = (GValue *)gst_structure_get_value (pipeline, "bins");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, bin);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "streaminfo");
+        if (value == NULL) {
+                p = NULL;
+        } else {
+                p = (gchar *)g_value_get_string (value);
+        }
+
+        return p;
+}
+
+/*
  * get_bin_definition
  *
  * Returns:the definition of the bin. 
  */
-static gchar*
+static gchar *
 get_bin_definition (GstStructure *pipeline, gchar *bin)
 {
         GValue *value;
@@ -898,6 +922,7 @@ get_bins (GstStructure *structure)
                 bin->elements = NULL;
                 bin->previous = NULL;
                 bin->configure = structure;
+                bin->streaminfo = get_bin_streaminfo (structure, name);
                 p = get_bin_definition (structure, name);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
@@ -1139,6 +1164,7 @@ complete_request_element (GSList *bins)
                                                 element = l4->data;
                                                 l4 = g_slist_next (l4);
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
+                                                        /* request sink element found, e.g mpeg2mux */
                                                         link->sink = element;
                                                         link->sink_pad_name = g_strdup (bin->name);
                                                 }
