@@ -945,7 +945,7 @@ get_bins (GstStructure *structure)
                                         link->src_pad_name = src_pad_name;
                                         link->sink = NULL;
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                        //link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
+                                        link->sink_pad_name = g_strdup (link->sink_name);
                                         bin->links = g_slist_append (bin->links, link);
                                 }
                         } else if (is_element_selected (structure, p1)) {
@@ -1166,7 +1166,6 @@ complete_request_element (GSList *bins)
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
                                                         /* request sink element found, e.g mpeg2mux */
                                                         link->sink = element;
-                                                        link->sink_pad_name = g_strdup (bin->name);
                                                 }
                                         }
                                         l3 = g_slist_next (l3);
