@@ -945,7 +945,7 @@ get_bins (GstStructure *structure)
                                         link->src_pad_name = src_pad_name;
                                         link->sink = NULL;
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                        link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
+                                        //link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
                                         bin->links = g_slist_append (bin->links, link);
                                 }
                         } else if (is_element_selected (structure, p1)) {
