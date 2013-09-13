@@ -291,6 +291,10 @@ main (int argc, char *argv[])
         httpstreaming_start (httpstreaming, 10);
 
         if (itvencoder_start (itvencoder) != 0) {
+                if (!foreground) {
+                        itvencoder_stop (itvencoder);
+                        remove_pid_file ();
+                }
                 GST_ERROR ("exit ...");
                 exit (1);
         }

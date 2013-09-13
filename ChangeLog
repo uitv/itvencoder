@@ -1,5 +1,8 @@
 releases are sorted from youngest to oldest.
 
+- streaminfo configure item
+- kill channel and remove itvencoder.pid before exit on start failure
+
 v-0.3.4 2013-9-11 zhangping
 - channel reset bug, tail_addr initialize as 12
 - configure save bug, main process will crash if save configure when channel restart

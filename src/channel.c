@@ -1995,9 +1995,9 @@ channel_start (Channel *channel, gboolean daemon)
 gint
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
-        if (*(channel->output->state) == GST_STATE_PLAYING) {
+        if (channel->worker_pid != 0) {
                 *(channel->output->state) = GST_STATE_NULL;
+                GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
                 kill (channel->worker_pid, sig);
                 return 0;
         } else {
