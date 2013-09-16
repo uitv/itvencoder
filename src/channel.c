@@ -1325,30 +1325,6 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         stream->current_position = current_position;
 }
 
-/*
- * Returns: the streaminfo of the bin.
- */
-static gchar *
-get_bin_streaminfo (GstStructure *pipeline, gchar *bin)
-{
-        GValue *value;
-        GstStructure *structure;
-        gchar *p;
-
-        value = (GValue *)gst_structure_get_value (pipeline, "bins");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, bin);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "streaminfo");
-        if (value == NULL) {
-                p = NULL;
-        } else {
-                p = (gchar *)g_value_get_string (value);
-        }
-
-        return p;
-}
-
 /**
  * create_encoder_pipeline
  * @configure: Configure object.
@@ -1406,6 +1382,7 @@ create_encoder_pipeline (Encoder *encoder)
                 element = bin->first;
                 element_factory = gst_element_get_factory (element);
                 type = gst_element_factory_get_element_type (element_factory);
+                stream = NULL;
                 if (g_strcmp0 ("GstAppSrc", g_type_name (type)) == 0) {
                         GST_INFO ("Encoder appsrc found.");
                         stream = encoder_get_stream (encoder, bin->name);
@@ -1423,8 +1400,10 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if (link->sink_pad_name != NULL) {
-                                p = get_bin_streaminfo (encoder->configure, bin->name);
+                        if ((link->sink_pad_name != NULL) && (stream != NULL)){
+                                if ((g_str_has_prefix (stream->source->streaminfo, "audio")) || (g_str_has_prefix (stream->source->streaminfo, "private"))) {
+                                        p = stream->source->streaminfo;
+                                }
                         }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
@@ -1477,6 +1456,7 @@ channel_source_extract_streams (Source *source)
                 if (g_match_info_matches (match_info)) {
                         stream = (SourceStream *)g_malloc (sizeof (SourceStream));
                         stream->name = name;
+                        stream->streaminfo = (gchar *)gst_structure_get_string (bin, "streaminfo");
                         GST_INFO ("stream found %s: %s", name, definition);
                         g_array_append_val (source->streams, stream);
                 }
