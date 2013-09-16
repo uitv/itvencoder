@@ -1531,6 +1531,13 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
+                if (g_str_has_prefix (stream->streaminfo, "video")) {
+                        channel->output->source.streams[i].type = ST_VIDEO;
+                } else if (g_str_has_prefix (stream->streaminfo, "audio")) {
+                        channel->output->source.streams[i].type = ST_AUDIO;
+                } else {
+                        channel->output->source.streams[i].type = ST_UNKNOWN;
+                }
         }
 
         return 0;
@@ -1689,11 +1696,10 @@ channel_configure_parse (Channel *channel)
 gint
 channel_output_init (Channel *channel, gboolean daemon)
 {
-        GstStructure *structure, *bin, *configure = channel->configure;
-        GValue *value;
+        GstStructure *configure = channel->configure;
         gint i, fd;
         ChannelOutput *output;
-        gchar *name, *p, *streaminfo;
+        gchar *name, *p;
 
         if (daemon) {
                 /* daemon, use share memory */
@@ -1710,27 +1716,6 @@ channel_output_init (Channel *channel, gboolean daemon)
         output->source.sync_error_times = 0;
         output->source.stream_count = channel->sscount;
         output->source.streams = (struct _SourceStreamState *)p;
-
-        value = (GValue *)gst_structure_get_value (configure, "source");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "bins");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        for (i = 0; i < channel->sscount; i++) {
-                /* stream(bin) type */
-                name = (gchar *)gst_structure_nth_field_name (structure, i);
-                value = (GValue *)gst_structure_get_value (structure, name);
-                bin = (GstStructure *)gst_value_get_structure (value);
-                streaminfo = (gchar *)gst_structure_get_string (bin, "streaminfo");
-                if (streaminfo == NULL) {
-                        output->source.streams[i].type = ST_UNKNOWN;
-                } else if (g_str_has_prefix (streaminfo, "video")) {
-                        output->source.streams[i].type = ST_VIDEO;
-                } else if (g_str_has_prefix (streaminfo, "audio")) {
-                        output->source.streams[i].type = ST_AUDIO;
-                } else {
-                        output->source.streams[i].type = ST_UNKNOWN;
-                }
-        }
         p += channel->sscount * sizeof (struct _SourceStreamState);
         output->encoder_count = channel->escountlist->len;
         output->encoders = (struct _EncoderOutput *)g_malloc (channel->escountlist->len * sizeof (struct _EncoderOutput));
