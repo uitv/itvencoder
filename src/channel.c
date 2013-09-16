@@ -816,30 +816,6 @@ is_bin_selected (GstStructure *pipeline, gchar *bin)
 }
 
 /*
- * Returns: the streaminfo of the bin.
- */
-static gchar *
-get_bin_streaminfo (GstStructure *pipeline, gchar *bin)
-{
-        GValue *value;
-        GstStructure *structure;
-        gchar *p;
-
-        value = (GValue *)gst_structure_get_value (pipeline, "bins");
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, bin);
-        structure = (GstStructure *)gst_value_get_structure (value);
-        value = (GValue *)gst_structure_get_value (structure, "streaminfo");
-        if (value == NULL) {
-                p = NULL;
-        } else {
-                p = (gchar *)g_value_get_string (value);
-        }
-
-        return p;
-}
-
-/*
  * get_bin_definition
  *
  * Returns:the definition of the bin. 
@@ -922,7 +898,6 @@ get_bins (GstStructure *structure)
                 bin->elements = NULL;
                 bin->previous = NULL;
                 bin->configure = structure;
-                bin->streaminfo = get_bin_streaminfo (structure, name);
                 p = get_bin_definition (structure, name);
                 //g_print ("p: %s\n", p);
                 pp = pp1 = g_strsplit (p, "!", 0);
@@ -1350,6 +1325,30 @@ encoder_appsrc_need_data_callback (GstAppSrc *src, guint length, gpointer user_d
         stream->current_position = current_position;
 }
 
+/*
+ * Returns: the streaminfo of the bin.
+ */
+static gchar *
+get_bin_streaminfo (GstStructure *pipeline, gchar *bin)
+{
+        GValue *value;
+        GstStructure *structure;
+        gchar *p;
+
+        value = (GValue *)gst_structure_get_value (pipeline, "bins");
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, bin);
+        structure = (GstStructure *)gst_value_get_structure (value);
+        value = (GValue *)gst_structure_get_value (structure, "streaminfo");
+        if (value == NULL) {
+                p = NULL;
+        } else {
+                p = (gchar *)g_value_get_string (value);
+        }
+
+        return p;
+}
+
 /**
  * create_encoder_pipeline
  * @configure: Configure object.
@@ -1424,8 +1423,8 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if ((link->sink_pad_name != NULL) && (bin->streaminfo != NULL)){
-                                p = bin->streaminfo;
+                        if (link->sink_pad_name != NULL) {
+                                p = get_bin_streaminfo (encoder->configure, bin->name);
                         }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
