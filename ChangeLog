@@ -1,7 +1,8 @@
 releases are sorted from youngest to oldest.
 
-- streaminfo configure item
+- source streaminfo configure item
 - kill channel and remove itvencoder.pid before exit on start failure
+- check video and audio encoder stream heartbeat only.
 
 v-0.3.4 2013-9-11 zhangping
 - channel reset bug, tail_addr initialize as 12

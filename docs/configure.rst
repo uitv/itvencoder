@@ -110,7 +110,9 @@ bin的配置如下面的样子::
 
 bin的定义与gst-launch命令中的语法格式类似。需要注意的是source的bins中需要有末端为appsink的bin，这样的bin通过appsink输出stream，iTVEncoder读取appsink输出的流交给encoder中对应的bin。encoder的bin与source的bin对应起来的方法是，encoder的bin中开头的appsrc必须有name属性，其值如果与source的某一个bin的名字匹配则两个bin就是对应的。
 
-bin中的option指明该bin是可选的，streaminfo用于给出该stream的元数据信息，比如对于音轨或者字幕轨，给出对应的语言类型，再比如该stream的对应的pid等。streaminfo的格式是gstreamer对的caps格式，比如::
+bin中的option指明该bin是可选的。
+
+streaminfo用于给出该stream的元数据信息，比如对于音轨或者字幕轨，给出对应的语言类型，再比如该stream的对应的pid等。streaminfo的格式是gstreamer对的caps格式，比如::
 
     private/dvbsub,language=eng
 
@@ -118,7 +120,9 @@ bin中的option指明该bin是可选的，streaminfo用于给出该stream的元�
 
     audio/mpeg,language=tha
 
-encoder的定义与source类似，最大的区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin。
+itvencoder会检查stream类型为video和audio的stream的心跳，超时会重启通道。对于video和audio的stream，必须给出streaminfo，才会被itvencoder检查心跳。
+
+encoder的定义与source类似，区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin，还有就是encoder没有streaminfo，其streaminfo继承自对应的source的bin。
 
 如果需要向mux传递音频或者字幕的语言信息，需要把相应的bin_name的格式按照如下定义即可::
 
