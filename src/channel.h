@@ -145,6 +145,7 @@ struct _EncoderOutput {
         GstClockTime *heartbeat;
         struct _EncoderStreamState {
                 gchar name[STREAM_NAME_LEN];
+                guint64 type;
                 GstClockTime current_timestamp;
                 GstClockTime last_heartbeat;
         } *streams;

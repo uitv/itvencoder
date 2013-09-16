@@ -462,6 +462,9 @@ itvencoder_channel_monitor (GstClock *clock, GstClockTime time, GstClockID id, g
                 /* encoder heartbeat check */
                 for (j = 0; j < output->encoder_count; j++) {
                         for (k = 0; k < output->encoders[j].stream_count; k++) {
+                                if (output->encoders[j].streams[k].type == ST_UNKNOWN) {
+                                        continue;
+                                }
                                 now = gst_clock_get_time (itvencoder->system_clock);
                                 time_diff = GST_CLOCK_DIFF (output->encoders[j].streams[k].last_heartbeat, now);
                                 if ((time_diff > HEARTBEAT_THRESHHOLD) && itvencoder->daemon) {

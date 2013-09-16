@@ -1601,6 +1601,15 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                 GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
                                 return 1;
                         }
+
+                        /* encoder stream type */
+                        if (g_str_has_prefix (stream->source->streaminfo, "video")) {
+                                channel->output->encoders[i].streams[j].type = ST_VIDEO;
+                        } else if (g_str_has_prefix (stream->source->streaminfo, "audio")) {
+                                channel->output->encoders[i].streams[j].type = ST_AUDIO;
+                        } else {
+                                channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
+                        }
                 }
                 g_array_append_val (channel->encoder_array, encoder);
         }
