@@ -1404,7 +1404,7 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if ((link->sink_pad_name != NULL) && (stream != NULL)){
+                        if ((link->sink_pad_name != NULL) && (stream != NULL) && (stream->source->streaminfo != NULL)){
                                 if ((g_str_has_prefix (stream->source->streaminfo, "audio")) || (g_str_has_prefix (stream->source->streaminfo, "private"))) {
                                         p = stream->source->streaminfo;
                                 }
@@ -1535,9 +1535,9 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
-                if (g_str_has_prefix (stream->streaminfo, "video")) {
+                if ((stream->streaminfo != NULL) && g_str_has_prefix (stream->streaminfo, "video")) {
                         channel->output->source.streams[i].type = ST_VIDEO;
-                } else if (g_str_has_prefix (stream->streaminfo, "audio")) {
+                } else if ((stream->streaminfo != NULL) && g_str_has_prefix (stream->streaminfo, "audio")) {
                         channel->output->source.streams[i].type = ST_AUDIO;
                 } else {
                         channel->output->source.streams[i].type = ST_UNKNOWN;
@@ -1607,9 +1607,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         }
 
                         /* encoder stream type */
-                        if (g_str_has_prefix (stream->source->streaminfo, "video")) {
+                        if ((stream->source->streaminfo != NULL) && (g_str_has_prefix (stream->source->streaminfo, "video"))) {
                                 channel->output->encoders[i].streams[j].type = ST_VIDEO;
-                        } else if (g_str_has_prefix (stream->source->streaminfo, "audio")) {
+                        } else if ((stream->source->streaminfo != NULL) && (g_str_has_prefix (stream->source->streaminfo, "audio"))) {
                                 channel->output->encoders[i].streams[j].type = ST_AUDIO;
                         } else {
                                 channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
