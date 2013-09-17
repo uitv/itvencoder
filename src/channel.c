@@ -821,7 +821,7 @@ is_bin_selected (GstStructure *pipeline, gchar *bin)
  *
  * Returns:the definition of the bin. 
  */
-static gchar*
+static gchar *
 get_bin_definition (GstStructure *pipeline, gchar *bin)
 {
         GValue *value;
@@ -921,7 +921,7 @@ get_bins (GstStructure *structure)
                                         link->src_pad_name = src_pad_name;
                                         link->sink = NULL;
                                         link->sink_name = g_strndup (p1, g_strrstr (p1, ".") - p1);
-                                        link->sink_pad_name = g_strndup (g_strrstr (p1, ".") + 1, strlen (p1) - strlen (link->sink_name) -1);
+                                        link->sink_pad_name = g_strdup (link->sink_name);
                                         bin->links = g_slist_append (bin->links, link);
                                 }
                         } else if (is_element_selected (structure, p1)) {
@@ -996,27 +996,6 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         sample = gst_app_sink_pull_sample (GST_APP_SINK (elt));
         buffer = gst_sample_get_buffer (sample);
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
-        if (stream->current_position == -1) {
-                stream->caps = gst_app_sink_get_caps (GST_APP_SINK (elt));
-                if (stream->caps == NULL) {
-                        stream->caps = gst_sample_get_caps (sample);
-                }
-                if (stream->caps == NULL) {
-                        GST_ERROR ("Can't get caps!");
-                }
-                GST_INFO ("caps is %s.", gst_caps_to_string (stream->caps));
-                /* set stream type */
-#if 0
-                caps = GST_BUFFER_CAPS (buffer);
-                str = gst_caps_to_string (caps);
-                if (g_str_has_prefix (str, "video")) {
-                        *(stream->type) = ST_VIDEO;
-                } else if (g_str_has_prefix (str, "audio")) {
-                        *(stream->type) = ST_AUDIO;
-                }
-                g_free (str);
-#endif
-        }
         stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
         /* output running status */
@@ -1151,8 +1130,8 @@ complete_request_element (GSList *bins)
                                                 element = l4->data;
                                                 l4 = g_slist_next (l4);
                                                 if (g_strcmp0 (link->sink_name, gst_element_get_name (element)) == 0) {
+                                                        /* request sink element found, e.g mpeg2mux */
                                                         link->sink = element;
-                                                        link->sink_pad_name = g_strdup (bin->name);
                                                 }
                                         }
                                         l3 = g_slist_next (l3);
@@ -1407,6 +1386,7 @@ create_encoder_pipeline (Encoder *encoder)
                 element = bin->first;
                 element_factory = gst_element_get_factory (element);
                 type = gst_element_factory_get_element_type (element_factory);
+                stream = NULL;
                 if (g_strcmp0 ("GstAppSrc", g_type_name (type)) == 0) {
                         GST_INFO ("Encoder appsrc found.");
                         stream = encoder_get_stream (encoder, bin->name);
@@ -1424,11 +1404,9 @@ create_encoder_pipeline (Encoder *encoder)
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
-                        if (link->sink_pad_name != NULL) {
-                                if (g_str_has_prefix (link->sink_pad_name, "audio_")) {
-                                        p = g_strdup_printf ("audio/mpeg,language=%s", &(link->sink_pad_name[6]));
-                                } else if (g_str_has_prefix (link->sink_pad_name, "subtitle_")) {
-                                        p = g_strdup_printf ("private/dvbsub,language=%s", &(link->sink_pad_name[9]));
+                        if ((link->sink_pad_name != NULL) && (stream != NULL)){
+                                if ((g_str_has_prefix (stream->source->streaminfo, "audio")) || (g_str_has_prefix (stream->source->streaminfo, "private"))) {
+                                        p = stream->source->streaminfo;
                                 }
                         }
                         if (p != NULL) {
@@ -1482,6 +1460,7 @@ channel_source_extract_streams (Source *source)
                 if (g_match_info_matches (match_info)) {
                         stream = (SourceStream *)g_malloc (sizeof (SourceStream));
                         stream->name = name;
+                        stream->streaminfo = (gchar *)gst_structure_get_string (bin, "streaminfo");
                         GST_INFO ("stream found %s: %s", name, definition);
                         g_array_append_val (source->streams, stream);
                 }
@@ -1556,6 +1535,13 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
+                if (g_str_has_prefix (stream->streaminfo, "video")) {
+                        channel->output->source.streams[i].type = ST_VIDEO;
+                } else if (g_str_has_prefix (stream->streaminfo, "audio")) {
+                        channel->output->source.streams[i].type = ST_AUDIO;
+                } else {
+                        channel->output->source.streams[i].type = ST_UNKNOWN;
+                }
         }
 
         return 0;
@@ -1618,6 +1604,15 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         if (stream->source == NULL) {
                                 GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
                                 return 1;
+                        }
+
+                        /* encoder stream type */
+                        if (g_str_has_prefix (stream->source->streaminfo, "video")) {
+                                channel->output->encoders[i].streams[j].type = ST_VIDEO;
+                        } else if (g_str_has_prefix (stream->source->streaminfo, "audio")) {
+                                channel->output->encoders[i].streams[j].type = ST_AUDIO;
+                        } else {
+                                channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
                         }
                 }
                 g_array_append_val (channel->encoder_array, encoder);
@@ -1738,9 +1733,6 @@ channel_output_init (Channel *channel, gboolean daemon)
         output->source.sync_error_times = 0;
         output->source.stream_count = channel->sscount;
         output->source.streams = (struct _SourceStreamState *)p;
-        for (i = 0; i < channel->sscount; i++) {
-                output->source.streams[i].type = ST_UNKNOWN;
-        }
         p += channel->sscount * sizeof (struct _SourceStreamState);
         output->encoder_count = channel->escountlist->len;
         output->encoders = (struct _EncoderOutput *)g_malloc (channel->escountlist->len * sizeof (struct _EncoderOutput));
@@ -1997,9 +1989,9 @@ channel_start (Channel *channel, gboolean daemon)
 gint
 channel_stop (Channel *channel, gint sig)
 {
-        GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
-        if (*(channel->output->state) == GST_STATE_PLAYING) {
+        if (channel->worker_pid != 0) {
                 *(channel->output->state) = GST_STATE_NULL;
+                GST_ERROR ("Stop channel %s, pid %d.", channel->name, channel->worker_pid);
                 kill (channel->worker_pid, sig);
                 return 0;
         } else {

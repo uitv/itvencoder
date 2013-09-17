@@ -150,6 +150,10 @@ main (int argc, char *argv[])
                 gint pid;
 
                 g_file_get_contents ("/var/run/itvencoder.pid", &pid_str, NULL, NULL);
+                if (pid_str == NULL) {
+                        g_print ("File /var/run/itvencoder.pid not found, check if there are itvencoder running.\n");
+                        exit (0);
+                }
                 pid = atoi (pid_str);
                 g_free (pid_str);
                 g_print ("stoping itvencoder with pid %d ...\n", pid);
@@ -291,6 +295,10 @@ main (int argc, char *argv[])
         httpstreaming_start (httpstreaming, 10);
 
         if (itvencoder_start (itvencoder) != 0) {
+                if (!foreground) {
+                        itvencoder_stop (itvencoder);
+                        remove_pid_file ();
+                }
                 GST_ERROR ("exit ...");
                 exit (1);
         }

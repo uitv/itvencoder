@@ -55,6 +55,7 @@ typedef struct _Bin {
 
 typedef struct _SourceStream {
         gchar *name;
+        gchar *streaminfo;
         guint64 *type;
         GstCaps *caps;
         GstBuffer *ring[SOURCE_RING_SIZE];
@@ -145,6 +146,7 @@ struct _EncoderOutput {
         GstClockTime *heartbeat;
         struct _EncoderStreamState {
                 gchar name[STREAM_NAME_LEN];
+                guint64 type;
                 GstClockTime current_timestamp;
                 GstClockTime last_heartbeat;
         } *streams;

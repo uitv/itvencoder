@@ -43,17 +43,21 @@ channel0 = {
             }
             video = {
                 definition = demuxer.<var name="video pid" type="string">video_0201</var> ! queue ! <var name="video decoder" type="[mpeg2dec, h264dec]">h264dec</var> ! queue ! appsink
+                streaminfo = video
             }
             audio1 = {
                 definition = demuxer.<var name="english audio pid" type="string">audio_026d</var> ! queue ! mad ! queue ! appsink
+                streaminfo = audio/mpeg,language=eng
                 option = <var name="select audio1" type="option">yes</var>
             }
             audio2 = {
                 definition = demuxer.<var name="thai audio pid" type="string">audio_0271</var> ! queue ! mad ! queue ! appsink
+                streaminfo = audio/mpeg,language=tha
                 option = <var name="select audio2" type="option">yes</var>
             }
             subtitle1 = {
                 definition = demuxer.private_044f ! queue ! appsink
+                streaminfo = private/dvbsub,language=eng
                 option = <var name="select subtitle1" type="option">yes</var>
             }
         }
