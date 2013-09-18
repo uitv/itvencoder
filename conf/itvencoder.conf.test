@@ -37,10 +37,12 @@ test = {
         bins = {
             audio = {
                 definition = audiotestsrc ! queue ! appsink
+                streaminfo = audio/mpeg
                 option = <var name="audio source" type="option">yes</var>
             }
             video = {
                 definition = videotestsrc ! appsink
+                streaminfo = video
                 option = <var name="video source" type="option">yes</var>
             }
         }
