@@ -405,6 +405,11 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return gst_util_get_timestamp () + GST_MSECOND;
+                } else {
+                        buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
+                        write (request_data->sock, buf, strlen (buf));
+                        g_free (buf);
+                        return 0;
                 }
                 break;
         case HTTP_CONTINUE:
