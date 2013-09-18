@@ -41,7 +41,7 @@ test = {
                 option = <var name="audio source" type="option">yes</var>
             }
             video = {
-                definition = videotestsrc ! appsink
+                definition = videotestsrc ! queue ! appsink
                 streaminfo = video
                 option = <var name="video source" type="option">yes</var>
             }
@@ -90,7 +90,7 @@ test = {
                     option = <var name="video encoder" type="option">yes</var>
                 }
                 audio = {
-                    definition = appsrc name=audio ! audioconvert ! audioresample ! avenc_aac ! muxer.
+                    definition = appsrc name=audio ! audioconvert ! audioresample ! voaacenc ! muxer.
                     option = <var name="audio encoder" type="option">yes</var>
                 }
                 muxer = {
