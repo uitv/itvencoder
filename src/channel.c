@@ -990,14 +990,17 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         SourceStream *stream = (SourceStream *)user_data;
         EncoderStream *encoder;
         gint i;
-        GstCaps *caps;
         gchar *str;
 
         sample = gst_app_sink_pull_sample (GST_APP_SINK (elt));
         buffer = gst_sample_get_buffer (sample);
         *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
-        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
 
+        if (stream->current_position == -1) {
+                stream->caps = gst_sample_get_caps (sample);
+        }
+
+        stream->current_position = (stream->current_position + 1) % SOURCE_RING_SIZE;
         /* output running status */
         GST_DEBUG ("%s current position %d, buffer duration: %d", stream->name, stream->current_position, GST_BUFFER_DURATION(buffer));
         for (i = 0; i < stream->encoders->len; i++) {
