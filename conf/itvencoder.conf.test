@@ -7,7 +7,7 @@
 #
 [server]
 # http streaming server
-httpstreaming = <var name="streaming address" type="string">0.0.0.0:20119</var>
+httpstreaming = <var name="streaming address" type="string">0.0.0.0:10119</var>
 
 # http managment server
 httpmgmt = <var name="management address" type="string">0.0.0.0:20118</var> # test regex <ipaddr>value</ipaddr>
@@ -91,16 +91,13 @@ test = {
                     option = <var name="video encoder" type="option">yes</var>
                 }
                 audio = {
-                    definition = appsrc name=audio ! faac ! muxer.
+                    definition = appsrc name=audio ! audioconvert ! audioresample ! faac ! muxer.
                     option = <var name="audio encoder" type="option">yes</var>
                 }
                 muxer = {
                     definition = mpegtsmux name=muxer ! queue ! appsink
                 }
             }
-
-            httpstreaming = <var name="http streaming out" type="option">yes</var>
-            udpstreaming = <var name="udp streaming out" type="string">224.1.1.1:1111</var>
         }
     }
 }
