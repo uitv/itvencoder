@@ -785,7 +785,7 @@ thread_pool_func (gpointer data, gpointer user_data)
                         /* Bad Request */
                         GST_ERROR ("Bad request, return is %d, sock is %d", ret, request_data->sock);
                         gchar *buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         request_data->status = HTTP_NONE;
                         close_socket_gracefully (request_data->sock);
@@ -893,6 +893,40 @@ httpserver_start (HTTPServer *http_server, http_callback_t user_callback, gpoint
         }
 
         return 0;
+}
+
+/*
+ * loop write until complete all of buf or timeout.
+ *
+ */
+gint
+httpserver_write (gint sock, gchar *buf, gsize count)
+{
+        gsize sent;
+        gint ret, try;
+        
+        sent = 0;
+        try = 0;
+        while (sent < count) {
+                if (try > 20) {
+                        /* 1s timeout, break */
+                        break;
+                }
+                ret = write (sock, buf + sent, count - sent);
+                if (ret == -1) {
+                        if (errno == EAGAIN) {
+                                /* block, wait 50ms */
+                                g_usleep (50000);
+                                try += 1;
+                                continue;
+                        } else {
+                                break;
+                        }
+                }
+                sent += ret;
+        }
+
+        return sent;
 }
 
 gint

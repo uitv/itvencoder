@@ -136,7 +136,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (var), var);
                         g_free (var);
                 }
-                write (request_data->sock, buf, strlen (buf));
+                httpserver_write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
         } else if (request_data->method == HTTP_POST) {
                 /* save configure. */
@@ -144,11 +144,11 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 configure_set_var (httpmgmt->itvencoder->configure, var);
                 if (configure_save_to_file (httpmgmt->itvencoder->configure) != 0) {
                         buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else {
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 7, "Success");
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 }
                 GST_INFO ("Reload configure.");
@@ -221,7 +221,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         if (!httpmgmt->itvencoder->daemon) {
                 /* run in foreground, channel operation is forbidden. */
                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", 9, "Forbidden");
-                write (request_data->sock, buf, strlen (buf));
+                httpserver_write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
                 return;
         }
@@ -252,7 +252,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
-        write (request_data->sock, buf, strlen (buf));
+        httpserver_write (request_data->sock, buf, strlen (buf));
         g_free (buf);
 }
 
@@ -311,7 +311,7 @@ tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
-        write (request_data->sock, buf, strlen (buf));
+        httpserver_write (request_data->sock, buf, strlen (buf));
         g_free (buf);
 }
 
@@ -342,7 +342,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         p = g_strdup_printf ("%d", httpmgmt->itvencoder->channel_array->len);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
                         g_free (p);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/channel")) {
                         /* channel operate. */
@@ -350,32 +350,32 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                 } else if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                         /* get mgmt, index.html */
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (index_html), index_html);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/gui.css")) {
                         /* get gui.css */
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/css", strlen (gui_css), gui_css);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/version")) {
                         /* get version */
                         p = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
                         buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (p), p);
                         g_free (p);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/starttime")) {
                         p = g_strdup_printf ("%llu", httpmgmt->itvencoder->start_time);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
                         g_free (p);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/tools")) {
                         /* tools. */
                         tools_request (httpmgmt, request_data);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 }
                 break;
@@ -386,7 +386,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
                 buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                write (request_data->sock, buf, strlen (buf));
+                httpserver_write (request_data->sock, buf, strlen (buf));
                 g_free (buf);
         }
 
