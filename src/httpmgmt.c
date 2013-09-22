@@ -252,7 +252,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 } else if (g_str_has_suffix (request_data->uri, "/age")) {
                         GST_WARNING ("Get channel%d age.", index);
                         channel = g_array_index (httpmgmt->itvencoder->channel_array, gpointer, index);
-                        age = g_strdup_printf ("%lld", channel->age);
+                        age = g_strdup_printf ("%ld", channel->age);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (age), age);
                         g_free (age);
                 } else {
@@ -385,7 +385,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         }
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/starttime")) {
-                        p = g_strdup_printf ("%llu", httpmgmt->itvencoder->start_time);
+                        p = g_strdup_printf ("%lu", httpmgmt->itvencoder->start_time);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
                         g_free (p);
                         if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
