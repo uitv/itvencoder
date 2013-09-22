@@ -366,8 +366,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                 encoder_output = get_encoder_output (httpstreaming, request_data);
                 if (encoder_output == NULL) {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf) != strlen (buf))) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -379,8 +378,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         if (request_user_data == NULL) {
                                 GST_ERROR ("Internal Server Error, g_malloc for request_user_data failure.");
                                 buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                                ret = write (request_data->sock, buf, strlen (buf));
-                                if (ret == -1) {
+                                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                                 }
                                 g_free (buf);
@@ -390,8 +388,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         if (*(encoder_output->head_addr) == *(encoder_output->tail_addr)) {
                                 GST_DEBUG ("%s unready.", request_data->uri);
                                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                                ret = write (request_data->sock, buf, strlen (buf));
-                                if (ret == -1) {
+                                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                                 }
                                 g_free (buf);
@@ -412,15 +409,14 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
                         request_data->user_data = request_user_data;
                         request_data->bytes_send = 0;
                         buf = g_strdup_printf (http_chunked, PACKAGE_NAME, PACKAGE_VERSION);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
                         return gst_util_get_timestamp () + GST_MSECOND;
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                         return 0;
                 }
@@ -447,8 +443,7 @@ httpstreaming_dispatcher (gpointer data, gpointer user_data)
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
                 buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                ret = write (request_data->sock, buf, strlen (buf));
-                if (ret == -1) {
+                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                 }
                 g_free (buf);

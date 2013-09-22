@@ -121,7 +121,6 @@ static void
 configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
         gchar *buf, *p, *var;
-        gint ret;
 
         if (request_data->method == HTTP_GET) {
                 /* get variables, /configure/path/to/var. */
@@ -138,8 +137,7 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "application/xml", strlen (var), var);
                         g_free (var);
                 }
-                ret = write (request_data->sock, buf, strlen (buf));
-                if (ret == -1) {
+                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                 }
                 g_free (buf);
@@ -149,15 +147,13 @@ configure_request (HTTPMgmt *httpmgmt, RequestData *request_data)
                 configure_set_var (httpmgmt->itvencoder->configure, var);
                 if (configure_save_to_file (httpmgmt->itvencoder->configure) != 0) {
                         buf = g_strdup_printf (http_500, PACKAGE_NAME, PACKAGE_VERSION);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
                 } else {
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)7, "Success");
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -225,15 +221,14 @@ restart_channel (HTTPMgmt *httpmgmt, gint index)
 static void
 channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
-        gint i, index, ret;
+        gint i, index;
         gchar *buf, *age;
         Channel *channel;
 
         if (!httpmgmt->itvencoder->daemon) {
                 /* run in foreground, channel operation is forbidden. */
                 buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", (size_t)9, "Forbidden");
-                ret = write (request_data->sock, buf, strlen (buf));
-                if (ret == -1) {
+                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                 }
                 g_free (buf);
@@ -266,8 +261,7 @@ channel_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
-        ret = write (request_data->sock, buf, strlen (buf));
-        if (ret == -1) {
+        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
         }
         g_free (buf);
@@ -316,7 +310,6 @@ static void
 tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
 {
         gchar *buf, *uri, *mediainfo;
-        gint ret;
 
         if (g_str_has_prefix (request_data->uri, "/tools/mediainfo")) {
                 uri = request_data->uri + 17; // strlen ("/tools/mediainfo/")
@@ -330,8 +323,7 @@ tools_request (HTTPMgmt *httpmgmt, RequestData *request_data)
         } else {
                 buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
         }
-        ret = write (request_data->sock, buf, strlen (buf));
-        if (ret == -1) {
+        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
         }
         g_free (buf);
@@ -353,7 +345,6 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
         RequestData *request_data = data;
         HTTPMgmt *httpmgmt = user_data;
         gchar *buf, *p;
-        gint ret;
 
         switch (request_data->status) {
         case HTTP_REQUEST:
@@ -365,7 +356,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         p = g_strdup_printf ("%d", httpmgmt->itvencoder->channel_array->len);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
                         g_free (p);
-                        write (request_data->sock, buf, strlen (buf));
+                        httpserver_write (request_data->sock, buf, strlen (buf));
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/channel")) {
                         /* channel operate. */
@@ -373,16 +364,14 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                 } else if (g_str_has_prefix (request_data->uri, "/mgmt")) {
                         /* get mgmt, index.html */
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/html", strlen (index_html), index_html);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
                 } else if (g_str_has_prefix (request_data->uri, "/gui.css")) {
                         /* get gui.css */
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/css", strlen (gui_css), gui_css);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -391,8 +380,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         p = g_strdup_printf ("iTVEncoder version: %s\niTVEncoder build: %s %s", VERSION, __DATE__, __TIME__);
                         buf = g_strdup_printf (itvencoder_ver, PACKAGE_NAME, PACKAGE_VERSION, strlen (p), p);
                         g_free (p);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -400,8 +388,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         p = g_strdup_printf ("%llu", httpmgmt->itvencoder->start_time);
                         buf = g_strdup_printf (http_200, PACKAGE_NAME, PACKAGE_VERSION, "text/plain", strlen (p), p);
                         g_free (p);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -410,8 +397,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
                         tools_request (httpmgmt, request_data);
                 } else {
                         buf = g_strdup_printf (http_404, PACKAGE_NAME, PACKAGE_VERSION);
-                        ret = write (request_data->sock, buf, strlen (buf));
-                        if (ret == -1) {
+                        if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                                 GST_ERROR ("Write sock error: %s", g_strerror (errno));
                         }
                         g_free (buf);
@@ -424,8 +410,7 @@ httpmgmt_dispatcher (gpointer data, gpointer user_data)
         default:
                 GST_ERROR ("Unknown status %d", request_data->status);
                 buf = g_strdup_printf (http_400, PACKAGE_NAME, PACKAGE_VERSION);
-                ret = write (request_data->sock, buf, strlen (buf));
-                if (ret == -1) {
+                if (httpserver_write (request_data->sock, buf, strlen (buf)) != strlen (buf)) {
                         GST_ERROR ("Write sock error: %s", g_strerror (errno));
                 }
                 g_free (buf);
