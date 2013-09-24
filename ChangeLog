@@ -1,5 +1,6 @@
 releases are sorted from youngest to oldest.
 
+v-0.3.6 2013-9-24 zhangping
 - source streaminfo configure item
 - kill channel and remove itvencoder.pid before exit on start failure
 - check video and audio encoder stream heartbeat only.

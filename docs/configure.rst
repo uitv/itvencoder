@@ -112,7 +112,7 @@ bin的定义与gst-launch命令中的语法格式类似。需要注意的是sour
 
 bin中的option指明该bin是可选的。
 
-streaminfo用于给出该stream的元数据信息，比如对于音轨或者字幕轨，给出对应的语言类型，再比如该stream的对应的pid等。streaminfo的格式是gstreamer对的caps格式，比如::
+streaminfo用于给出该stream的元数据信息，比如对于音轨或者字幕轨，给出对应的语言类型，语言信息会以描述符的方式写入到流中，另外对于多音轨或者多字幕轨可以根据streaminfo定位相应的流。streaminfo的格式是gstreamer对的caps格式，比如::
 
     private/dvbsub,language=eng
 
@@ -124,12 +124,6 @@ itvencoder会检查stream类型为video和audio的stream的心跳，超时会重
 
 encoder的定义与source类似，区别是source中有appsink作为末端的bin，而encoder中有appsrc作为起始的bin，还有就是encoder没有streaminfo，其streaminfo继承自对应的source的bin。
 
-如果需要向mux传递音频或者字幕的语言信息，需要把相应的bin_name的格式按照如下定义即可::
-
-    audio_eng
-    subtitle_tha
-
-其中下划线前面的部分指明其为音轨或者字幕，而下划线后面的部分是语言，采用ISO 639标准。
 
 可修改配置项
 ============
@@ -143,3 +137,16 @@ encoder的定义与source类似，区别是source中有appsink作为末端的bin
 用于标示可变配置项的tag为var，需要给出两个属性，分别是name，type，相应的取值依赖于type属性。name除了标示这个配置项以外，还用于描述这个配置项的作用，在实现web管理界面的时候可以作为相应配置的label。type指出该配置项的值的类型，有四种类型的配置项，分别是string, number, option, select，string即字符串类型，number是数字型，option是布尔型，取值为TRUE和FALSE，select的格式是[baseline, main, high], 类似c中的enum类型。
 
 实际使用中，比如url是string类型：192.168.1.1:11111。视频编码profile是select类型，[baseline, main, high]。
+
+配置文件实例
+============
+
+在源代码中conf目录下有配置文件的实例。目前有如下配置文件实例::
+
+    itvencoder.conf, 多个通道的配置文件
+    itvencoder.conf.ac3.ip，针对源音频编码为ac3的配置文件
+    itvencoder.conf.ip， 针对输入源为ip的配置文件。
+    itvencoder.conf.subtitle， 针对多音轨多字幕的源的配置文件。
+    itvencoder.conf.subtitleoverlay，针对字幕叠加的配置文件。
+    itvencoder.conf.test，源为videotestsrc和audiotestsrc的配置文件，这个配置文件不需要特殊的环境，安装了gstreamer即可测试体验itvencoder。
+    itvencoder.conf.v4l2，源为支持v4l2的采集卡的配置文件。

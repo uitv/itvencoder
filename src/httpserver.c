@@ -892,9 +892,10 @@ httpserver_write (gint sock, gchar *buf, gsize count)
         
         sent = 0;
         try = 0;
-        while (sent < count) {
+        for (;;) {
                 if (try > 20) {
                         /* 1s timeout, break */
+                        GST_INFO ("Write timeout error.");
                         break;
                 }
                 ret = write (sock, buf + sent, count - sent);
@@ -905,10 +906,19 @@ httpserver_write (gint sock, gchar *buf, gsize count)
                                 try += 1;
                                 continue;
                         } else {
+                                GST_INFO ("Write error.");
                                 break;
                         }
                 }
                 sent += ret;
+                if (sent < count) {
+                        /* wait 50ms */
+                        g_usleep (50000);
+                        try += 1;
+                        continue;
+                } else {
+                        break;
+                }
         }
 
         return sent;
