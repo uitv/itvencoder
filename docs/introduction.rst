@@ -27,7 +27,30 @@ element是pipeline的最小组成部分，element是一个对多媒体流进行�
 element
 -------
 
-elements的输入叫做sink pads，输出叫做source pads。应用程序通过pad把element连接起来构成pipeline，如下图所示，其中顺着流的方向为downstream，相反方向是upstream。
+element是pipeline的最小组成部分。element提供了多个pads，或者为sink，或者为source。一个element有四种可能的状态，分别是NULL，READY，PAUSED，PLAYING。NULL和READY状态下，element不对数据做任何处理，PLAYING状态对数据进行处理，PAUSE状态介于两者之间，对数据进行preroll。应用程序通过函数调用控制pipeline在不同状态之间进行转换。
+
+element的状态变换不能跳过中间状态，比如不能从READY状态直接变换到PLAYING状态，必须经过中间的PAUSE状态。
+
+element的状态转换成PAUSE会激活element的pad。首先是source pad被激活，然后是sink pad。pad被激活后会调用activate函数，有一些pad会启动一个Task。
+
+PAUSE状态下，pipeline会进行数据的preroll，目的是为后续的PLAYING状态准备好数据，使得PLAYING启动的速度更快。一些element需接收到足够的数据才能完成向PAUSE状态的转变，sink pad只有在接收到第一个数据才能实现向PAUSE的状态转变。
+
+bin
+---
+
+bin是由多个element构成的特殊的element，用图来说明：
+
+.. image:: _static/bin.png
+
+pipeline是具备如下特性的特殊的bin
+
+* 选择并管理一个全局的时钟。
+* 基于选定的时钟管理running_time。running_time用于同步，指的是pipeline在PLAYING状态下花费的时间。
+* 管理pipeline的延迟。
+* 通过GstBus提供element与应用程序间的通讯方式。
+* 管理elements的全局状态，比如EOS，Error等。
+
+下图是一个pipeline：
 
 .. image:: _static/pipeline.png
 
