@@ -24,6 +24,15 @@ iTVEncoder源码安装
 
 iTVEncoder已经随整个安装包一起安装，这里介绍如何从源代码安装和生成rpm包。
 
+确认已经安装如下与编译开发相关的软件包::
+
+    yum install gnome-common
+    yum install autoconf
+    yum install automake
+    yum install libtool
+    yum install gstreamer-devel
+    yum install gstreamer-plugins-base-devel
+
 源码编译安装::
 
     ./autogen.sh
