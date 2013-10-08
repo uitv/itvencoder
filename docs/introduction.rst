@@ -12,17 +12,20 @@ iTVEncoder是基于gstreamer的实时编码器。
 gstreamer
 =========
 
-要了解和使用iTVEncoder，首先必须了解gstreamer。
+Gstreamer是用于流媒体应用开发的框架，Gstreamer是基于plugins的，包括Gstreamer core和若干elements，一个plugin包含一个或者多个elements。基于Gstreamer的应用程序能够具备的处理能力依赖于系统中安装的不同种类功能的elements的数量。Gstreamer核心不具备处理具体的media的功能，但是element处理media时需要具备的特性很多是由Gstreamer的核心提供的。
 
-Gstreamer是一个libraries和plugins的集合，用于帮助实现各种类型的多媒体应用程序，比如播放器，转码工具，多媒体服务器等。
+Gstreamer core实现了gstreamer架构，给出了数据流如何处理，规定了媒体类型的协商，给出了编写应用的API。利用Gstreamer编写多媒体应用程序，就是利用elements构建一个pipeline。
 
-利用Gstreamer编写多媒体应用程序，就是利用elements构建一个pipeline。element是一个对多媒体流进行处理的object，比如如下的处理：
+element是pipeline的最小组成部分，element是一个对多媒体流进行处理的object，一个element对多媒体流进行的处理可能是读取文件、音频或者视频解码、音频或者视频编码、从硬件采集设备上采集数据、在硬件设备上播放多媒体、多个流的复用、多个流的解复用。
 
-* 读取文件。
-* 不同格式的编解码。
-* 从硬件采集设备上采集数据。
-* 在硬件设备上播放多媒体。
-* 多个流的复用。
+通过下图理解gstreamer框架及基于gstreamer的应用：
+
+.. image:: _static/gstreamer-overview.png
+
+一下分别介绍gstreamer中的基本概念，包括pipeline、bin、element、pads、caps等。
+
+element
+-------
 
 elements的输入叫做sink pads，输出叫做source pads。应用程序通过pad把element连接起来构成pipeline，如下图所示，其中顺着流的方向为downstream，相反方向是upstream。
 
