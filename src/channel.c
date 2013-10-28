@@ -713,7 +713,8 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 
         caps = gst_pad_get_caps (pad);
         GST_INFO ("caps: %s", gst_caps_to_string (caps));
-        if (gst_element_link_pads_filtered (src, src_pad_name, bin->previous->sink, NULL, caps)) {
+        //if (gst_element_link_pads_filtered (src, src_pad_name, bin->previous->sink, NULL, caps)) {
+        if (gst_element_link (src, bin->previous->sink)) {
                 GST_INFO ("new added pad name: %s, delayed src pad name %s. ok!", src_pad_name, bin->previous->src_pad_name);
                 g_signal_handler_disconnect (src, bin->signal_id);
         }

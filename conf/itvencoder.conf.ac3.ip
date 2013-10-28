@@ -19,6 +19,7 @@ logdir = /var/log/itvencoder
 channel0 = {
     enable = <var name="enable" type="option">yes</var>
     debug = mpegtsmux:2
+    title = <var name="title" type="string">xxxx</var>
 
     # source pipeline defination
     source = {
@@ -99,11 +100,11 @@ channel0 = {
                 definition = demuxer.<var name="video pid" type="string">video_18c4</var> ! queue ! <var name="video decoder" type="[mpeg2dec, ffdec_mpeg2video]">ffdec_mpeg2video</var> ! deinterlace ! queue ! clockoverlay ! timeoverlay ! textoverlay ! queue ! appsink
             }
             audio1 = {
-                definition = demuxer.<var name="audio1 pid" type="string">audio_18c5</var> ! queue ! <var name="audio1 decoder" type="[mad, ffdec_ac3]">ffdec_ac3</var> ! queue ! audioconvert ! queue ! appsink
+                definition = demuxer.<var name="audio1 pid" type="string">audio_18c5</var> ! queue ! <var name="audio1 decoder" type="[mad, ffdec_ac3, ffdec_eac3]">ffdec_ac3</var> ! queue ! audioconvert ! queue ! appsink
                 option = <var name="select audio1" type="option">yes</var>
             }
             audio2 = {
-                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! <var name="audio2 decoder" type="[mad, ffdec_ac3]">mad</var> ! queue ! appsink
+                definition = demuxer.<var name="audio2 pid" type="string">audio_0271</var> ! queue ! <var name="audio2 decoder" type="[mad, ffdec_ac3, ffdec_eac3]">mad</var> ! queue ! appsink
                 option = <var name="select audio2" type="option">no</var>
             }
         }

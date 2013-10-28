@@ -19,6 +19,7 @@ logdir = /var/log/itvencoder
 v4l2src = {
     enable = <var name="enable" type="option">yes</var>
     debug = mpegtsmux:2
+    title = <var name="title" type="string">xxxx</var>
 
     # source pipeline defination
     source = {

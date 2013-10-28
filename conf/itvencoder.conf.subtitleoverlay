@@ -18,6 +18,7 @@ logdir = /var/log/itvencoder
 [channels]
 channel0 = {
     enable = <var name="enable" type="option">yes</var>
+    title = <var name="title" type="string">xxxx</var>
 
     # source pipeline defination
     source = {
