@@ -1357,6 +1357,8 @@ create_encoder_pipeline (Encoder *encoder)
         gchar *p;
         GstCaps *caps;
         GstBus *bus;
+
+        gboolean blinked = FALSE;
  
         pipeline = gst_pipeline_new (NULL);
 
@@ -1402,16 +1404,21 @@ create_encoder_pipeline (Encoder *encoder)
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
                         p = get_caps (encoder->configure, link->src_name);
                         if ((link->sink_pad_name != NULL) && (stream != NULL)){
-                                if ((g_str_has_prefix (stream->source->streaminfo, "audio")) || (g_str_has_prefix (stream->source->streaminfo, "private"))) {
-                                        p = stream->source->streaminfo;
+                                if ((g_str_has_prefix (stream->source->streamcaps, "audio")) || (g_str_has_prefix (stream->source->streamcaps, "private"))) {
+                                        p = stream->source->streamcaps;
                                 }
                         }
                         if (p != NULL) {
                                 caps = gst_caps_from_string (p);
-                                gst_element_link_filtered (link->src, link->sink, caps);
+                                blinked = gst_element_link_filtered (link->src, link->sink, caps);
                                 gst_caps_unref (caps);
                         } else {
-                                gst_element_link (link->src, link->sink);
+                                blinked = gst_element_link (link->src, link->sink);
+                        }
+                        if (!blinked) {
+                                GST_INFO ("link element: %s -> %s failed, caps: %s", link->src_name, link->sink_name, p);
+                        } else {
+                                GST_INFO ("link element: %s -> %s ok, caps: %s", link->src_name, link->sink_name, p);
                         }
                         links = g_slist_next (links);
                 }
@@ -1457,7 +1464,7 @@ channel_source_extract_streams (Source *source)
                 if (g_match_info_matches (match_info)) {
                         stream = (SourceStream *)g_malloc (sizeof (SourceStream));
                         stream->name = name;
-                        stream->streaminfo = (gchar *)gst_structure_get_string (bin, "streaminfo");
+                        stream->streamcaps = (gchar *)gst_structure_get_string (bin, "streamcaps");
                         GST_INFO ("stream found %s: %s", name, definition);
                         g_array_append_val (source->streams, stream);
                 }
@@ -1532,9 +1539,9 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
-                if (g_str_has_prefix (stream->streaminfo, "video")) {
+                if (g_str_has_prefix (stream->streamcaps, "video")) {
                         channel->output->source.streams[i].type = ST_VIDEO;
-                } else if (g_str_has_prefix (stream->streaminfo, "audio")) {
+                } else if (g_str_has_prefix (stream->streamcaps, "audio")) {
                         channel->output->source.streams[i].type = ST_AUDIO;
                 } else {
                         channel->output->source.streams[i].type = ST_UNKNOWN;
@@ -1604,9 +1611,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         }
 
                         /* encoder stream type */
-                        if (g_str_has_prefix (stream->source->streaminfo, "video")) {
+                        if (g_str_has_prefix (stream->source->streamcaps, "video")) {
                                 channel->output->encoders[i].streams[j].type = ST_VIDEO;
-                        } else if (g_str_has_prefix (stream->source->streaminfo, "audio")) {
+                        } else if (g_str_has_prefix (stream->source->streamcaps, "audio")) {
                                 channel->output->encoders[i].streams[j].type = ST_AUDIO;
                         } else {
                                 channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
@@ -1782,7 +1789,7 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
                 GST_ERROR ("Channel with pid %d normaly exit, status is %d", pid, WEXITSTATUS(status));
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.", pid);
+                GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.\n%s\n", pid, ITVENCODER_LOGO);
                 channel_reset (channel);
                 channel_start (channel, TRUE);
         }

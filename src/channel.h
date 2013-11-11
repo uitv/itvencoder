@@ -14,6 +14,14 @@
 #define STREAM_NAME_LEN 32
 #define SHM_SIZE 64*1024*1024
 
+#define ITVENCODER_LOGO \
+"     _ _________      ________                     _                \n" \
+"    (_)__   __\\ \\    / /  ____|                   | |             \n" \
+"     _   | |   \\ \\  / /| |__   _ __   ___ ___   __| | ___ _ __    \n" \
+"    | |  | |    \\ \\/ / |  __| | '_ \\ / _ / _ \\ / _` |/ _ \\ '__|\n" \
+"    | |  | |     \\  /  | |____| | | | (_| (_) | (_| |  __/ |       \n" \
+"    |_|  |_|      \\/   |______|_| |_|\\___\\___/ \\__,_|\\___|_|   "
+
 typedef struct _Source Source;
 typedef struct _SourceClass SourceClass;
 typedef struct _Encoder Encoder;
@@ -55,7 +63,7 @@ typedef struct _Bin {
 
 typedef struct _SourceStream {
         gchar *name;
-        gchar *streaminfo;
+        gchar *streamcaps;
         guint64 *type;
         GstBuffer *ring[SOURCE_RING_SIZE];
         gint current_position; // source output position
