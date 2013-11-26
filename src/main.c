@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <gst/gst.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "itvencoder.h"
@@ -125,6 +126,11 @@ main (int argc, char *argv[])
         GOptionContext *ctx;
         GError *err = NULL;
         gchar *p, *log_dir, *log_path;
+
+        if(getuid() != 0){
+            g_print("Permission denied, please use root try again!\n");
+            exit(0);
+        }
 
         if (!g_thread_supported ()) {
                 g_thread_init (NULL);

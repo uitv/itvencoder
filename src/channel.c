@@ -12,6 +12,7 @@
 #include <gst/app/gstappsink.h>
 #include <gst/app/gstappsrc.h>
 #include "channel.h"
+#include "gdef.h"
 
 extern gchar *config_path;
 
@@ -652,7 +653,7 @@ get_caps (GstStructure *configure, gchar *name)
 
         p = NULL;
         value = (GValue *)gst_structure_get_value (configure, "elements");
-	structure = (GstStructure *)gst_value_get_structure (value);
+        structure = (GstStructure *)gst_value_get_structure (value);
         pp = g_strsplit (name, " ", 0);
         value = (GValue *)gst_structure_get_value (structure, pp[0]);
         if (value == NULL) {
@@ -1402,9 +1403,14 @@ create_encoder_pipeline (Encoder *encoder)
                 while (links != NULL) {
                         link = links->data;
                         GST_INFO ("link element: %s -> %s", link->src_name, link->sink_name);
+
                         p = get_caps (encoder->configure, link->src_name);
                         if ((link->sink_pad_name != NULL) && (stream != NULL)){
-                                if ((g_str_has_prefix (stream->source->streamcaps, "audio")) || (g_str_has_prefix (stream->source->streamcaps, "private"))) {
+                                if (
+                                        (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "audio")) ||
+                                        (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "private"))
+                                   )
+                                {
                                         p = stream->source->streamcaps;
                                 }
                         }
@@ -1539,9 +1545,9 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
-                if (g_str_has_prefix (stream->streamcaps, "video")) {
+                if (stream->streamcaps && g_str_has_prefix (stream->streamcaps, "video")) {
                         channel->output->source.streams[i].type = ST_VIDEO;
-                } else if (g_str_has_prefix (stream->streamcaps, "audio")) {
+                } else if (stream->streamcaps && g_str_has_prefix (stream->streamcaps, "audio")) {
                         channel->output->source.streams[i].type = ST_AUDIO;
                 } else {
                         channel->output->source.streams[i].type = ST_UNKNOWN;
@@ -1611,9 +1617,9 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                         }
 
                         /* encoder stream type */
-                        if (g_str_has_prefix (stream->source->streamcaps, "video")) {
+                        if (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "video")) {
                                 channel->output->encoders[i].streams[j].type = ST_VIDEO;
-                        } else if (g_str_has_prefix (stream->source->streamcaps, "audio")) {
+                        } else if (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "audio")) {
                                 channel->output->encoders[i].streams[j].type = ST_AUDIO;
                         } else {
                                 channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
