@@ -1043,6 +1043,8 @@ create_source_pipeline (Source *source)
         GstCaps *caps;
         GstBus *bus;
 
+        gboolean blinked = FALSE;
+
         pipeline = gst_pipeline_new (NULL);
 
         bins = source->bins;
@@ -1066,10 +1068,15 @@ create_source_pipeline (Source *source)
                                 p = get_caps (source->configure, link->src_name);
                                 if (p != NULL) {
                                         caps = gst_caps_from_string (p);
-                                        gst_element_link_filtered (link->src, link->sink, caps);
+                                        blinked = gst_element_link_filtered (link->src, link->sink, caps);
                                         gst_caps_unref (caps);
                                 } else {
-                                        gst_element_link (link->src, link->sink);
+                                        blinked = gst_element_link (link->src, link->sink);
+                                }
+                                if (!blinked) {
+                                        GST_INFO ("link element: %s -> %s failed, caps: %s", link->src_name, link->sink_name, p);
+                                } else {
+                                        GST_INFO ("link element: %s -> %s ok, caps: %s", link->src_name, link->sink_name, p);
                                 }
                                 links = g_slist_next (links);
                         }
