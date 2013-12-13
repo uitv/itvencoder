@@ -683,7 +683,7 @@ pad_added_callback (GstElement *src, GstPad *pad, gpointer data)
 
         src_pad_name = gst_pad_get_name (pad);
         if (!g_str_has_prefix (src_pad_name, bin->previous->src_pad_name)) {
-                GST_DEBUG ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
+                GST_INFO ("new added pad name: %s, delayed src pad name %s, not match.", src_pad_name, bin->previous->src_pad_name);
                 return;
         }
 
@@ -1014,6 +1014,50 @@ source_appsink_callback (GstAppSink *elt, gpointer user_data)
         *(stream->current_timestamp) = GST_BUFFER_TIMESTAMP (buffer);
 }
 
+static void on_pad_added_rtsp (GstElement *src, GstPad *pad, void *data)
+{
+/*
+        // for test
+        GstElement *sink = GST_ELEMENT (data);
+        GstPad *sinkpad;
+
+        sinkpad = gst_element_get_pad (sink, "sink");
+        gst_pad_link (pad, sinkpad);
+        gst_object_unref (sinkpad);
+        GST_INFO ("new added pad name rtsp, delayed src pad name rtsp. ok!");
+*/
+        Bin *bin = (Bin*)data;
+        GstCaps *caps;
+        GSList *links;
+        Link *link;
+        gchar *p;
+
+        gboolean blinked = FALSE;
+
+        links = bin->links;
+        while (links != NULL) {
+                link = links->data;
+                GST_INFO ("Delayed link for rtsp, src name: %s, sink name %s.", link->src_name, link->sink_name);
+                if (g_str_has_prefix (link->src_name, "rtspsrc")) {
+                        p = get_caps (bin->configure, link->src_name);
+                        if (p != NULL) {
+                                caps = gst_caps_from_string (p);
+                                blinked = gst_element_link_filtered (link->src, link->sink, caps);
+                                gst_caps_unref (caps);
+                        } else {
+                                blinked = gst_element_link (link->src, link->sink);
+                        }
+                        if (!blinked) {
+                                GST_INFO ("Delayed link for rtsp, link element: %s -> %s failed, caps: %s", link->src_name, link->sink_name, p);
+                        } else {
+                                GST_INFO ("Delayed link for rtsp, link element: %s -> %s ok, caps: %s", link->src_name, link->sink_name, p);
+                        }
+                        break;
+                }
+                links = g_slist_next (links);
+        }
+}
+
 /**
  * create_source_pipeline
  * @configure: Configure object.
@@ -1064,6 +1108,12 @@ create_source_pipeline (Source *source)
                         links = bin->links;
                         while (links != NULL) {
                                 link = links->data;
+                                if (g_str_has_prefix (link->src_name, "rtspsrc")) {
+                                        GST_INFO ("Delayed link, src name: %s, sink name %s.", link->src_name, link->sink_name);
+                                        g_signal_connect (link->src , "pad-added", G_CALLBACK (on_pad_added_rtsp), bin);
+                                        links = g_slist_next (links);
+                                        continue;
+                                }
                                 GST_INFO ("link %s -> %s", link->src_name, link->sink_name);
                                 p = get_caps (source->configure, link->src_name);
                                 if (p != NULL) {
