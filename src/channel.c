@@ -14,6 +14,7 @@
 #include "channel.h"
 #include "gdef.h"
 
+extern gchar exe_path[1024];
 extern gchar *config_path;
 
 GST_DEBUG_CATEGORY_EXTERN (ITVENCODER);
@@ -1600,15 +1601,20 @@ channel_source_initialize (Channel *channel, GstStructure *configure)
                 }
                 stream->type = &(channel->output->source.streams[i].type);
                 stream->last_heartbeat = &(channel->output->source.streams[i].last_heartbeat);
+                *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
                 stream->current_timestamp = &(channel->output->source.streams[i].current_timestamp);
                 g_strlcpy (channel->output->source.streams[i].name, stream->name, STREAM_NAME_LEN);
-                if (stream->streamcaps && g_str_has_prefix (stream->streamcaps, "video")) {
+                if (stream->name && g_str_has_prefix (stream->name, "video")) {
                         channel->output->source.streams[i].type = ST_VIDEO;
-                } else if (stream->streamcaps && g_str_has_prefix (stream->streamcaps, "audio")) {
+                } else if (stream->name && g_str_has_prefix (stream->name, "audio")) {
                         channel->output->source.streams[i].type = ST_AUDIO;
                 } else {
                         channel->output->source.streams[i].type = ST_UNKNOWN;
                 }
+                GST_INFO ("%s.source.%s initialize heart beat %" GST_TIME_FORMAT,
+                        channel->name,
+                        channel->output->source.streams[i].name,
+                        GST_TIME_ARGS (channel->output->source.streams[i].last_heartbeat));
         }
 
         return 0;
@@ -1664,19 +1670,25 @@ channel_encoder_initialize (Channel *channel, GstStructure *configure)
                                         stream->source = source;
                                         stream->current_position = -1;
                                         stream->system_clock = encoder->channel->system_clock;
+                                        *(stream->last_heartbeat) = gst_clock_get_time (stream->system_clock);
                                         g_array_append_val (source->encoders, stream);
                                         break;
                                 }
                         }
+                        GST_INFO ("%s.encoders.%s.%s initialize heart beat %" GST_TIME_FORMAT,
+                                channel->name,
+                                channel->output->encoders[i].name,
+                                channel->output->encoders[i].streams[j].name,
+                                GST_TIME_ARGS (channel->output->encoders[i].streams[j].last_heartbeat));
                         if (stream->source == NULL) {
                                 GST_ERROR ("cant find channel %s source %s.", channel->name, stream->name);
                                 return 1;
                         }
 
                         /* encoder stream type */
-                        if (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "video")) {
+                        if (stream->source->name && g_str_has_prefix (stream->source->name, "video")) {
                                 channel->output->encoders[i].streams[j].type = ST_VIDEO;
-                        } else if (stream->source->streamcaps && g_str_has_prefix (stream->source->streamcaps, "audio")) {
+                        } else if (stream->source->name && g_str_has_prefix (stream->source->name, "audio")) {
                                 channel->output->encoders[i].streams[j].type = ST_AUDIO;
                         } else {
                                 channel->output->encoders[i].streams[j].type = ST_UNKNOWN;
@@ -1849,10 +1861,10 @@ child_watch_cb (GPid pid, gint status, Channel *channel)
         channel->worker_pid = 0;
 
         if (WIFEXITED (status) && (WEXITSTATUS(status) == 0)) {
-                GST_ERROR ("Channel with pid %d normaly exit, status is %d", pid, WEXITSTATUS(status));
+                GST_ERROR ("Channel%d with pid %d normaly exit, status is %d", channel->id, pid, WEXITSTATUS(status));
         }
         if (WIFSIGNALED(status)) {
-                GST_ERROR ("Channel with pid %d exit on an unhandled signal, restart.\n%s\n", pid, ITVENCODER_LOGO);
+                GST_ERROR ("Channel%d with pid %d exit on an signal(%d), restart.\n%s\n", channel->id, pid, WTERMSIG(status), ITVENCODER_LOGO);
                 channel_reset (channel);
                 channel_start (channel, TRUE);
         }
@@ -1968,7 +1980,8 @@ channel_start (Channel *channel, gboolean daemon)
 
         if (daemon) {
                 memset (path, '\0', sizeof (path));
-                readlink ("/proc/self/exe", path, sizeof (path));
+                //readlink ("/proc/self/exe", path, sizeof (path));
+                sprintf(path, "%s", exe_path);
                 i = 0;
                 argv[i++] = g_strdup (path);
                 if (config_path != NULL) {
@@ -1982,14 +1995,17 @@ channel_start (Channel *channel, gboolean daemon)
                         argv[i++] = g_strdup_printf ("--gst-debug=%s", p);
                 }
                 argv[i++] = NULL;
-                if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, NULL)) {
-                        GST_ERROR ("Start channel %s error!!!", channel->name);
+                if (!g_spawn_async (NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &pid, &e)) {
+                        GST_ERROR ("Start channel %s error, code: %d, reason: %s, exe_path: %s.", channel->name, e->code, e->message, path);
                         for (k = 0; k < i; k++) {
                                 if (argv[k] != NULL) {
                                         g_free (argv[k]);
                                 }
                         }
+						g_error_free(e);
                         return 5;
+                } else {
+                        GST_ERROR ("Start channel %s success, pid: %d, exe_path: %s.", channel->name, pid, path);
                 }
                 for (k = 0; k < i; k++) {
                         if (argv[k] != NULL) {

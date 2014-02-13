@@ -17,8 +17,8 @@
 #define HEARTBEAT_THRESHHOLD 7000000000 /* 2000ms */
 #define ENCODER_OUTPUT_HEARTBEAT_THRESHHOLD 30000000000 /* 30s */
 
-#define LOG_SIZE 4*1024*1024
-#define LOG_ROTATE 100
+#define LOG_SIZE 64*1024*1024
+#define LOG_ROTATE 2048
 
 typedef struct _ITVEncoder      ITVEncoder;
 typedef struct _ITVEncoderClass ITVEncoderClass;

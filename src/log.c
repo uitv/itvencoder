@@ -131,6 +131,10 @@ static void log_func (GstDebugCategory *category,
                 return;
         }
 
+        if (!log_hd) {
+                return;
+        }
+
         time (&t);
         tm = localtime (&t);
         asctime_r (tm, date);

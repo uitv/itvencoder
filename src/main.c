@@ -69,6 +69,7 @@ init_log (gchar *log_path)
 static gboolean foreground = FALSE;
 static gboolean stop = FALSE;
 static gboolean version = FALSE;
+gchar exe_path[1024] = {0};
 gchar *config_path = NULL;
 gchar *media_uri = NULL;
 ITVEncoder *itvencoder;
@@ -127,9 +128,16 @@ main (int argc, char *argv[])
         GError *err = NULL;
         gchar *p, *log_dir, *log_path;
 
-        if(getuid() != 0){
-            g_print("Permission denied, please use root try again!\n");
-            exit(0);
+        memset (exe_path, '\0', sizeof (exe_path));
+
+        if (readlink ("/proc/self/exe", exe_path, sizeof (exe_path)) < 0) {
+                g_print("readlink error(%d), exit!\n", errno);
+                exit(0);
+        }
+
+        if (getuid() != 0){
+                g_print("Permission denied, please use root try again!\n");
+                exit(0);
         }
 
         if (!g_thread_supported ()) {
@@ -217,6 +225,7 @@ main (int argc, char *argv[])
                 ret = init_log (log_path);
                 g_free (log_path);
                 if (ret != 0) {
+                        GST_WARNING ("Channel(%d) init_log error.", channel_id);
                         exit (1);
                 }
 
@@ -242,13 +251,22 @@ main (int argc, char *argv[])
 
                 loop = g_main_loop_new (NULL, FALSE);
                 if (channel_setup (channel, TRUE) != 0) {
+                        GST_WARNING ("Channel(%d) channel_setup error.", channel_id);
                         exit (0);
+                } else {
+                        GST_WARNING ("Channel(%d) channel_setup success.", channel_id);
                 }
                 if (channel_reset (channel) != 0) {
+                        GST_WARNING ("Channel(%d) channel_reset error.", channel_id);
                         exit (0);
+                } else {
+                        GST_WARNING ("Channel(%d) channel_reset success.", channel_id);
                 }
                 if (channel_start (channel, FALSE) != 0) {
+                        GST_WARNING ("Channel(%d) channel_start error.", channel_id);
                         exit (0);
+                } else {
+                        GST_WARNING ("Channel(%d) channel_start success.", channel_id);
                 }
                 g_main_loop_run (loop);
                 return 0;
@@ -277,6 +295,7 @@ main (int argc, char *argv[])
 
         signal (SIGPIPE, SIG_IGN);
         GST_WARNING ("iTVEncoder started ...");
+        GST_WARNING ("readlink exe path: %s.", exe_path);
 
         loop = g_main_loop_new (NULL, FALSE);
 
